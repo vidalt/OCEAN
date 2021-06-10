@@ -1,0 +1,7 @@
+numpy==1.19.5
+pandas==1.2.0
+scikit-learn==0.22.2.post1
+# scikit-learn==0.23.0
+# scipy==1.6.0
+scipy==1.4.1
+sklearn==0.0
