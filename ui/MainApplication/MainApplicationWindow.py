@@ -13,7 +13,7 @@ class MainApplicationWindow(QtWidgets.QMainWindow):
         width, height = 720, 380
         self.setMinimumSize(width, height)
 
-        self.setWindowTitle('Oceani')
+        self.setWindowTitle('OceanUI')
 
         # dashView = DashView()
         # self.setCentralWidget(dashView) 
