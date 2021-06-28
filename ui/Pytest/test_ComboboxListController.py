@@ -17,7 +17,7 @@ def test_CICLC_initializeView_wrong_type_featureName_parameter(featureName):
         counterfactualInterfaceComboboxListController.initializeView(featureName, ['value1', 'value2', 'value3'])
 
 @pytest.mark.parametrize('content', [1, 2.9, 'str', False, ('t1', 't2'), None, [1]])
-def test_CICLC_initializeView_wrong_type_featureName_parameter(content):
+def test_CICLC_initializeView_wrong_type_content_parameter(content):
     with pytest.raises(AssertionError):
         app = QtWidgets.QApplication(sys.argv)
         counterfactualInterfaceComboboxListController = StaticObjects.staticCounterfactualInterfaceComboboxListController()
