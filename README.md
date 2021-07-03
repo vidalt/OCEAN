@@ -70,3 +70,33 @@ You can then get back to this directory, and launch the benchmark with
     source env/bin/activate
     python src/runBenchmarkWithMace.py
 ```
+# User Interface
+
+The folder `ui` contains the code to a user interface; this application can help some users facilitating the interaction with the OCEAN system. The interface needs some more python libs to run, so run the following commands to install them:
+
+```shell
+    source env/bin/activate
+    pip install -r ui/uiRequirements.txt
+```
+
+And run the following commands to start the interface:
+
+```shell
+    source env/bin/activate
+    cd ui
+    python main.py
+```
+
+Follows a gif to show how the interface works:
+
+![](gif_v1.gif)
+
+Besides that, some automated tests are done. To run them, use the following commands:
+
+```shell
+    source env/bin/activate
+    cd ui
+    pytest
+```
+
+Or, `pytest -v` to see a detailed version of tests results.
