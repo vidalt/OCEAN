@@ -8,9 +8,9 @@ class CounterfactualEngineEnums:
     class RandomForestClassifierParameters(Enum):
         MAX_LEAF_NODES = 32
         RANDOM_STATE = 1
-        N_ESTIMATORS = 50
+        N_ESTIMATORS = 20
 
     class IsolationForestParameters(Enum):
         RANDOM_STATE = 1 
-        MAX_SAMPLES = 50
-        N_ESTIMATORS = 50
+        MAX_SAMPLES = 20
+        N_ESTIMATORS = 20

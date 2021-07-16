@@ -19,7 +19,7 @@ class CounterfactualInterfaceModel():
 
         self.currentDatasetReader = None
 
-        self.__data = None
+        self.data = None
         self.__transformedData = None
 
         self.features = None
@@ -52,18 +52,18 @@ class CounterfactualInterfaceModel():
         chosenDatasetName = chosenDataset + '.csv'
         chosenDatasetPath = os.path.join(self.datasetsPath, chosenDatasetName)
 
-        self.__data = pd.read_csv(chosenDatasetPath)
-        self.features = self.__data.columns
-        self.featuresType = {feature:getFeatureType(self.__data[feature][0]) for feature in self.__data.columns if feature != 'Class'}
-        self.__data = self.__data.drop(0)
-        self.featuresActionability = {feature:getFeatureActionnability(self.__data[feature][1]) for feature in self.__data.columns if feature != 'Class'}
-        self.__data = self.__data.drop(1)
+        self.data = pd.read_csv(chosenDatasetPath)
+        self.features = self.data.columns
+        self.featuresType = {feature:getFeatureType(self.data[feature][0]) for feature in self.data.columns if feature != 'Class'}
+        self.data = self.data.drop(0)
+        self.featuresActionability = {feature:getFeatureActionnability(self.data[feature][1]) for feature in self.data.columns if feature != 'Class'}
+        self.data = self.data.drop(1)
         
         self.featuresInformations = {}
         for feature in self.features:
             if feature != 'Class':
                 if self.featuresType[feature] is FeatureType.Binary:
-                    values = self.__data[feature].unique()
+                    values = self.data[feature].unique()
 
                     self.featuresInformations[feature] = {'featureType':self.featuresType[feature], 
                                                             'featureActionnability':self.featuresActionability[feature],
@@ -72,12 +72,12 @@ class CounterfactualInterfaceModel():
                 elif self.featuresType[feature] is FeatureType.Discrete or self.featuresType[feature] is FeatureType.Numeric:
                     self.featuresInformations[feature] = {'featureType':self.featuresType[feature], 
                                                             'featureActionnability':self.featuresActionability[feature],
-                                                            'min':min(self.__data[feature].astype(float)),
-                                                            'max':max(self.__data[feature].astype(float))}
+                                                            'min':min(self.data[feature].astype(float)),
+                                                            'max':max(self.data[feature].astype(float))}
                 elif self.featuresType[feature] is FeatureType.Categorical: 
                     self.featuresInformations[feature] = {'featureType':self.featuresType[feature], 
                                                             'featureActionnability':self.featuresActionability[feature],
-                                                            'possibleValues':self.__data[feature].value_counts().keys().tolist()}
+                                                            'possibleValues':self.data[feature].value_counts().keys().tolist()}
 
         self.currentDatasetReader = DatasetReader(chosenDatasetPath)
         self.__transformedData =self.currentDatasetReader.data
@@ -99,7 +99,7 @@ class CounterfactualInterfaceModel():
         self.transformedFeaturesActionability = self.currentDatasetReader.featuresActionnability
         self.transformedFeaturesPossibleValues = self.currentDatasetReader.featuresPossibleValues
 
-    # this function returns the train and test data from chosen dataset
+    # this function returns the train and test data from chosen dataset and ordered columns
     def getTrainData(self):
         if self.currentDatasetReader is not None:
             return self.currentDatasetReader.X[self.transformedFeaturesOrdered], self.currentDatasetReader.y
@@ -116,7 +116,7 @@ class CounterfactualInterfaceModel():
 
             randomIndex = rd.randint(0, len(predicted0Index)-1)
             randomPredicted0 = predicted0Index[randomIndex]
-            randomPoint = self.__data.loc[randomPredicted0].to_numpy()
+            randomPoint = self.data.loc[randomPredicted0].to_numpy()
 
             return randomPoint
 
