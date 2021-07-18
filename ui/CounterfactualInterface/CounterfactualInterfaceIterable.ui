@@ -234,7 +234,7 @@
        </widget>
       </item>
       <item>
-       <widget class="DashView" name="widgetCanvas" native="true"/>
+       <widget class="MatplotLibCanvas" name="widgetCanvas" native="true"/>
       </item>
      </layout>
     </widget>
@@ -243,9 +243,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>DashView</class>
+   <class>MatplotLibCanvas</class>
    <extends>QWidget</extends>
-   <header>Dash/DashView.h</header>
+   <header>Canvas/MatplotLibCanvas.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

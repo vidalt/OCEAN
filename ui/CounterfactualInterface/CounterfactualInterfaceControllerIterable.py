@@ -1,10 +1,14 @@
 import numpy as np
 import pandas as pd
-from scipy.sparse import data
+
+from PyQt5.QtCore import QThread
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
 
 from .CounterfactualInterfaceModel import CounterfactualInterfaceModel
 from .CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
 from .CounterfactualInterfaceViewIterable import CounterfactualInterfaceViewIterable
+from .CounterfactualInferfaceWorkerIterable import CounterfactualInferfaceWorkerIterable
 
 from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
 
@@ -43,6 +47,8 @@ class CounterfactualInterfaceControllerIterable:
 
         self.__dictControllersSelectedPoint = {}
         self.__samplesToPlot = None
+        self.transformedSamplesToPlot = None
+        self.transformedSamplesClasses = None
 
 
     # this function takes the dataframe names and send them to interface
@@ -68,6 +74,8 @@ class CounterfactualInterfaceControllerIterable:
 
         self.__dictControllersSelectedPoint = {}
         self.__samplesToPlot = None
+
+        self.__values = None
 
     # this function opens the selected dataset
     # trains the random forest and the isolation forest,
@@ -146,7 +154,32 @@ class CounterfactualInterfaceControllerIterable:
                 if feature != 'Class':
                     self.__dictControllersSelectedPoint[feature].setSelectedValue(randomDataPoint[index])
 
+    def __buildSample(self):
+        # pega os eixos -> verifica os tipos:
+        # - binário / categorico -> usa todas as possibilidades
+        # - numérico -> seleciona um subconjunto
+        xVariable, yVariable = self.view.getChosenAxis()
+
+        featureTypeX = self.model.featuresInformations[xVariable]['featureType']
+        featureTypeY = self.model.featuresInformations[yVariable]['featureType']
+        print(featureTypeX, featureTypeY)
+        # if featureType is FeatureType.Binary:
+
+        return None
+    
+    def __buildDictParameters(self):
+        # concatenating selected point with sample
+        dataToPlot = pd.concat([self.__samplesToPlot, self.__dataframeChosenDataPoint])
+        dataToPlot = dataToPlot.reset_index().drop(['index'], axis=1)
+
+        # building the dict parameters to plot
+        xVariable, yVariable = self.view.getChosenAxis()
+        parameters = {'dataframe':dataToPlot, 'xVariable':xVariable, 'yVariable':yVariable}
+
+        return parameters
+
     def __handlerCalculateDistances(self):
+        self.waitCursor()
         # !!!O QUE FAZER!!!
         # pegar o ponto selecionado e calcular a distância para o contrafactual mais próximo
         # repetir o processo para algumas outras variantes desse ponto
@@ -169,30 +202,61 @@ class CounterfactualInterfaceControllerIterable:
 
             # getting a set of samples to plot
             if self.__samplesToPlot is None:
-                self.__samplesToPlot = self.model.data.sample(n=5)
+                # self.__samplesToPlot = self.__buildSample()
+                self.__samplesToPlot = self.model.data.sample(n=10)
+
+                transformedSamples = []
+                for i in range(len(self.__samplesToPlot)):
+                    transformedSamples.append(self.model.transformDataPoint(self.__samplesToPlot.iloc[i][:-1]))
+                
+                self.transformedSamplesToPlot = transformedSamples
+                self.transformedSamplesClasses = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, transformedSamples)
             # !!!update the samples class with predicted class!!!
+            # print('*'*75)
+            # print(self.transformedSamplesToPlot)
+            # print('*'*75)
+            # print(self.transformedSamplesClasses)
+            # print('*'*75)
 
             # building a dataframe with the selected point and the class 'selected'
             dataPoint = self.chosenDataPoint.copy()
             dataPoint = np.append(dataPoint, 'selected')
             self.__dataframeChosenDataPoint = pd.DataFrame(data=[dataPoint], columns=self.__samplesToPlot.columns)
 
-            # concatenating selected point with sample
-            dataToPlot = pd.concat([self.__samplesToPlot, self.__dataframeChosenDataPoint])
-            dataToPlot = dataToPlot.reset_index().drop(['index'], axis=1)
+            # running the counterfactual generation in another thread
+            self.thread = QThread()
+            self.worker = CounterfactualInferfaceWorkerIterable(self)
+            self.worker.moveToThread(self.thread)
+            self.thread.started.connect(self.worker.run)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.worker.finished.connect(self.objectiveFunctionValues)
+            self.worker.finished.connect(self.restorCursor)
+            self.thread.finished.connect(self.thread.deleteLater)
+            self.thread.start()
 
-            # building the dict parameters to plot
-            xVariable, yVariable = self.view.getChosenAxis()
-            parameters = {'dataframe':dataToPlot, 'xVariable':xVariable, 'yVariable':yVariable}
-            self.__canvas.updateGraph(parameters)
+            # # plot
+            # parameters = self.__buildDictParameters()
+            # self.__canvas.updateGraph(parameters)
 
-    def __updateGraph(self):
-        # concatenating selected point with sample
-        dataToPlot = pd.concat([self.__samplesToPlot, self.__dataframeChosenDataPoint])
-        dataToPlot = dataToPlot.reset_index().drop(['index'], axis=1)
-        
-        # building the dict parameters to plot
-        xVariable, yVariable = self.view.getChosenAxis()
-        parameters = {'dataframe':dataToPlot, 'xVariable':xVariable, 'yVariable':yVariable}
+    def objectiveFunctionValues(self, values):
+        parameters = self.__buildDictParameters()
+        parameters['dataframe']['distance'] = values
+        self.__values = values
         self.__canvas.updateGraph(parameters)
 
+    def __updateGraph(self):
+        self.waitCursor()
+        parameters = self.__buildDictParameters()
+        parameters['dataframe']['distance'] = self.__values
+        self.__canvas.updateGraph(parameters)
+        self.restorCursor()
+
+    # this function is used to change the default cursor to wait cursor
+    def waitCursor(self):
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+    
+    # this function is used to restor the default cursor
+    def restorCursor(self):
+        # updating cursor
+        QApplication.restoreOverrideCursor()

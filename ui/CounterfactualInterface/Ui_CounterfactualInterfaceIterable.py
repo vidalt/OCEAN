@@ -98,7 +98,7 @@ class Ui_CounterfactualInterfaceIterable(object):
         self.pushButtonUpdateGraph.setObjectName("pushButtonUpdateGraph")
         self.horizontalLayout_3.addWidget(self.pushButtonUpdateGraph)
         self.verticalLayout.addWidget(self.widgetContainerAxes)
-        self.widgetCanvas = DashView(self.widgetContainerCanvas)
+        self.widgetCanvas = MatplotLibCanvas(self.widgetContainerCanvas)
         self.widgetCanvas.setObjectName("widgetCanvas")
         self.verticalLayout.addWidget(self.widgetCanvas)
         self.horizontalLayout.addWidget(self.widgetContainerCanvas)
@@ -115,4 +115,4 @@ class Ui_CounterfactualInterfaceIterable(object):
         self.labelOriginalClass.setText(_translate("CounterfactualInterfaceIterable", "Original Class:"))
         self.labelSelectAxes.setText(_translate("CounterfactualInterfaceIterable", "Select Axes"))
         self.pushButtonUpdateGraph.setText(_translate("CounterfactualInterfaceIterable", "Update Graph"))
-from Dash.DashView import DashView
+from Canvas.MatplotLibCanvas import MatplotLibCanvas

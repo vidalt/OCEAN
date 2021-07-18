@@ -30,13 +30,13 @@ class DashView(QWebView):
 
             cleanDataframe = None
             if xVariable != yVariable:
-                cleanDataframe = dataframe[[xVariable, yVariable, 'Class']]
+                cleanDataframe = dataframe[[xVariable, yVariable, 'distance', 'Class']]
             else:
-                cleanDataframe = dataframe[[xVariable, 'Class']]
+                cleanDataframe = dataframe[[xVariable, 'distance', 'Class']]
             cleanDataframe = cleanDataframe.drop_duplicates()
 
             # fig = px.scatter(dataframe, x=xVariable, y=yVariable, color="species", size='petal_length', hover_data=['petal_width'])
-            self.figure = px.scatter(cleanDataframe, x=xVariable, y=yVariable, color='Class', hover_data=['Class'])
+            self.figure = px.scatter(cleanDataframe, x=xVariable, y=yVariable, color='Class', size='distance')
 
             self.layout = html.Div(
             dcc.Graph(

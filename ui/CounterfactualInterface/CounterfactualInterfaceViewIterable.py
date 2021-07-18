@@ -23,6 +23,11 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
     def getCanvas(self):
         return self.widgetCanvas
 
+    def resizeEvent(self, event):
+        width = self.getCanvas().size().width()
+        height = self.getCanvas().size().height()
+        self.getCanvas().resizeCanvas(width, height)
+
     # this function fill the combobox
     # first cleaning the combobox,
     # and adding the datasets name
