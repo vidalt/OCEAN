@@ -234,21 +234,17 @@
        </widget>
       </item>
       <item>
-       <widget class="MatplotLibCanvas" name="widgetCanvas" native="true"/>
+       <widget class="QTabWidget" name="tabWidgetContainerCanvas">
+        <property name="tabsClosable">
+         <bool>true</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>MatplotLibCanvas</class>
-   <extends>QWidget</extends>
-   <header>Canvas/MatplotLibCanvas.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

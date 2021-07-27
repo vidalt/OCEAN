@@ -46,7 +46,7 @@ class CounterfactualInferfaceWorker(QObject):
             objectiveNorm=0, 
             mutuallyExclusivePlanesCutsActivated=True, 
             strictCounterFactual=True, 
-            verbose=False,
+            verbose=True,
             binaryDecisionVariables=BinaryDecisionVariables.PathFlow_y,
             featuresActionnability=self.__controller.model.transformedFeaturesActionability,
             featuresType=self.__controller.model.transformedFeaturesType, 
@@ -86,9 +86,6 @@ class CounterfactualInferfaceWorker(QObject):
                         constraintIndex += 1
 
         randomForestMilp.solveModel()
-        print('!'*75)
-        print('Objective Value:', randomForestMilp.model.getObjective().getValue())
-        print('!'*75)
         counterfactualResult = randomForestMilp.x_sol
 
         if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():

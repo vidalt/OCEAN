@@ -19,14 +19,10 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
         self.pushButtonCalculateDistances.clicked.connect(lambda: self.calculateDistances.emit())
         self.pushButtonUpdateGraph.clicked.connect(lambda: self.updateGraph.emit())
 
+        self.__iterationNumber = 1
 
-    def getCanvas(self):
-        return self.widgetCanvas
+        self.tabWidgetContainerCanvas.tabCloseRequested.connect(lambda index: self.tabWidgetContainerCanvas.removeTab(index))
 
-    def resizeEvent(self, event):
-        width = self.getCanvas().size().width()
-        height = self.getCanvas().size().height()
-        self.getCanvas().resizeCanvas(width, height)
 
     # this function fill the combobox
     # first cleaning the combobox,
@@ -71,6 +67,10 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
             self.comboBoxAxisY.clear()
             self.comboBoxAxisX.addItems(options)
             self.comboBoxAxisY.addItems(options)
+
+    def addGraphTab(self, canvasView):
+        self.tabWidgetContainerCanvas.addTab(canvasView, 'Iteration'+str(self.__iterationNumber))
+        self.__iterationNumber += 1
 
     def getChosenAxis(self):
         return self.comboBoxAxisX.currentText(), self.comboBoxAxisY.currentText()

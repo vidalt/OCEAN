@@ -12,6 +12,8 @@ from .CounterfactualInferfaceWorkerIterable import CounterfactualInferfaceWorker
 
 from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
 
+from Canvas.CanvasController import CanvasController
+
 from CounterFactualParameters import FeatureType
 
 from .ComboboxList.ComboboxListController import ComboboxListController
@@ -43,7 +45,7 @@ class CounterfactualInterfaceControllerIterable:
         self.__dataframeChosenDataPoint = None
         self.predictedOriginalClass = None
 
-        self.__canvas = self.view.getCanvas()
+        self.__canvas = None
 
         self.__dictControllersSelectedPoint = {}
         self.__samplesToPlot = None
@@ -203,7 +205,7 @@ class CounterfactualInterfaceControllerIterable:
             # getting a set of samples to plot
             if self.__samplesToPlot is None:
                 # self.__samplesToPlot = self.__buildSample()
-                self.__samplesToPlot = self.model.data.sample(n=10)
+                self.__samplesToPlot = self.model.data.sample(n=3)
 
                 transformedSamples = []
                 for i in range(len(self.__samplesToPlot)):
@@ -235,15 +237,13 @@ class CounterfactualInterfaceControllerIterable:
             self.thread.finished.connect(self.thread.deleteLater)
             self.thread.start()
 
-            # # plot
-            # parameters = self.__buildDictParameters()
-            # self.__canvas.updateGraph(parameters)
-
     def objectiveFunctionValues(self, values):
         parameters = self.__buildDictParameters()
         parameters['dataframe']['distance'] = values
         self.__values = values
+        self.__canvas = CanvasController()
         self.__canvas.updateGraph(parameters)
+        self.view.addGraphTab(self.__canvas.view)
 
     def __updateGraph(self):
         self.waitCursor()
