@@ -3,7 +3,7 @@
 # it is needed because this process takes time enough to freeze the interface, 
 # so, this class is used to be instantiated in another thread
 
-from .CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
+from ..CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
 
 from CounterFactualParameters import FeatureType
 from CounterFactualParameters import BinaryDecisionVariables, TreeConstraintsType

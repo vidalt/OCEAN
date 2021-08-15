@@ -1,7 +1,7 @@
 import numpy as np
 
-from .CounterfactualInterfaceModel import CounterfactualInterfaceModel
-from .CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
+from ..CounterfactualInterfaceModel import CounterfactualInterfaceModel
+from ..CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
 from .CounterfactualInterfaceViewStatic import CounterfactualInterfaceViewStatic
 
 from .CounterfactualInferfaceWorker import CounterfactualInferfaceWorker
@@ -10,10 +10,10 @@ from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
 
 from CounterFactualParameters import FeatureType
 
-from .ComboboxList.ComboboxListController import ComboboxListController
-from .DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
+from ..ComboboxList.ComboboxListController import ComboboxListController
+from ..DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
 # from .LineEditMinimumMaximum.LineEditMinimumMaximumController import LineEditMinimumMaximumController
-from .Slider3Ranges.Slider3RangesController import Slider3RangesController
+from ..Slider3Ranges.Slider3RangesController import Slider3RangesController
 
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import Qt

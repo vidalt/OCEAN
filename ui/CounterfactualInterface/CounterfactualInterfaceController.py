@@ -5,8 +5,8 @@
 import numpy as np
 
 from .CounterfactualInterfaceView import CounterfactualInterfaceView
-from .CounterfactualInterfaceControllerStatic import CounterfactualInterfaceControllerStatic
-from .CounterfactualInterfaceControllerIterable import CounterfactualInterfaceControllerIterable
+from .CounterfactualStatic.CounterfactualInterfaceControllerStatic import CounterfactualInterfaceControllerStatic
+from .CounterfactualIterable.CounterfactualInterfaceControllerIterable import CounterfactualInterfaceControllerIterable
 
 class CounterfactualInterfaceController():
 

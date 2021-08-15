@@ -5,8 +5,8 @@ from PyQt5.QtCore import QThread
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 
-from .CounterfactualInterfaceModel import CounterfactualInterfaceModel
-from .CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
+from ..CounterfactualInterfaceModel import CounterfactualInterfaceModel
+from ..CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
 from .CounterfactualInterfaceViewIterable import CounterfactualInterfaceViewIterable
 from .CounterfactualInferfaceWorkerIterable import CounterfactualInferfaceWorkerIterable
 
@@ -16,9 +16,9 @@ from Canvas.CanvasController import CanvasController
 
 from CounterFactualParameters import FeatureType
 
-from .ComboboxList.ComboboxListController import ComboboxListController
-from .DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
-from .Slider3Ranges.Slider3RangesController import Slider3RangesController
+from ..ComboboxList.ComboboxListController import ComboboxListController
+from ..DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
+from ..Slider3Ranges.Slider3RangesController import Slider3RangesController
 
 class CounterfactualInterfaceControllerIterable:
 
