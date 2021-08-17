@@ -20,6 +20,14 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
         self.pushButtonUncheckAll.clicked.connect(lambda: self.__uncheckAllHandler())
 
 
+    # this function blocks the user from changing the value
+    def disableComponent(self):
+        self.comboBoxValues.setEnabled(False)
+
+    # this function enables the user from changind the value
+    def enableComponent(self):
+        self.comboBoxValues.setEnabled(True)
+
     # this function ensures that when the feature is not actionable, 
     # the allowed value will be the value inside the combobox
     def __updateAllowedNotActionable(self):

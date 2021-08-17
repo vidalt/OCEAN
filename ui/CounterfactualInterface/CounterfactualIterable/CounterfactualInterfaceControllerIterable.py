@@ -20,6 +20,8 @@ from ..ComboboxList.ComboboxListController import ComboboxListController
 from ..DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
 from ..Slider3Ranges.Slider3RangesController import Slider3RangesController
 
+from .Iteration.IterationController import IterationController
+
 class CounterfactualInterfaceControllerIterable:
 
     def __init__(self):
@@ -30,12 +32,13 @@ class CounterfactualInterfaceControllerIterable:
 
         self.__chosenDataset = CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value
         self.view.chosenDataset.connect(self.__handlerChosenDataset)
-
         self.view.randomPoint.connect(self.__handlerRandomPoint)
+        self.view.calculateClass.connect(self.__handlerCalculateClass)
+        self.view.nextIteration.connect(self.__handlerNextIteration)
 
-        self.view.calculateDistances.connect(self.__handlerCalculateDistances)
+        # self.view.calculateDistances.connect(self.__handlerCalculateDistances)
 
-        self.view.updateGraph.connect(self.__updateGraph)
+        # self.view.updateGraph.connect(self.__updateGraph)
 
         self.randomForestClassifier = None
         self.isolationForest = None
@@ -139,7 +142,7 @@ class CounterfactualInterfaceControllerIterable:
                     # saving the controller to facilitate the access to components
                     self.__dictControllersSelectedPoint[feature] = componentController
 
-            self.view.addAxisOptions(list(self.model.features))
+            # self.view.addAxisOptions(list(self.model.features))
             
         else:
             # cleaning the view
@@ -148,6 +151,8 @@ class CounterfactualInterfaceControllerIterable:
 
     # this function get a random datapoint from dataset 
     def __handlerRandomPoint(self):
+        self.view.clearClass()
+
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             randomDataPoint = self.model.getRandomPoint(self.randomForestClassifier)
 
@@ -155,19 +160,6 @@ class CounterfactualInterfaceControllerIterable:
             for index, feature in enumerate(self.model.features):
                 if feature != 'Class':
                     self.__dictControllersSelectedPoint[feature].setSelectedValue(randomDataPoint[index])
-
-    def __buildSample(self):
-        # pega os eixos -> verifica os tipos:
-        # - binário / categorico -> usa todas as possibilidades
-        # - numérico -> seleciona um subconjunto
-        xVariable, yVariable = self.view.getChosenAxis()
-
-        featureTypeX = self.model.featuresInformations[xVariable]['featureType']
-        featureTypeY = self.model.featuresInformations[yVariable]['featureType']
-        print(featureTypeX, featureTypeY)
-        # if featureType is FeatureType.Binary:
-
-        return None
     
     def __buildDictParameters(self):
         # concatenating selected point with sample
@@ -179,6 +171,27 @@ class CounterfactualInterfaceControllerIterable:
         parameters = {'dataframe':dataToPlot, 'xVariable':xVariable, 'yVariable':yVariable}
 
         return parameters
+
+    # this function takes the selected data point and calculate the respective class
+    def __handlerCalculateClass(self):
+        self.view.clearClass()
+        
+        if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
+            # getting the datapoint
+            auxiliarDataPoint = []
+            for feature in self.model.features:
+                if feature != 'Class':
+                    content = self.__dictControllersSelectedPoint[feature].getContent()
+                    auxiliarDataPoint.append(content['value'])
+                    
+            self.chosenDataPoint = np.array(auxiliarDataPoint)
+
+            # transforming the datapoint to predict its class
+            self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
+            
+            # predicting the datapoint class and showing its value
+            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+            self.view.showOriginalClass(self.predictedOriginalClass[0])      
 
     def __handlerCalculateDistances(self):
         self.waitCursor()
@@ -245,12 +258,11 @@ class CounterfactualInterfaceControllerIterable:
         self.__canvas.updateGraph(parameters)
         self.view.addGraphTab(self.__canvas.view)
 
-    def __updateGraph(self):
-        self.waitCursor()
-        parameters = self.__buildDictParameters()
-        parameters['dataframe']['distance'] = self.__values
-        self.__canvas.updateGraph(parameters)
-        self.restorCursor()
+    def __handlerNextIteration(self):
+        if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
+            nextIteration = IterationController(self.model, self.randomForestClassifier)
+            nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
+            self.view.addNewIterationTab(nextIteration.view)
 
     # this function is used to change the default cursor to wait cursor
     def waitCursor(self):

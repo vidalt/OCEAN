@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QListWidgetItem
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QWidget, QListWidgetItem
 
 from .Ui_CounterfactualInterfaceIterable import Ui_CounterfactualInterfaceIterable
 
@@ -7,8 +7,10 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
 
     chosenDataset = pyqtSignal()
     randomPoint = pyqtSignal()
-    calculateDistances = pyqtSignal()
-    updateGraph = pyqtSignal()
+    calculateClass = pyqtSignal()
+    nextIteration = pyqtSignal()
+    # calculateDistances = pyqtSignal()
+    # updateGraph = pyqtSignal()
 
     def __init__(self):
         super(CounterfactualInterfaceViewIterable, self).__init__()
@@ -16,12 +18,15 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
 
         self.comboBoxSelectDataset.currentTextChanged.connect(lambda: self.chosenDataset.emit())
         self.pushButtonRandomPoint.clicked.connect(lambda: self.randomPoint.emit())
-        self.pushButtonCalculateDistances.clicked.connect(lambda: self.calculateDistances.emit())
-        self.pushButtonUpdateGraph.clicked.connect(lambda: self.updateGraph.emit())
+        self.pushButtonCalculateClass.clicked.connect(lambda: self.calculateClass.emit())
+        self.pushButtonNext.clicked.connect(lambda: self.nextIteration.emit())
+        # self.pushButtonCalculateDistances.clicked.connect(lambda: self.calculateDistances.emit())
+        # self.pushButtonUpdateGraph.clicked.connect(lambda: self.updateGraph.emit())
 
         self.__iterationNumber = 1
 
-        self.tabWidgetContainerCanvas.tabCloseRequested.connect(lambda index: self.tabWidgetContainerCanvas.removeTab(index))
+        self.tabWidget.tabBar().setTabButton(0, self.tabWidget.tabBar().RightSide, None)
+        self.tabWidget.tabCloseRequested.connect(lambda index: self.tabWidget.removeTab(index))
 
 
     # this function fill the combobox
@@ -39,9 +44,13 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
     # this function is used to clean the entire view
     def clearView(self):
         self.listWidgetSelectedPoint.clear()
-        self.comboBoxAxisX.clear()
-        self.comboBoxAxisY.clear()
+        # self.comboBoxAxisX.clear()
+        # self.comboBoxAxisY.clear()
         self.labelOriginalClass.clear()
+        self.labelOriginalClass.setText('Original Class: ')
+
+    # this function is used to clean the calculated class
+    def clearClass(self):
         self.labelOriginalClass.setText('Original Class: ')
 
     # this function is used to get the selected dataset name
@@ -71,6 +80,12 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
     def addGraphTab(self, canvasView):
         self.tabWidgetContainerCanvas.addTab(canvasView, 'Iteration'+str(self.__iterationNumber))
         self.__iterationNumber += 1
+
+    def addNewIterationTab(self, iterationView):
+        self.tabWidget.addTab(iterationView, 'Step'+str(self.__iterationNumber))
+        self.__iterationNumber += 1
+
+        self.tabWidget.setCurrentIndex(self.tabWidget.count()-1)
 
     def getChosenAxis(self):
         return self.comboBoxAxisX.currentText(), self.comboBoxAxisY.currentText()

@@ -15,6 +15,16 @@ class DoubleRadioButtonView(QWidget, Ui_DoubleRadioButton):
         self.checkBoxActionability.stateChanged.connect(lambda: self.__actionabilityOptionHandler())
 
 
+    # this function blocks the user from changing the value
+    def disableComponent(self):
+        self.radioButtonValue0.setEnabled(False)
+        self.radioButtonValue1.setEnabled(False)
+
+    # this function enables the user from changind the value
+    def enableComponent(self):
+        self.radioButtonValue0.setEnabled(True)
+        self.radioButtonValue1.setEnabled(True)
+
     def __actionabilityOptionHandler(self):
         if self.checkBoxActionability.isChecked():
             # self.checkBoxActionability.setText('actionable')
