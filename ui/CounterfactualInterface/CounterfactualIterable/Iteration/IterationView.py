@@ -1,6 +1,7 @@
 # Author: Moises Henrique Pereira
 # this class imports the UI file to be possible to access and interact with the interface components
 
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QWidget, QListWidgetItem
 
 from .Ui_Iteration import Ui_Iteration
@@ -9,13 +10,25 @@ from .IterationEnums import IterationEnums
 
 class IterationView(QWidget, Ui_Iteration):
 
+    nextIteration = pyqtSignal()
+    selectedAxisX = pyqtSignal()
+    selectedAxisY = pyqtSignal()
+
     def __init__(self):
         super(IterationView, self).__init__()
         self.setupUi(self)
 
+        self.comboBoxAxisX.currentTextChanged.connect(lambda: self.selectedAxisX.emit())
+        self.comboBoxAxisY.currentTextChanged.connect(lambda: self.selectedAxisY.emit())
+
+        self.tableWidgetCounterfactualComparison.resizeColumnsToContents()
+
 
     def initializeView(self):
         pass
+
+    def getCanvas(self):
+        return self.widgetContainerCanvas
 
     # this function is used to add the features components inside the main view
     def addFeatureWidget(self, feature:'QWidget'):
@@ -44,10 +57,10 @@ class IterationView(QWidget, Ui_Iteration):
 
     # this function is used to clean the calculated class
     def clearClass(self):
-        self.labelOriginalClass.setText('Original Class: ')
+        self.labelCurrentClass.setText('Current Class: ')
 
     # this function is used to update the class component
-    def showOriginalClass(self, classValue):
+    def showCurrentClass(self, classValue):
         assert classValue is not None
 
-        self.labelOriginalClass.setText('Original Class: '+str(classValue))
+        self.labelCurrentClass.setText('Current Class: '+str(classValue))

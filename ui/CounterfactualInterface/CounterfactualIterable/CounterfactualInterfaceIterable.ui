@@ -22,9 +22,9 @@
      <property name="tabsClosable">
       <bool>true</bool>
      </property>
-     <widget class="QWidget" name="tab">
+     <widget class="QWidget" name="tabScenario0">
       <attribute name="title">
-       <string>Step0</string>
+       <string>Scenario0</string>
       </attribute>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <property name="leftMargin">

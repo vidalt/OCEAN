@@ -2,11 +2,16 @@
 # this class handle the logic over the interface, interacting with model, view and worker
 # also taking the selected dataset informations from model to send to counterfactual generator in worker class
 
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
+
 from .IterationView import IterationView
 
 from CounterFactualParameters import FeatureType
 
 from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
+
+from Canvas.CanvasController import CanvasController
 
 from ...ComboboxList.ComboboxListController import ComboboxListController
 from ...DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
@@ -24,12 +29,19 @@ class IterationController():
 
         self.__initializeView()
 
+        self.view.selectedAxisX.connect(self.__updateGraph)
+        self.view.selectedAxisY.connect(self.__updateGraph)
+
+        self.__updateGraph()
+
         self.__dictControllersSelectedPoint = {}
 
         self.chosenDataPoint = None
         self.transformedChosenDataPoint = None
 
-        self.predictedOriginalClass = None
+        self.predictedCurrentClass = None
+
+        self.__canvas = self.view.getCanvas()
 
 
     # this function takes the dataframe names and send them to interface
@@ -44,7 +56,6 @@ class IterationController():
                 featureType = self.model.featuresInformations[feature]['featureType']
 
                 content = dictControllersSelectedPoint[feature].getContent()
-                print(feature, ':', content)
 
                 if featureType is FeatureType.Binary:
                     value0 = self.model.featuresInformations[feature]['value0']
@@ -62,7 +73,7 @@ class IterationController():
                     value = content['value']
 
                     # componentController = LineEditMinimumMaximumController(self.view)
-                    componentController = Slider3RangesController(self.view)
+                    componentController = Slider3RangesController(self.view, smaller=True)
                     componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
                     componentController.setSelectedValue(value)
 
@@ -72,7 +83,7 @@ class IterationController():
                     value = content['value']
 
                     # componentController = LineEditMinimumMaximumController(self.view)
-                    componentController = Slider3RangesController(self.view)
+                    componentController = Slider3RangesController(self.view, smaller=True)
                     componentController.initializeView(feature, minValue, maxValue)
                     componentController.setSelectedValue(value)
                     
@@ -109,12 +120,22 @@ class IterationController():
         self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
         
         # predicting the datapoint class and showing its value
-        self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
-        self.view.showOriginalClass(self.predictedOriginalClass[0])      
+        self.predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+        self.view.showCurrentClass(self.predictedCurrentClass[0])      
 
     def __updateGraph(self):
         self.waitCursor()
-        parameters = self.__buildDictParameters()
-        parameters['dataframe']['distance'] = self.__values
-        self.__canvas.updateGraph(parameters)
+
+        # parameters = self.__buildDictParameters()
+        # parameters['dataframe']['distance'] = self.__values
+        # self.__canvas.updateGraph(parameters)
         self.restorCursor()
+
+     # this function is used to change the default cursor to wait cursor
+    def waitCursor(self):
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+    
+    # this function is used to restor the default cursor
+    def restorCursor(self):
+        # updating cursor
+        QApplication.restoreOverrideCursor()

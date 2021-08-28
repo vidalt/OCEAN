@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'c:\Users\Moises\Documents\GitHub\interfaceCounterfactual\icml2021Counterfactuals\CounterfactualInterface\ComboboxList\ComboboxList.ui'
+# Form implementation generated from reading ui file 'c:\Users\Moises\Documents\GitHub\OCEAN\ui\CounterfactualInterface\ComboboxList\ComboboxList.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.2
 #
@@ -14,13 +14,13 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_ComboboxList(object):
     def setupUi(self, ComboboxList):
         ComboboxList.setObjectName("ComboboxList")
-        ComboboxList.resize(500, 175)
+        ComboboxList.resize(300, 175)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(ComboboxList.sizePolicy().hasHeightForWidth())
         ComboboxList.setSizePolicy(sizePolicy)
-        ComboboxList.setMaximumSize(QtCore.QSize(500, 175))
+        ComboboxList.setMaximumSize(QtCore.QSize(500, 16777215))
         self.gridLayout = QtWidgets.QGridLayout(ComboboxList)
         self.gridLayout.setObjectName("gridLayout")
         self.labelFeatureName = QtWidgets.QLabel(ComboboxList)
@@ -43,7 +43,12 @@ class Ui_ComboboxList(object):
         self.checkBoxActionability.setObjectName("checkBoxActionability")
         self.gridLayout.addWidget(self.checkBoxActionability, 0, 1, 1, 2)
         self.comboBoxValues = QtWidgets.QComboBox(ComboboxList)
-        self.comboBoxValues.setMinimumSize(QtCore.QSize(0, 25))
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.comboBoxValues.sizePolicy().hasHeightForWidth())
+        self.comboBoxValues.setSizePolicy(sizePolicy)
+        self.comboBoxValues.setMinimumSize(QtCore.QSize(120, 25))
         self.comboBoxValues.setObjectName("comboBoxValues")
         self.gridLayout.addWidget(self.comboBoxValues, 1, 0, 1, 1)
         self.listWidgetAllowedValues = QtWidgets.QListWidget(ComboboxList)
@@ -57,7 +62,12 @@ class Ui_ComboboxList(object):
         self.listWidgetAllowedValues.setObjectName("listWidgetAllowedValues")
         self.gridLayout.addWidget(self.listWidgetAllowedValues, 1, 1, 2, 2)
         self.labelSpacer = QtWidgets.QLabel(ComboboxList)
-        self.labelSpacer.setMinimumSize(QtCore.QSize(220, 70))
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.labelSpacer.sizePolicy().hasHeightForWidth())
+        self.labelSpacer.setSizePolicy(sizePolicy)
+        self.labelSpacer.setMinimumSize(QtCore.QSize(0, 70))
         self.labelSpacer.setStyleSheet("QLabel {\n"
 "    font-weight: bold;\n"
 "}")

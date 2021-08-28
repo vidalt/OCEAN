@@ -82,7 +82,7 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
         self.__iterationNumber += 1
 
     def addNewIterationTab(self, iterationView):
-        self.tabWidget.addTab(iterationView, 'Step'+str(self.__iterationNumber))
+        self.tabWidget.addTab(iterationView, 'Scenario'+str(self.__iterationNumber))
         self.__iterationNumber += 1
 
         self.tabWidget.setCurrentIndex(self.tabWidget.count()-1)

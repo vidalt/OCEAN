@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'c:\Users\Moises\Documents\GitHub\interfaceCounterfactual\INF2102\CounterfactualInterface\DoubleRadioButton\DoubleRadioButton.ui'
+# Form implementation generated from reading ui file 'c:\Users\Moises\Documents\GitHub\OCEAN\ui\CounterfactualInterface\DoubleRadioButton\DoubleRadioButton.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.2
 #
@@ -14,8 +14,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_DoubleRadioButton(object):
     def setupUi(self, DoubleRadioButton):
         DoubleRadioButton.setObjectName("DoubleRadioButton")
-        DoubleRadioButton.resize(426, 74)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        DoubleRadioButton.resize(300, 74)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(DoubleRadioButton.sizePolicy().hasHeightForWidth())

@@ -4,11 +4,18 @@
 # and to get the minimum e maximum values given a feature
  
 from .Slider3RangesView import Slider3RangesView
+from .Slider3RangesViewSmaller import Slider3RangesViewSmaller
 
 class Slider3RangesController:
 
-    def __init__(self, parent=None):
-        self.__view = Slider3RangesView(parent)
+    def __init__(self, parent=None, smaller=False):
+        self.__view = None
+
+        if smaller:
+            self.__view = Slider3RangesViewSmaller(parent)
+        else:
+            self.__view = Slider3RangesView(parent)
+            
 
     @property
     def view(self):
