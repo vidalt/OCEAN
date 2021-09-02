@@ -1,14 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from PyQt5.QtCore import QThread
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 
 from ..CounterfactualInterfaceModel import CounterfactualInterfaceModel
 from ..CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
 from .CounterfactualInterfaceViewIterable import CounterfactualInterfaceViewIterable
-from .CounterfactualInferfaceWorkerIterable import CounterfactualInferfaceWorkerIterable
 
 from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
 
@@ -69,26 +67,10 @@ class CounterfactualInterfaceControllerIterable:
 
         self.view.initializeView(datasetsName)
 
-    def __resetParameters(self):
-        self.randomForestClassifier = None
-        self.isolationForest = None
-
-        self.chosenDataPoint = None
-        self.transformedChosenDataPoint = None
-        self.predictedOriginalClass = None
-
-        self.__dictControllersSelectedPoint = {}
-        self.__samplesToPlot = None
-
-        self.__values = None
-
     # this function opens the selected dataset
     # trains the random forest and the isolation forest,
     # and present the features components and its respectives informations
     def __handlerChosenDataset(self):
-        # reset the parameters
-        # self.__resetParameters()
-
         # getting the name of the desired dataset
         self.__chosenDataset = self.view.getChosenDataset()
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
@@ -160,17 +142,6 @@ class CounterfactualInterfaceControllerIterable:
             for index, feature in enumerate(self.model.features):
                 if feature != 'Class':
                     self.__dictControllersSelectedPoint[feature].setSelectedValue(randomDataPoint[index])
-    
-    def __buildDictParameters(self):
-        # concatenating selected point with sample
-        dataToPlot = pd.concat([self.__samplesToPlot, self.__dataframeChosenDataPoint])
-        dataToPlot = dataToPlot.reset_index().drop(['index'], axis=1)
-
-        # building the dict parameters to plot
-        xVariable, yVariable = self.view.getChosenAxis()
-        parameters = {'dataframe':dataToPlot, 'xVariable':xVariable, 'yVariable':yVariable}
-
-        return parameters
 
     # this function takes the selected data point and calculate the respective class
     def __handlerCalculateClass(self):
@@ -193,74 +164,9 @@ class CounterfactualInterfaceControllerIterable:
             self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
             self.view.showOriginalClass(self.predictedOriginalClass[0])      
 
-    def __handlerCalculateDistances(self):
-        self.waitCursor()
-        # !!!O QUE FAZER!!!
-        # pegar o ponto selecionado e calcular a distância para o contrafactual mais próximo
-        # repetir o processo para algumas outras variantes desse ponto
-        if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            # getting the datapoint
-            auxiliarDataPoint = []
-            for feature in self.model.features:
-                if feature != 'Class':
-                    content = self.__dictControllersSelectedPoint[feature].getContent()
-                    auxiliarDataPoint.append(content['value'])
-                    
-            self.chosenDataPoint = np.array(auxiliarDataPoint)
-
-            # transforming the datapoint to predict its class
-            self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
-            
-            # predicting the datapoint class and showing its value
-            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
-            self.view.showOriginalClass(self.predictedOriginalClass[0])
-
-            # getting a set of samples to plot
-            if self.__samplesToPlot is None:
-                # self.__samplesToPlot = self.__buildSample()
-                self.__samplesToPlot = self.model.data.sample(n=3)
-
-                transformedSamples = []
-                for i in range(len(self.__samplesToPlot)):
-                    transformedSamples.append(self.model.transformDataPoint(self.__samplesToPlot.iloc[i][:-1]))
-                
-                self.transformedSamplesToPlot = transformedSamples
-                self.transformedSamplesClasses = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, transformedSamples)
-            # !!!update the samples class with predicted class!!!
-            # print('*'*75)
-            # print(self.transformedSamplesToPlot)
-            # print('*'*75)
-            # print(self.transformedSamplesClasses)
-            # print('*'*75)
-
-            # building a dataframe with the selected point and the class 'selected'
-            dataPoint = self.chosenDataPoint.copy()
-            dataPoint = np.append(dataPoint, 'selected')
-            self.__dataframeChosenDataPoint = pd.DataFrame(data=[dataPoint], columns=self.__samplesToPlot.columns)
-
-            # running the counterfactual generation in another thread
-            self.thread = QThread()
-            self.worker = CounterfactualInferfaceWorkerIterable(self)
-            self.worker.moveToThread(self.thread)
-            self.thread.started.connect(self.worker.run)
-            self.worker.finished.connect(self.thread.quit)
-            self.worker.finished.connect(self.worker.deleteLater)
-            self.worker.finished.connect(self.objectiveFunctionValues)
-            self.worker.finished.connect(self.restorCursor)
-            self.thread.finished.connect(self.thread.deleteLater)
-            self.thread.start()
-
-    def objectiveFunctionValues(self, values):
-        parameters = self.__buildDictParameters()
-        parameters['dataframe']['distance'] = values
-        self.__values = values
-        self.__canvas = CanvasController()
-        self.__canvas.updateGraph(parameters)
-        self.view.addGraphTab(self.__canvas.view)
-
     def __handlerNextIteration(self):
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            nextIteration = IterationController(self.model, self.randomForestClassifier)
+            nextIteration = IterationController(self.model, self.randomForestClassifier, self.isolationForest)
             nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
             self.view.addNewIterationTab(nextIteration.view)
 

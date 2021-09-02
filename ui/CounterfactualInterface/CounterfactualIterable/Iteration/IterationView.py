@@ -64,3 +64,6 @@ class IterationView(QWidget, Ui_Iteration):
         assert classValue is not None
 
         self.labelCurrentClass.setText('Current Class: '+str(classValue))
+
+    def getChosenAxis(self):
+        return self.comboBoxAxisX.currentText(), self.comboBoxAxisY.currentText()

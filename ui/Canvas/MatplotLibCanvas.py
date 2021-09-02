@@ -14,7 +14,7 @@ class MatplotLibCanvas(FigureCanvas):
 
         FigureCanvas.__init__(self, self.figure)
 
-        self.axes = self.figure.add_subplot(111)
+        self.axes = self.figure.add_axes([0.1, 0.15, 0.65, 0.75])
         self.txt = None
 
         self.setParent(parent)
@@ -49,10 +49,10 @@ class MatplotLibCanvas(FigureCanvas):
 
             # annot.set_visible(False)
 
-            # cursor = mplcursors.cursor(self.axes, hover=True)
+            cursor = mplcursors.cursor(self.axes, hover=True)
 
-            # cursor.connect('add', lambda sel: sel.annotation.set_text('Class: {} \nDistance: {}'.
-            #     format(self.__dataframe['Class'][sel.target.index], self.__dataframe['distance'][sel.target.index])))
+            cursor.connect('add', lambda sel: sel.annotation.set_text('Class: {} \nDistance: {}'.
+                format(self.__dataframe['Class'][sel.target.index], self.__dataframe['distance'][sel.target.index])))
             
             self.figure.canvas.mpl_connect('pick_event', self.onpick)
 

@@ -20,23 +20,24 @@ class CounterfactualInferfaceWorkerIterable(QObject):
     def __init__(self, controller):
         super().__init__()
 
-        import sys
+        # import sys
 
-        modulename = '.CounterfactualInterfaceControllerIterable'
-        if modulename not in sys.modules:
-            from .CounterfactualInterfaceControllerIterable import CounterfactualInterfaceControllerIterable
+        # modulename = '.CounterfactualInterfaceControllerIterable'
+        # if modulename not in sys.modules:
+        #     from .CounterfactualInterfaceControllerIterable import CounterfactualInterfaceControllerIterable
 
-        assert isinstance(controller, CounterfactualInterfaceControllerIterable)
+        # assert isinstance(controller, CounterfactualInterfaceControllerIterable)
 
         self.__controller = controller
         self.__values = []
+        
 
     def run(self):
         points = self.__controller.transformedSamplesToPlot.copy()
         points.append(self.__controller.transformedChosenDataPoint)
 
         classes = list(self.__controller.transformedSamplesClasses.copy())
-        classes.append(self.__controller.predictedOriginalClass[0])
+        classes.append(self.__controller.predictedCurrentClass[0])
         for i in range(len(points)):
             # instantiating the optimization model
             randomForestMilp = RandomForestCounterFactualMilp(self.__controller.randomForestClassifier,

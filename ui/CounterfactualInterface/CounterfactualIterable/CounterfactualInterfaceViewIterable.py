@@ -9,8 +9,6 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
     randomPoint = pyqtSignal()
     calculateClass = pyqtSignal()
     nextIteration = pyqtSignal()
-    # calculateDistances = pyqtSignal()
-    # updateGraph = pyqtSignal()
 
     def __init__(self):
         super(CounterfactualInterfaceViewIterable, self).__init__()
@@ -20,8 +18,6 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
         self.pushButtonRandomPoint.clicked.connect(lambda: self.randomPoint.emit())
         self.pushButtonCalculateClass.clicked.connect(lambda: self.calculateClass.emit())
         self.pushButtonNext.clicked.connect(lambda: self.nextIteration.emit())
-        # self.pushButtonCalculateDistances.clicked.connect(lambda: self.calculateDistances.emit())
-        # self.pushButtonUpdateGraph.clicked.connect(lambda: self.updateGraph.emit())
 
         self.__iterationNumber = 1
 
@@ -76,10 +72,6 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
             self.comboBoxAxisY.clear()
             self.comboBoxAxisX.addItems(options)
             self.comboBoxAxisY.addItems(options)
-
-    def addGraphTab(self, canvasView):
-        self.tabWidgetContainerCanvas.addTab(canvasView, 'Iteration'+str(self.__iterationNumber))
-        self.__iterationNumber += 1
 
     def addNewIterationTab(self, iterationView):
         self.tabWidget.addTab(iterationView, 'Scenario'+str(self.__iterationNumber))
