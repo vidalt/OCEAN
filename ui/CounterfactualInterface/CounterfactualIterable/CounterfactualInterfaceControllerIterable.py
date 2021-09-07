@@ -165,10 +165,14 @@ class CounterfactualInterfaceControllerIterable:
             self.view.showOriginalClass(self.predictedOriginalClass[0])      
 
     def __handlerNextIteration(self):
+        self.waitCursor()
+
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             nextIteration = IterationController(self.model, self.randomForestClassifier, self.isolationForest)
             nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
             self.view.addNewIterationTab(nextIteration.view)
+
+        self.restorCursor()
 
     # this function is used to change the default cursor to wait cursor
     def waitCursor(self):

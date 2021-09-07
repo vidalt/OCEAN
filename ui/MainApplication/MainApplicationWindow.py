@@ -1,6 +1,8 @@
 # Author: Moises Henrique Pereira
 # this class instantiates the controller responsible by the entire counterfactual interface
 
+import requests
+
 from PyQt5 import QtWidgets
 
 from CounterfactualInterface.CounterfactualInterfaceController import CounterfactualInterfaceController
@@ -22,5 +24,8 @@ class MainApplicationWindow(QtWidgets.QMainWindow):
 
         self.showMaximized()
 
-        # dashView = DashView()
-        # self.setCentralWidget(dashView) 
+
+    # this function event is used to kill the flask server
+    def closeEvent(self, event):
+        requests.post('http://127.0.0.1:8050/shutdown')
+        event.accept()

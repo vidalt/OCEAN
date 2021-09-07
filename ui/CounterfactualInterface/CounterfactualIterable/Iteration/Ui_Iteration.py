@@ -95,7 +95,7 @@ class Ui_Iteration(object):
         self.comboBoxAxisY.addItem("")
         self.horizontalLayout_9.addWidget(self.comboBoxAxisY)
         self.verticalLayout_2.addWidget(self.widgetContainerAxes)
-        self.widgetContainerCanvas = MatplotLibCanvas(self.widgetContainerGraph)
+        self.widgetContainerCanvas = DashView(self.widgetContainerGraph)
         self.widgetContainerCanvas.setObjectName("widgetContainerCanvas")
         self.verticalLayout_2.addWidget(self.widgetContainerCanvas)
         self.horizontalLayout.addWidget(self.widgetContainerGraph)
@@ -179,4 +179,4 @@ class Ui_Iteration(object):
         item.setText(_translate("Iteration", "Counterfactual Value"))
         self.pushButtonNext.setText(_translate("Iteration", "Next"))
         self.pushButtonFinish.setText(_translate("Iteration", "Finish"))
-from Canvas.MatplotLibCanvas import MatplotLibCanvas
+from Dash.DashView import DashView

@@ -287,7 +287,8 @@ class IterationController():
         elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
             parameters['dataframe']['distance'] = self.__values
 
-            parameters['dataframe'].sort_values(by=[parameters['xVariable'], parameters['yVariable']], inplace=True)
+            # parameters['dataframe'].sort_values(by=[parameters['xVariable'], parameters['yVariable']], inplace=True)
+            parameters['model'] = self.model
 
             self.__canvas.updateGraph(parameters)
 
