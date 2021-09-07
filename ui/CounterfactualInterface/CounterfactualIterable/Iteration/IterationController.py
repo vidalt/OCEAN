@@ -24,6 +24,7 @@ from ..CounterfactualInferfaceWorkerIterable import CounterfactualInferfaceWorke
 
 import numpy as np
 import pandas as pd
+from sklearn.utils.extmath import cartesian
 
 class IterationController():
 
@@ -49,8 +50,8 @@ class IterationController():
         self.transformedSamplesToPlot = None
         self.transformedSamplesClasses = None
 
-        self.view.selectedAxisX.connect(self.__updateGraph)
-        self.view.selectedAxisY.connect(self.__updateGraph)
+        self.view.selectedAxisX.connect(lambda: self.__updateGraph())
+        self.view.selectedAxisY.connect(lambda: self.__updateGraph())
 
 
     # this function takes the dataframe names and send them to interface
@@ -130,6 +131,10 @@ class IterationController():
 
     def __updateGraph(self):
         parameters = self.__buildDictParameters()
+
+        if parameters['xVariable'] == '' or parameters['yVariable'] == '':
+            return
+
         if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
             pass
         elif parameters['xVariable'] == IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
@@ -151,11 +156,78 @@ class IterationController():
 
         return parameters
 
+    def __getPossibities(self, variable):
+        dictVariable = self.model.featuresInformations[variable]
+        featureType = self.model.featuresInformations[variable]['featureType']
+
+        possibilities = None
+        if featureType is FeatureType.Binary:
+            value0 = dictVariable['value0']
+            value1 = dictVariable['value1']
+            possibilities = [value0, value1]
+
+        elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+            minValue = dictVariable['min']
+            maxValue = dictVariable['max']
+
+            content = self.__dictControllersSelectedPoint[variable].getContent()
+            currentValue = content['value']
+
+            adds = [-2, -1, 0, 1, 2]
+            possibilities = []
+            for add in adds:
+                aux = currentValue + add
+                if aux >= minValue and aux <= maxValue:
+                    possibilities.append(aux)
+
+        elif featureType is FeatureType.Categorical:
+            possibilities = dictVariable['possibleValues']
+
+        return possibilities
+
+    def __buildSample(self):
+        xVariable, yVariable = self.view.getChosenAxis()
+
+        if xVariable != IterationEnums.DefaultAxes.DEFAULT_X.value and yVariable != IterationEnums.DefaultAxes.DEFAULT_Y.value:
+            # print('!'*75)
+            # print(self.model.featuresInformations[xVariable])  
+            # print('!'*75)
+            # print(self.model.featuresInformations[yVariable])  
+            # print('!'*75)
+
+            xPossibilities = self.__getPossibities(xVariable)
+            yPossibilities = self.__getPossibities(yVariable)
+            cartesianXY = None
+            try:
+                cartesianXY = cartesian((xPossibilities, yPossibilities))
+            except:
+                cartesianXY = []
+                for xp in xPossibilities:
+                    for yp in yPossibilities:
+                        cartesianXY.append([xp, yp])
+
+            # print(xPossibilities)
+            # print('!'*75)
+            # print(yPossibilities)
+            # print('!'*75)
+            # print(cartesianXY)
+            # print('!'*75)
+            
+            samples = pd.DataFrame(data=None, columns=self.model.data.columns)
+            for i, xy in enumerate(cartesianXY):
+                try: 
+                    xySample = self.model.data.loc[(self.model.data[xVariable] == xy[0]) & (self.model.data[yVariable] == xy[1])][:]
+                    samples = samples.append(xySample.sample(n=1))
+                except:
+                    print('There is not sample with those values')
+
+            if len(samples) == 0:
+                samples = self.model.data.sample(n=5)
+
+            return samples
+
     def __handlerCalculateDistances(self):
         self.waitCursor()
-        # !!!O QUE FAZER!!!
-        # pegar o ponto selecionado e calcular a distância para o contrafactual mais próximo
-        # repetir o processo para algumas outras variantes desse ponto
         
         # getting the datapoint
         auxiliarDataPoint = []
@@ -174,16 +246,15 @@ class IterationController():
         self.view.showCurrentClass(self.predictedCurrentClass[0])
 
         # getting a set of samples to plot
-        if self.__samplesToPlot is None:
-            # self.__samplesToPlot = self.__buildSample()
-            self.__samplesToPlot = self.model.data.sample(n=5)
+        self.__samplesToPlot = self.__buildSample()
+        # self.__samplesToPlot = self.model.data.sample(n=5)
 
-            transformedSamples = []
-            for i in range(len(self.__samplesToPlot)):
-                transformedSamples.append(self.model.transformDataPoint(self.__samplesToPlot.iloc[i][:-1]))
-            
-            self.transformedSamplesToPlot = transformedSamples
-            self.transformedSamplesClasses = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, transformedSamples)
+        transformedSamples = []
+        for i in range(len(self.__samplesToPlot)):
+            transformedSamples.append(self.model.transformDataPoint(self.__samplesToPlot.iloc[i][:-1]))
+        
+        self.transformedSamplesToPlot = transformedSamples
+        self.transformedSamplesClasses = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, transformedSamples)
 
         # building a dataframe with the selected point and the class 'current'
         dataPoint = self.chosenDataPoint.copy()
@@ -204,8 +275,10 @@ class IterationController():
 
     def objectiveFunctionValues(self, values):
         parameters = self.__buildDictParameters()
-        # parameters['dataframe']['distance'] = values
         self.__values = values
+
+        for i in range(len(self.__values)):
+            self.__values[i] = round(self.__values[i], 2)
 
         if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
             pass
@@ -213,6 +286,8 @@ class IterationController():
             pass
         elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
             parameters['dataframe']['distance'] = self.__values
+
+            parameters['dataframe'].sort_values(by=[parameters['xVariable'], parameters['yVariable']], inplace=True)
 
             self.__canvas.updateGraph(parameters)
 
