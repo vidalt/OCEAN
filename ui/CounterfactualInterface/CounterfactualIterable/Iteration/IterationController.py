@@ -258,7 +258,7 @@ class IterationController():
 
         # building a dataframe with the selected point and the class 'current'
         dataPoint = self.chosenDataPoint.copy()
-        dataPoint = np.append(dataPoint, 'current')
+        dataPoint = np.append(dataPoint, 2)
         self.__dataframeChosenDataPoint = pd.DataFrame(data=[dataPoint], columns=self.__samplesToPlot.columns)
 
         # running the counterfactual generation in another thread

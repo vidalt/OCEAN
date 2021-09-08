@@ -89,6 +89,23 @@ class Ui_CounterfactualInterfaceIterable(object):
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
         self.verticalLayout_2.addWidget(self.widgetContainerClass)
         self.horizontalLayout_3.addWidget(self.widgetContainerDataset)
+        self.widgetFeatureImportance = QtWidgets.QWidget(self.tabScenario0)
+        self.widgetFeatureImportance.setStyleSheet("QWidget [objectName*=\"widgetFeatureImportance\"]{\n"
+"    background-color: rgb(255, 255, 255);\n"
+"\n"
+"}")
+        self.widgetFeatureImportance.setObjectName("widgetFeatureImportance")
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.widgetFeatureImportance)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.labelFeatureImportance = QtWidgets.QLabel(self.widgetFeatureImportance)
+        self.labelFeatureImportance.setMinimumSize(QtCore.QSize(0, 25))
+        self.labelFeatureImportance.setMaximumSize(QtCore.QSize(16777215, 25))
+        self.labelFeatureImportance.setObjectName("labelFeatureImportance")
+        self.verticalLayout.addWidget(self.labelFeatureImportance)
+        self.widgetContainerCanvas = DashView(self.widgetFeatureImportance)
+        self.widgetContainerCanvas.setObjectName("widgetContainerCanvas")
+        self.verticalLayout.addWidget(self.widgetContainerCanvas)
+        self.horizontalLayout_3.addWidget(self.widgetFeatureImportance)
         self.tabWidget.addTab(self.tabScenario0, "")
         self.horizontalLayout.addWidget(self.tabWidget)
 
@@ -104,4 +121,6 @@ class Ui_CounterfactualInterfaceIterable(object):
         self.pushButtonCalculateClass.setText(_translate("CounterfactualInterfaceIterable", "Calculate Class"))
         self.labelOriginalClass.setText(_translate("CounterfactualInterfaceIterable", "Original Class:"))
         self.pushButtonNext.setText(_translate("CounterfactualInterfaceIterable", "Next"))
+        self.labelFeatureImportance.setText(_translate("CounterfactualInterfaceIterable", "Feature Importance"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabScenario0), _translate("CounterfactualInterfaceIterable", "Scenario0"))
+from Dash.DashView import DashView

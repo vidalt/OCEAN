@@ -25,6 +25,9 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
         self.tabWidget.tabCloseRequested.connect(lambda index: self.tabWidget.removeTab(index))
 
 
+    def getCanvas(self):
+        return self.widgetContainerCanvas
+    
     # this function fill the combobox
     # first cleaning the combobox,
     # and adding the datasets name

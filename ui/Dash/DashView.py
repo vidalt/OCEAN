@@ -45,17 +45,21 @@ class DashView(QWebView):
             # self.figure = px.scatter(cleanDataframe, x=xVariable, y=yVariable, color='Class', size='distance')
             
             # APLICAR ENCODE NAS FEATURES CATEGÓRICAS
+            dataframe['Class'] = pd.to_numeric(dataframe['Class'])
             dimensions = []
 
             for feature in dataframe.columns:   
                 dictAux = {}             
                 if feature == 'Class':
-                    # dictAux['range'] = [dataframe[feature].min(), dataframe[feature].max()]
-                    # dictAux['label'] = feature
-                    # dictAux['values'] = dataframe[feature].to_numpy()
-                    pass
+                    dataframe[feature] = pd.to_numeric(dataframe[feature])
+                    dictAux['range'] = [0, 2]
+                    dictAux['label'] = feature
+                    dictAux['values'] = dataframe[feature].to_numpy()
+                    dictAux['tickvals'] = [0, 1, 2]
+                    dictAux['ticktext'] = ['0', '1', 'current']
 
                 elif feature == 'distance':
+                    dataframe[feature] = pd.to_numeric(dataframe[feature])
                     dictAux['range'] = [dataframe[feature].min(), dataframe[feature].max()]
                     dictAux['label'] = feature
                     dictAux['values'] = dataframe[feature].to_numpy()
@@ -80,10 +84,36 @@ class DashView(QWebView):
             # self.figure = px.parallel_coordinates(dataframe)
             self.figure = go.Figure(data=
                 go.Parcoords(
-                    line_color='blue',
+                    line = dict(color = dataframe['Class'],
+                    # colorscale = px.colors.sequential.Viridis,
+                    colorscale = [(0.00, "red"), (0.33, "red"), 
+                                  (0.33, "green"), (0.66, "green"),
+                                  (0.66, "blue"),  (1.00, "blue")],
+                    showscale = True,
+                    cmin = dataframe['Class'].min(),
+                    cmax = dataframe['Class'].max()),
                     dimensions = dimensions
                 )
             )
+
+            self.layout = html.Div(
+            dcc.Graph(
+                id='graph',
+                figure=self.figure)
+            )
+
+            dashApp.layout = self.layout
+            dashPageManager.addPage(self.canvasID, self.layout)
+            
+            self.load(QUrl("http://127.0.0.1:8050" + "/" + self.canvasID))
+
+    def updateFeatureImportanceGraph(self, parameters=None):
+        if parameters is not None:
+            dataframe = parameters['dataframe']
+            xVariable = parameters['xVariable']
+            yVariable = parameters['yVariable']
+
+            self.figure = px.bar(dataframe, x=xVariable, y=yVariable)
 
             self.layout = html.Div(
             dcc.Graph(

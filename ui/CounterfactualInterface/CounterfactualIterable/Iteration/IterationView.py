@@ -21,8 +21,6 @@ class IterationView(QWidget, Ui_Iteration):
         self.comboBoxAxisX.currentTextChanged.connect(lambda: self.selectedAxisX.emit())
         self.comboBoxAxisY.currentTextChanged.connect(lambda: self.selectedAxisY.emit())
 
-        self.tableWidgetCounterfactualComparison.resizeColumnsToContents()
-
 
     def initializeView(self):
         pass

@@ -34,6 +34,8 @@ class CounterfactualInterfaceControllerIterable:
         self.view.calculateClass.connect(self.__handlerCalculateClass)
         self.view.nextIteration.connect(self.__handlerNextIteration)
 
+        self.__nextIteration = None
+
         # self.view.calculateDistances.connect(self.__handlerCalculateDistances)
 
         # self.view.updateGraph.connect(self.__updateGraph)
@@ -86,6 +88,19 @@ class CounterfactualInterfaceControllerIterable:
             if xTrain is not None and yTrain is not None: 
                 self.randomForestClassifier = CounterfactualEngine.trainRandomForestClassifier(xTrain, yTrain)
                 self.isolationForest = CounterfactualEngine.trainIsolationForest(xTrain)
+
+                # plot the features importance
+                importance = self.randomForestClassifier.feature_importances_
+                importances = pd.DataFrame(data={
+                    'features': self.model.transformedFeatures[:-1],
+                    'importance': importance
+                })
+                importances = importances.sort_values(by='importance', ascending=False)
+
+                parameters = {'dataframe': importances, 'xVariable': 'features', 'yVariable': 'importance'}
+
+                self.__canvas = self.view.getCanvas()
+                self.__canvas.updateFeatureImportanceGraph(parameters)
 
             # showing the features components and informations
             for feature in self.model.features:
@@ -168,9 +183,9 @@ class CounterfactualInterfaceControllerIterable:
         self.waitCursor()
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            nextIteration = IterationController(self.model, self.randomForestClassifier, self.isolationForest)
-            nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
-            self.view.addNewIterationTab(nextIteration.view)
+            self.__nextIteration = IterationController(self.model, self.randomForestClassifier, self.isolationForest)
+            self.__nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
+            self.view.addNewIterationTab(self.__nextIteration.view)
 
         self.restorCursor()
 

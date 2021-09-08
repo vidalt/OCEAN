@@ -80,7 +80,7 @@ class CounterfactualInterfaceModel():
                                                             'possibleValues':self.data[feature].value_counts().keys().tolist()}
 
         self.currentDatasetReader = DatasetReader(chosenDatasetPath)
-        self.__transformedData =self.currentDatasetReader.data
+        self.__transformedData = self.currentDatasetReader.data
         self.transformedFeatures = self.currentDatasetReader.data.columns
 
         self.transformedFeaturesOrdered = []
