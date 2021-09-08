@@ -50,8 +50,9 @@ class IterationController():
         self.transformedSamplesToPlot = None
         self.transformedSamplesClasses = None
 
-        self.view.selectedAxisX.connect(lambda: self.__updateGraph())
-        self.view.selectedAxisY.connect(lambda: self.__updateGraph())
+        # self.view.selectedAxisX.connect(lambda: self.__updateGraph())
+        # self.view.selectedAxisY.connect(lambda: self.__updateGraph())
+        self.view.selectedFeatures.connect(lambda: self.__updateGraph())
 
 
     # this function takes the dataframe names and send them to interface
@@ -106,7 +107,8 @@ class IterationController():
                 # saving the controller to facilitate the access to components
                 self.__dictControllersSelectedPoint[feature] = componentController
 
-        self.view.addAxisOptions(list(self.model.features))
+        self.view.addAxisOptions(list(self.model.features[:-1]))
+        self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
 
     # this function takes the selected data point and calculate the respective class
@@ -132,14 +134,17 @@ class IterationController():
     def __updateGraph(self):
         parameters = self.__buildDictParameters()
 
-        if parameters['xVariable'] == '' or parameters['yVariable'] == '':
-            return
+        # if parameters['xVariable'] == '' or parameters['yVariable'] == '':
+        #     return
 
-        if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            pass
-        elif parameters['xVariable'] == IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            pass
-        elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
+        # if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
+        #     pass
+        # elif parameters['xVariable'] == IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
+        #     pass
+        # elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
+            # self.__handlerCalculateDistances()
+            
+        if len(self.view.getSelectedFeatures()) != 0:
             self.__handlerCalculateDistances()
 
     def __buildDictParameters(self):
@@ -189,12 +194,6 @@ class IterationController():
         xVariable, yVariable = self.view.getChosenAxis()
 
         if xVariable != IterationEnums.DefaultAxes.DEFAULT_X.value and yVariable != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            # print('!'*75)
-            # print(self.model.featuresInformations[xVariable])  
-            # print('!'*75)
-            # print(self.model.featuresInformations[yVariable])  
-            # print('!'*75)
-
             xPossibilities = self.__getPossibities(xVariable)
             yPossibilities = self.__getPossibities(yVariable)
             cartesianXY = None
@@ -206,13 +205,6 @@ class IterationController():
                     for yp in yPossibilities:
                         cartesianXY.append([xp, yp])
 
-            # print(xPossibilities)
-            # print('!'*75)
-            # print(yPossibilities)
-            # print('!'*75)
-            # print(cartesianXY)
-            # print('!'*75)
-            
             samples = pd.DataFrame(data=None, columns=self.model.data.columns)
             for i, xy in enumerate(cartesianXY):
                 try: 
@@ -246,8 +238,8 @@ class IterationController():
         self.view.showCurrentClass(self.predictedCurrentClass[0])
 
         # getting a set of samples to plot
-        self.__samplesToPlot = self.__buildSample()
-        # self.__samplesToPlot = self.model.data.sample(n=5)
+        # self.__samplesToPlot = self.__buildSample()
+        self.__samplesToPlot = self.model.data.sample(n=5)
 
         transformedSamples = []
         for i in range(len(self.__samplesToPlot)):
@@ -280,17 +272,17 @@ class IterationController():
         for i in range(len(self.__values)):
             self.__values[i] = round(self.__values[i], 2)
 
-        if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            pass
-        elif parameters['xVariable'] == IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            pass
-        elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            parameters['dataframe']['distance'] = self.__values
+        # if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
+        #     pass
+        # elif parameters['xVariable'] == IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
+        #     pass
+        # elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
+        parameters['dataframe']['distance'] = self.__values
+        parameters['selectedFeatures'] = self.view.getSelectedFeatures()
 
-            # parameters['dataframe'].sort_values(by=[parameters['xVariable'], parameters['yVariable']], inplace=True)
-            parameters['model'] = self.model
+        parameters['model'] = self.model
 
-            self.__canvas.updateGraph(parameters)
+        self.__canvas.updateGraph(parameters)
 
     def __handlerNextIteration(self):
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:

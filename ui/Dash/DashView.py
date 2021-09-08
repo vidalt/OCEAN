@@ -1,9 +1,10 @@
 from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
-from PyQt5.QtCore import QUrl, QTimer
+from PyQt5.QtCore import QUrl
 
 import uuid
 
-# from Dash.DashApp import dashApp
+from sklearn.preprocessing import LabelEncoder
+
 from Dash.DashApp import dashApp, dashPageManager
 
 import dash_core_components as dcc
@@ -67,17 +68,24 @@ class DashView(QWebView):
                 else:
                     featureType = model.featuresInformations[feature]['featureType']
 
-                    if featureType is FeatureType.Binary:
-                        pass
+                    if featureType is FeatureType.Binary or featureType is FeatureType.Categorical:
+                        uniqueValues = dataframe[feature].unique()
+                        encoder = LabelEncoder()
+                        encoder.fit(uniqueValues)
+
+                        dataframe[feature] = encoder.transform(dataframe[feature])
+
+                        dictAux['range'] = [dataframe[feature].min(), dataframe[feature].max()]
+                        dictAux['label'] = feature
+                        dictAux['values'] = dataframe[feature].to_numpy()
+                        dictAux['tickvals'] = encoder.transform(uniqueValues)
+                        dictAux['ticktext'] = uniqueValues
 
                     elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
                         dataframe[feature] = pd.to_numeric(dataframe[feature])
                         dictAux['range'] = [dataframe[feature].min(), dataframe[feature].max()]
                         dictAux['label'] = feature
                         dictAux['values'] = dataframe[feature].to_numpy()
-
-                    elif featureType is FeatureType.Categorical:
-                        pass
 
                 dimensions.append(dictAux)
 

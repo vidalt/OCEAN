@@ -13,6 +13,7 @@ class IterationView(QWidget, Ui_Iteration):
     nextIteration = pyqtSignal()
     selectedAxisX = pyqtSignal()
     selectedAxisY = pyqtSignal()
+    selectedFeatures = pyqtSignal()
 
     def __init__(self):
         super(IterationView, self).__init__()
@@ -20,6 +21,7 @@ class IterationView(QWidget, Ui_Iteration):
 
         self.comboBoxAxisX.currentTextChanged.connect(lambda: self.selectedAxisX.emit())
         self.comboBoxAxisY.currentTextChanged.connect(lambda: self.selectedAxisY.emit())
+        self.pushButtonUpdateGraph.clicked.connect(lambda: self.selectedFeatures.emit())
 
 
     def initializeView(self):
@@ -52,6 +54,16 @@ class IterationView(QWidget, Ui_Iteration):
             self.comboBoxAxisY.clear()
             self.comboBoxAxisX.addItems(optionsX)
             self.comboBoxAxisY.addItems(optionsY)
+
+    def addFeaturesOptions(self, options):
+        assert isinstance(options, list)
+        for features in options:
+            assert isinstance(features, str)
+
+        self.comboBoxCheckable.addItems(options)
+
+    def getSelectedFeatures(self):
+        return self.comboBoxCheckable.currentData()
 
     # this function is used to clean the calculated class
     def clearClass(self):
