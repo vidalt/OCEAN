@@ -44,3 +44,11 @@ class CounterfactualEngine():
         assert isinstance(xValue, list)
 
         return randomForestClassifier.predict(xValue)
+
+    # this function returns the prediction given a model and a point
+    @staticmethod
+    def randomForestClassifierPredictProbabilities(randomForestClassifier, xValue):
+        assert randomForestClassifier is not None
+        assert isinstance(xValue, list)
+
+        return randomForestClassifier.predict_proba(xValue)

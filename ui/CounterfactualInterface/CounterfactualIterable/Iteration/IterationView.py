@@ -19,8 +19,6 @@ class IterationView(QWidget, Ui_Iteration):
         super(IterationView, self).__init__()
         self.setupUi(self)
 
-        self.comboBoxAxisX.currentTextChanged.connect(lambda: self.selectedAxisX.emit())
-        self.comboBoxAxisY.currentTextChanged.connect(lambda: self.selectedAxisY.emit())
         self.pushButtonUpdateGraph.clicked.connect(lambda: self.selectedFeatures.emit())
 
 
@@ -38,22 +36,6 @@ class IterationView(QWidget, Ui_Iteration):
         item.setSizeHint(feature.size())
         self.listWidgetSelectedPoint.addItem(item)
         self.listWidgetSelectedPoint.setItemWidget(item, feature)
-
-    def addAxisOptions(self, options):
-        assert isinstance(options, list)
-        for features in options:
-            assert isinstance(features, str)
-
-        optionsX = options.copy()
-        optionsX.insert(0, IterationEnums.DefaultAxes.DEFAULT_X.value)
-        optionsY = options.copy()
-        optionsY.insert(0, IterationEnums.DefaultAxes.DEFAULT_Y.value)
-    
-        if options is not None:
-            self.comboBoxAxisX.clear()
-            self.comboBoxAxisY.clear()
-            self.comboBoxAxisX.addItems(optionsX)
-            self.comboBoxAxisY.addItems(optionsY)
 
     def addFeaturesOptions(self, options):
         assert isinstance(options, list)
@@ -74,6 +56,3 @@ class IterationView(QWidget, Ui_Iteration):
         assert classValue is not None
 
         self.labelCurrentClass.setText('Current Class: '+str(classValue))
-
-    def getChosenAxis(self):
-        return self.comboBoxAxisX.currentText(), self.comboBoxAxisY.currentText()

@@ -43,15 +43,15 @@ class IterationController():
         self.transformedChosenDataPoint = None
 
         self.predictedCurrentClass = None
+        self.predictedCurrentClassPercentage = None
 
         self.__canvas = self.view.getCanvas()
         
         self.__samplesToPlot = None
         self.transformedSamplesToPlot = None
         self.transformedSamplesClasses = None
+        self.transformedSamplesClassesPercentage = None
 
-        # self.view.selectedAxisX.connect(lambda: self.__updateGraph())
-        # self.view.selectedAxisY.connect(lambda: self.__updateGraph())
         self.view.selectedFeatures.connect(lambda: self.__updateGraph())
 
 
@@ -107,7 +107,6 @@ class IterationController():
                 # saving the controller to facilitate the access to components
                 self.__dictControllersSelectedPoint[feature] = componentController
 
-        self.view.addAxisOptions(list(self.model.features[:-1]))
         self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
 
@@ -129,28 +128,17 @@ class IterationController():
         
         # predicting the datapoint class and showing its value
         self.predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+        self.predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
+        
         self.view.showCurrentClass(self.predictedCurrentClass[0])      
 
     def __updateGraph(self):
-        parameters = self.__buildDictParameters()
-
-        # if parameters['xVariable'] == '' or parameters['yVariable'] == '':
-        #     return
-
-        # if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
-        #     pass
-        # elif parameters['xVariable'] == IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-        #     pass
-        # elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            # self.__handlerCalculateDistances()
-            
         if len(self.view.getSelectedFeatures()) != 0:
             self.__handlerCalculateDistances()
 
     def __buildDictParameters(self):
         # building the dict parameters to plot
-        xVariable, yVariable = self.view.getChosenAxis()
-        parameters = {'xVariable':xVariable, 'yVariable':yVariable}
+        parameters = {}
 
         if self.__samplesToPlot is not None:
             # concatenating selected point with sample
@@ -161,62 +149,62 @@ class IterationController():
 
         return parameters
 
-    def __getPossibities(self, variable):
-        dictVariable = self.model.featuresInformations[variable]
-        featureType = self.model.featuresInformations[variable]['featureType']
+    # def __getPossibities(self, variable):
+    #     dictVariable = self.model.featuresInformations[variable]
+    #     featureType = self.model.featuresInformations[variable]['featureType']
 
-        possibilities = None
-        if featureType is FeatureType.Binary:
-            value0 = dictVariable['value0']
-            value1 = dictVariable['value1']
-            possibilities = [value0, value1]
+    #     possibilities = None
+    #     if featureType is FeatureType.Binary:
+    #         value0 = dictVariable['value0']
+    #         value1 = dictVariable['value1']
+    #         possibilities = [value0, value1]
 
-        elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
-            minValue = dictVariable['min']
-            maxValue = dictVariable['max']
+    #     elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+    #         minValue = dictVariable['min']
+    #         maxValue = dictVariable['max']
 
-            content = self.__dictControllersSelectedPoint[variable].getContent()
-            currentValue = content['value']
+    #         content = self.__dictControllersSelectedPoint[variable].getContent()
+    #         currentValue = content['value']
 
-            adds = [-2, -1, 0, 1, 2]
-            possibilities = []
-            for add in adds:
-                aux = currentValue + add
-                if aux >= minValue and aux <= maxValue:
-                    possibilities.append(aux)
+    #         adds = [-2, -1, 0, 1, 2]
+    #         possibilities = []
+    #         for add in adds:
+    #             aux = currentValue + add
+    #             if aux >= minValue and aux <= maxValue:
+    #                 possibilities.append(aux)
 
-        elif featureType is FeatureType.Categorical:
-            possibilities = dictVariable['possibleValues']
+    #     elif featureType is FeatureType.Categorical:
+    #         possibilities = dictVariable['possibleValues']
 
-        return possibilities
+    #     return possibilities
 
-    def __buildSample(self):
-        xVariable, yVariable = self.view.getChosenAxis()
+    # def __buildSample(self):
+    #     xVariable, yVariable = 'feature1', 'feature2'
 
-        if xVariable != IterationEnums.DefaultAxes.DEFAULT_X.value and yVariable != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-            xPossibilities = self.__getPossibities(xVariable)
-            yPossibilities = self.__getPossibities(yVariable)
-            cartesianXY = None
-            try:
-                cartesianXY = cartesian((xPossibilities, yPossibilities))
-            except:
-                cartesianXY = []
-                for xp in xPossibilities:
-                    for yp in yPossibilities:
-                        cartesianXY.append([xp, yp])
+    #     if xVariable != IterationEnums.DefaultAxes.DEFAULT_X.value and yVariable != IterationEnums.DefaultAxes.DEFAULT_Y.value:
+    #         xPossibilities = self.__getPossibities(xVariable)
+    #         yPossibilities = self.__getPossibities(yVariable)
+    #         cartesianXY = None
+    #         try:
+    #             cartesianXY = cartesian((xPossibilities, yPossibilities))
+    #         except:
+    #             cartesianXY = []
+    #             for xp in xPossibilities:
+    #                 for yp in yPossibilities:
+    #                     cartesianXY.append([xp, yp])
 
-            samples = pd.DataFrame(data=None, columns=self.model.data.columns)
-            for i, xy in enumerate(cartesianXY):
-                try: 
-                    xySample = self.model.data.loc[(self.model.data[xVariable] == xy[0]) & (self.model.data[yVariable] == xy[1])][:]
-                    samples = samples.append(xySample.sample(n=1))
-                except:
-                    print('There is not sample with those values')
+    #         samples = pd.DataFrame(data=None, columns=self.model.data.columns)
+    #         for i, xy in enumerate(cartesianXY):
+    #             try: 
+    #                 xySample = self.model.data.loc[(self.model.data[xVariable] == xy[0]) & (self.model.data[yVariable] == xy[1])][:]
+    #                 samples = samples.append(xySample.sample(n=1))
+    #             except:
+    #                 print('There is not sample with those values')
 
-            if len(samples) == 0:
-                samples = self.model.data.sample(n=5)
+    #         if len(samples) == 0:
+    #             samples = self.model.data.sample(n=5)
 
-            return samples
+    #         return samples
 
     def __handlerCalculateDistances(self):
         self.waitCursor()
@@ -235,6 +223,8 @@ class IterationController():
         
         # predicting the datapoint class and showing its value
         self.predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+        self.predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
+        
         self.view.showCurrentClass(self.predictedCurrentClass[0])
 
         # getting a set of samples to plot
@@ -247,6 +237,7 @@ class IterationController():
         
         self.transformedSamplesToPlot = transformedSamples
         self.transformedSamplesClasses = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, transformedSamples)
+        self.transformedSamplesClassesPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, transformedSamples)
 
         # building a dataframe with the selected point and the class 'current'
         dataPoint = self.chosenDataPoint.copy()
@@ -272,12 +263,19 @@ class IterationController():
         for i in range(len(self.__values)):
             self.__values[i] = round(self.__values[i], 2)
 
-        # if parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] == IterationEnums.DefaultAxes.DEFAULT_Y.value:
-        #     pass
-        # elif parameters['xVariable'] == IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-        #     pass
-        # elif parameters['xVariable'] != IterationEnums.DefaultAxes.DEFAULT_X.value and parameters['yVariable'] != IterationEnums.DefaultAxes.DEFAULT_Y.value:
         parameters['dataframe']['distance'] = self.__values
+
+        predictedProbabilities = list(self.transformedSamplesClassesPercentage.copy())
+        predictedProbabilities.append(self.predictedCurrentClassPercentage[0])
+        print('!'*75)
+        print(len(predictedProbabilities))
+        print('!'*75)
+        prob0 = []
+        for p in predictedProbabilities:
+            print(type(p), p)
+            prob0.append(p[0])
+        parameters['dataframe']['predictedProbability0'] = prob0
+
         parameters['selectedFeatures'] = self.view.getSelectedFeatures()
 
         parameters['model'] = self.model

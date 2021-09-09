@@ -32,24 +32,19 @@ class DashView(QWebView):
         if parameters is not None:
             dataframe = parameters['dataframe']
             model = parameters['model']
-            xVariable = parameters['xVariable']
-            yVariable = parameters['yVariable']
-
-            # cleanDataframe = None
-            # if xVariable != yVariable:
-            #     cleanDataframe = dataframe[[xVariable, yVariable, 'distance', 'Class']]
-            # else:
-            #     cleanDataframe = dataframe[[xVariable, 'distance', 'Class']]
-            # cleanDataframe = cleanDataframe.drop_duplicates()
-
-            # fig = px.scatter(dataframe, x=xVariable, y=yVariable, color="species", size='petal_length', hover_data=['petal_width'])
-            # self.figure = px.scatter(cleanDataframe, x=xVariable, y=yVariable, color='Class', size='distance')
+            selectedFeatures = parameters['selectedFeatures']
+            selectedFeatures.insert(0, 'distance')
+            selectedFeatures.insert(1, 'predictedProbability0')
+            selectedFeatures.append('Class')
             
-            # APLICAR ENCODE NAS FEATURES CATEGÓRICAS
-            dataframe['Class'] = pd.to_numeric(dataframe['Class'])
+            # dataframe['Class'] = pd.to_numeric(dataframe['Class'])
+            print('!'*75)
+            print(dataframe)
+            print('!'*75)
             dimensions = []
 
-            for feature in dataframe.columns:   
+            # for feature in dataframe.columns:   
+            for feature in selectedFeatures:
                 dictAux = {}             
                 if feature == 'Class':
                     dataframe[feature] = pd.to_numeric(dataframe[feature])
@@ -58,6 +53,11 @@ class DashView(QWebView):
                     dictAux['values'] = dataframe[feature].to_numpy()
                     dictAux['tickvals'] = [0, 1, 2]
                     dictAux['ticktext'] = ['0', '1', 'current']
+
+                elif feature == 'predictedProbability0':
+                    dictAux['range'] = [0, 1]
+                    dictAux['label'] = feature
+                    dictAux['values'] = dataframe[feature].to_numpy()
 
                 elif feature == 'distance':
                     dataframe[feature] = pd.to_numeric(dataframe[feature])
