@@ -74,7 +74,7 @@ class IterationController():
                     componentController = DoubleRadioButtonController(self.view)
                     componentController.initializeView(feature, str(value0), str(value1))
                     componentController.setSelectedValue(value)
-                    componentController.disableComponent()
+                    # componentController.disableComponent()
 
                 elif featureType is FeatureType.Discrete:
                     minValue = content['minimumValue']
@@ -100,7 +100,7 @@ class IterationController():
                     componentController = ComboboxListController(self.view)
                     componentController.initializeView(feature, self.model.featuresInformations[feature]['possibleValues'])
                     componentController.setSelectedValue(value)
-                    componentController.disableComponent()
+                    # componentController.disableComponent()
 
                 # adding the view to selectedPoint component
                 self.view.addFeatureWidget(componentController.view)
@@ -267,14 +267,10 @@ class IterationController():
 
         predictedProbabilities = list(self.transformedSamplesClassesPercentage.copy())
         predictedProbabilities.append(self.predictedCurrentClassPercentage[0])
-        print('!'*75)
-        print(len(predictedProbabilities))
-        print('!'*75)
-        prob0 = []
+        prob1 = []
         for p in predictedProbabilities:
-            print(type(p), p)
-            prob0.append(p[0])
-        parameters['dataframe']['predictedProbability0'] = prob0
+            prob1.append(p[1])
+        parameters['dataframe']['predictedProbability1'] = prob1
 
         parameters['selectedFeatures'] = self.view.getSelectedFeatures()
 

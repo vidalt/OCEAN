@@ -34,16 +34,10 @@ class DashView(QWebView):
             model = parameters['model']
             selectedFeatures = parameters['selectedFeatures']
             selectedFeatures.insert(0, 'distance')
-            selectedFeatures.insert(1, 'predictedProbability0')
+            selectedFeatures.insert(1, 'predictedProbability1')
             selectedFeatures.append('Class')
             
-            # dataframe['Class'] = pd.to_numeric(dataframe['Class'])
-            print('!'*75)
-            print(dataframe)
-            print('!'*75)
             dimensions = []
-
-            # for feature in dataframe.columns:   
             for feature in selectedFeatures:
                 dictAux = {}             
                 if feature == 'Class':
@@ -54,7 +48,7 @@ class DashView(QWebView):
                     dictAux['tickvals'] = [0, 1, 2]
                     dictAux['ticktext'] = ['0', '1', 'current']
 
-                elif feature == 'predictedProbability0':
+                elif feature == 'predictedProbability1':
                     dictAux['range'] = [0, 1]
                     dictAux['label'] = feature
                     dictAux['values'] = dataframe[feature].to_numpy()
