@@ -36,17 +36,23 @@ class DashView(QWebView):
             selectedFeatures.insert(0, 'distance')
             selectedFeatures.insert(1, 'predictedProbability1')
             selectedFeatures.append('Class')
+            selectedFeatures.append('color')
             
             dimensions = []
             for feature in selectedFeatures:
                 dictAux = {}             
                 if feature == 'Class':
                     dataframe[feature] = pd.to_numeric(dataframe[feature])
+                    dictAux['range'] = [0, 1]
+                    dictAux['label'] = feature
+                    dictAux['values'] = dataframe[feature].to_numpy()
+
+                elif feature == 'color':
                     dictAux['range'] = [0, 2]
                     dictAux['label'] = feature
                     dictAux['values'] = dataframe[feature].to_numpy()
                     dictAux['tickvals'] = [0, 1, 2]
-                    dictAux['ticktext'] = ['0', '1', 'current']
+                    dictAux['ticktext'] = ['original', 'current', 'counterfactual']
 
                 elif feature == 'predictedProbability1':
                     dictAux['range'] = [0, 1]
@@ -86,14 +92,14 @@ class DashView(QWebView):
             # self.figure = px.parallel_coordinates(dataframe)
             self.figure = go.Figure(data=
                 go.Parcoords(
-                    line = dict(color = dataframe['Class'],
+                    line = dict(color = dataframe['color'],
                     # colorscale = px.colors.sequential.Viridis,
                     colorscale = [(0.00, "red"), (0.33, "red"), 
                                   (0.33, "green"), (0.66, "green"),
                                   (0.66, "blue"),  (1.00, "blue")],
-                    showscale = True,
-                    cmin = dataframe['Class'].min(),
-                    cmax = dataframe['Class'].max()),
+                    showscale = False,
+                    cmin = dataframe['color'].min(),
+                    cmax = dataframe['color'].max()),
                     dimensions = dimensions
                 )
             )

@@ -16,6 +16,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 class CounterfactualInferfaceWorkerIterable(QObject):
 
     finished = pyqtSignal(list)
+    counterfactualDataframe = pyqtSignal(object, object)
 
     def __init__(self, controller):
         super().__init__()
@@ -89,6 +90,22 @@ class CounterfactualInferfaceWorkerIterable(QObject):
             #                     constraintIndex += 1
 
             randomForestMilp.solveModel()
+
+            if i == len(points) - 1:
+                # getting the counterfactual to the current datapoint
+                counterfactualResult = randomForestMilp.x_sol
+
+                if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
+                    self.progress.emit('Model is infeasible')
+                elif counterfactualResult is not None:
+                    counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
+                    counterfactualResultClassProbability = self.__controller.randomForestClassifier.predict_proba(counterfactualResult)
+
+                    result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
+                    result = np.append(result, counterfactualResultClass[0])
+                    
+                    # sending the counterfactual
+                    self.counterfactualDataframe.emit(result, counterfactualResultClassProbability)
 
             # saving the value from objective function
             self.__values.append(randomForestMilp.model.getObjective().getValue())

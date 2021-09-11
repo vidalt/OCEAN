@@ -183,7 +183,7 @@ class CounterfactualInterfaceControllerIterable:
         self.waitCursor()
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            self.__nextIteration = IterationController(self.model, self.randomForestClassifier, self.isolationForest)
+            self.__nextIteration = IterationController(parent=self, model=self.model,randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
             self.__nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
             self.view.addNewIterationTab(self.__nextIteration.view)
 

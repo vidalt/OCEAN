@@ -28,7 +28,9 @@ from sklearn.utils.extmath import cartesian
 
 class IterationController():
 
-    def __init__(self, model, randomForestClassifier, isolationForest):
+    def __init__(self, parent, model, randomForestClassifier, isolationForest):
+        self.parent = parent
+
         self.view = IterationView()
         self.model = model
 
@@ -44,6 +46,8 @@ class IterationController():
 
         self.predictedCurrentClass = None
         self.predictedCurrentClassPercentage = None
+
+        self.counterfactualToPlot = None
 
         self.__canvas = self.view.getCanvas()
         
@@ -141,70 +145,13 @@ class IterationController():
         parameters = {}
 
         if self.__samplesToPlot is not None:
-            # concatenating selected point with sample
-            dataToPlot = pd.concat([self.__samplesToPlot, self.__dataframeChosenDataPoint])
+            # concatenating selected point with sample, and the counterfactual
+            dataToPlot = pd.concat([self.__samplesToPlot, self.__dataframeChosenDataPoint, self.counterfactualToPlot])
             dataToPlot = dataToPlot.reset_index().drop(['index'], axis=1)
 
             parameters['dataframe'] = dataToPlot
 
         return parameters
-
-    # def __getPossibities(self, variable):
-    #     dictVariable = self.model.featuresInformations[variable]
-    #     featureType = self.model.featuresInformations[variable]['featureType']
-
-    #     possibilities = None
-    #     if featureType is FeatureType.Binary:
-    #         value0 = dictVariable['value0']
-    #         value1 = dictVariable['value1']
-    #         possibilities = [value0, value1]
-
-    #     elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
-    #         minValue = dictVariable['min']
-    #         maxValue = dictVariable['max']
-
-    #         content = self.__dictControllersSelectedPoint[variable].getContent()
-    #         currentValue = content['value']
-
-    #         adds = [-2, -1, 0, 1, 2]
-    #         possibilities = []
-    #         for add in adds:
-    #             aux = currentValue + add
-    #             if aux >= minValue and aux <= maxValue:
-    #                 possibilities.append(aux)
-
-    #     elif featureType is FeatureType.Categorical:
-    #         possibilities = dictVariable['possibleValues']
-
-    #     return possibilities
-
-    # def __buildSample(self):
-    #     xVariable, yVariable = 'feature1', 'feature2'
-
-    #     if xVariable != IterationEnums.DefaultAxes.DEFAULT_X.value and yVariable != IterationEnums.DefaultAxes.DEFAULT_Y.value:
-    #         xPossibilities = self.__getPossibities(xVariable)
-    #         yPossibilities = self.__getPossibities(yVariable)
-    #         cartesianXY = None
-    #         try:
-    #             cartesianXY = cartesian((xPossibilities, yPossibilities))
-    #         except:
-    #             cartesianXY = []
-    #             for xp in xPossibilities:
-    #                 for yp in yPossibilities:
-    #                     cartesianXY.append([xp, yp])
-
-    #         samples = pd.DataFrame(data=None, columns=self.model.data.columns)
-    #         for i, xy in enumerate(cartesianXY):
-    #             try: 
-    #                 xySample = self.model.data.loc[(self.model.data[xVariable] == xy[0]) & (self.model.data[yVariable] == xy[1])][:]
-    #                 samples = samples.append(xySample.sample(n=1))
-    #             except:
-    #                 print('There is not sample with those values')
-
-    #         if len(samples) == 0:
-    #             samples = self.model.data.sample(n=5)
-
-    #         return samples
 
     def __handlerCalculateDistances(self):
         self.waitCursor()
@@ -228,8 +175,10 @@ class IterationController():
         self.view.showCurrentClass(self.predictedCurrentClass[0])
 
         # getting a set of samples to plot
-        # self.__samplesToPlot = self.__buildSample()
-        self.__samplesToPlot = self.model.data.sample(n=5)
+        # receive the initial and the current datapoint, keeping a historic
+        parentDataPoint = self.parent.chosenDataPoint.copy()
+        parentDataPoint = np.append(parentDataPoint, self.parent.predictedOriginalClass)
+        self.__samplesToPlot = pd.DataFrame(data=[parentDataPoint], columns=self.model.features)
 
         transformedSamples = []
         for i in range(len(self.__samplesToPlot)):
@@ -239,10 +188,17 @@ class IterationController():
         self.transformedSamplesClasses = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, transformedSamples)
         self.transformedSamplesClassesPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, transformedSamples)
 
-        # building a dataframe with the selected point and the class 'current'
+        # updating the samples classes by predictions
+        self.__samplesToPlot['Class'] = self.transformedSamplesClasses
+        # adding a column color to indicate the samples, the current datapoint and the counterfactual
+        self.__samplesToPlot['color'] = 0 # samples/historic
+
+        # building a dataframe with the selected point and the 'current' class 
         dataPoint = self.chosenDataPoint.copy()
-        dataPoint = np.append(dataPoint, 2)
-        self.__dataframeChosenDataPoint = pd.DataFrame(data=[dataPoint], columns=self.__samplesToPlot.columns)
+        dataPoint = np.append(dataPoint, self.predictedCurrentClass)
+        self.__dataframeChosenDataPoint = pd.DataFrame(data=[dataPoint], columns=self.model.features)
+        # adding a column color to indicate the samples, the current datapoint and the counterfactual
+        self.__dataframeChosenDataPoint['color'] = 1 # current
 
         # running the counterfactual generation in another thread
         self.thread = QThread()
@@ -254,11 +210,14 @@ class IterationController():
         self.worker.finished.connect(self.objectiveFunctionValues)
         self.worker.finished.connect(self.restorCursor)
         self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.counterfactualDataframe.connect(self.createCounterfactualDataframe)
         self.thread.start()
 
     def objectiveFunctionValues(self, values):
         parameters = self.__buildDictParameters()
         self.__values = values
+        # appending the counterfactual distance
+        self.__values.append(0) 
 
         for i in range(len(self.__values)):
             self.__values[i] = round(self.__values[i], 2)
@@ -267,6 +226,9 @@ class IterationController():
 
         predictedProbabilities = list(self.transformedSamplesClassesPercentage.copy())
         predictedProbabilities.append(self.predictedCurrentClassPercentage[0])
+        # appending the counterfactual probability
+        predictedProbabilities.append(self.counterfactualProbability[0])
+
         prob1 = []
         for p in predictedProbabilities:
             prob1.append(p[1])
@@ -277,6 +239,13 @@ class IterationController():
         parameters['model'] = self.model
 
         self.__canvas.updateGraph(parameters)
+
+    def createCounterfactualDataframe(self, counterfactualDataPoint, counterfactualProbability):
+        self.counterfactualToPlot = pd.DataFrame(data=[counterfactualDataPoint], columns=self.model.features)
+        # adding a column color to indicate the samples, the current datapoint and the counterfactual
+        self.counterfactualToPlot['color'] = 2 # counterfactual
+
+        self.counterfactualProbability = counterfactualProbability
 
     def __handlerNextIteration(self):
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
