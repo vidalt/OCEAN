@@ -177,7 +177,7 @@
        </widget>
       </item>
       <item>
-       <widget class="DashView" name="widgetContainerCanvas" native="true"/>
+       <widget class="MatplotLibCanvas" name="widgetContainerCanvas" native="true"/>
       </item>
       <item>
        <widget class="QWidget" name="widgetNextFinish" native="true">
@@ -236,15 +236,15 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>DashView</class>
-   <extends>QWidget</extends>
-   <header>Dash/DashView.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>CheckableComboBox</class>
    <extends>QComboBox</extends>
    <header>CounterfactualInterface/CheckableComboBox/CheckableComboBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MatplotLibCanvas</class>
+   <extends>QWidget</extends>
+   <header>Canvas/MatplotLibCanvas.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

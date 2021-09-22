@@ -89,7 +89,7 @@ class Ui_Iteration(object):
         self.pushButtonUpdateGraph.setObjectName("pushButtonUpdateGraph")
         self.horizontalLayout_9.addWidget(self.pushButtonUpdateGraph)
         self.verticalLayout_2.addWidget(self.widgetContainerAxes)
-        self.widgetContainerCanvas = DashView(self.widgetContainerGraph)
+        self.widgetContainerCanvas = MatplotLibCanvas(self.widgetContainerGraph)
         self.widgetContainerCanvas.setObjectName("widgetContainerCanvas")
         self.verticalLayout_2.addWidget(self.widgetContainerCanvas)
         self.widgetNextFinish = QtWidgets.QWidget(self.widgetContainerGraph)
@@ -125,5 +125,5 @@ class Ui_Iteration(object):
         self.pushButtonUpdateGraph.setText(_translate("Iteration", "Update Graph"))
         self.pushButtonNext.setText(_translate("Iteration", "Next"))
         self.pushButtonFinish.setText(_translate("Iteration", "Finish"))
+from Canvas.MatplotLibCanvas import MatplotLibCanvas
 from CounterfactualInterface.CheckableComboBox.CheckableComboBox import CheckableComboBox
-from Dash.DashView import DashView

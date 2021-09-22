@@ -5,6 +5,16 @@ from numpy.core.fromnumeric import size
 import seaborn as sns
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg  as FigureCanvas
 
+from CounterFactualParameters import FeatureType
+from .PolygonInteractor import PolygonInteractor
+
+from matplotlib.lines import Line2D
+from matplotlib.patches import Polygon
+from sklearn.preprocessing import LabelEncoder 
+
+import numpy as np
+import pandas as pd
+
 class MatplotLibCanvas(FigureCanvas):
 
     def __init__(self, parent=None):
@@ -22,56 +32,108 @@ class MatplotLibCanvas(FigureCanvas):
         self.__dataframe = None
 
 
+    def createAxis(self, fig, ax, xRange, yRange, labels):
+        # create axis
+        line1 = Line2D(xRange, yRange, color='r', alpha=0.5)
+        fig.axes[0].add_line(line1)
+
+        # set annotation ("ytick labels") to each feature
+        for i, label in enumerate(labels):
+            ax.text(xRange[0], i, ' '+str(label), transform=ax.transData)
+
     def updateGraph(self, parameters=None):
+        self.clearAxesAndGraph()
         if parameters is not None:
-            self.__dataframe = parameters['dataframe']
-            xVariable = parameters['xVariable']
-            yVariable = parameters['yVariable']
+            dataframe = parameters['dataframe']
+            model = parameters['model']
+            selectedFeatures = parameters['selectedFeatures']
 
-            self.axes.cla()  # Clear the canvas.
-            sns.scatterplot(x=self.__dataframe[xVariable],
-                            y=self.__dataframe[yVariable],
-                            hue=self.__dataframe['Class'],
-                            data=self.__dataframe,
-                            ax=self.axes,
-                            size=self.__dataframe['distance'],
-                            picker=True,
-                            zorder=10)
+            # dictEncoders = {}
+            # for f in selectedFeatures:
+            #     featureEncoder = LabelEncoder()
+            #     featureEncoder.fit(dataframe[f])
+            #     dictEncoders[f] = featureEncoder
 
-            # import numpy as np
-            # self.axes.plot(np.random.rand(100), 'o', picker=5)
+            allFeaturesToPlot = selectedFeatures.copy()
+            allFeaturesToPlot.insert(0, 'dist')
+            allFeaturesToPlot.insert(1, 'prob1')
+            allFeaturesToPlot.append('Class')
+            allFeaturesToPlot.append('color')
 
-            self.axes.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+            # clear the canvas
+            self.axes.cla()  
 
-            # annot = self.axes.annotate("", xy=(0, 0), xytext=(-10, 10), textcoords="offset points",
-            #                 bbox=dict(boxstyle="round", fc="w"),
-            #                 arrowprops=dict(arrowstyle="->"))
+            # create the draggable line to current point
+            xs = []
+            ys = []
+            ranges = []
+            decimals = []
+            xMaxRange = 0
 
-            # annot.set_visible(False)
+            for i, f in enumerate(allFeaturesToPlot):
+                if f == 'dist':
+                    pass
+                elif f == 'prob1':
+                    pass
+                elif f == 'Class':
+                    pass
+                elif f == 'color':
+                    pass
+                else:
+                    # append ranges to move
+                    uniqueValuesFeature = model.data[f].unique()
+                    ranges.append(len(uniqueValuesFeature)-1)
+                    if model.featuresType[f] == FeatureType.Discrete or model.featuresType[f] == FeatureType.Numeric:
+                        uniqueValuesFeature = pd.to_numeric(uniqueValuesFeature)
+                        uniqueValuesFeature.sort()
 
-            cursor = mplcursors.cursor(self.axes, hover=True)
+                    # append x, y
+                    value = dataframe.iloc[0][f]
+                    xs.append(i)
+                    if model.featuresType[f] == FeatureType.Discrete or model.featuresType[f] == FeatureType.Numeric:
+                        ys.append(np.where(uniqueValuesFeature == float(value))[0][0])
+                    else:
+                        ys.append(np.where(uniqueValuesFeature == value)[0][0])
 
-            cursor.connect('add', lambda sel: sel.annotation.set_text('Class: {} \nDistance: {}'.
-                format(self.__dataframe['Class'][sel.target.index], self.__dataframe['distance'][sel.target.index])))
+                    # get x max range
+                    if len(uniqueValuesFeature) > xMaxRange:
+                        xMaxRange = len(uniqueValuesFeature)
+
+                    # use the unique values feature to plot the vertical axis
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
+
+                    # append decimal plates to move
+                    if model.featuresType[f] == FeatureType.Binary or model.featuresType[f] == FeatureType.Categorical or model.featuresType[f] == FeatureType.Discrete:
+                        decimals.append(0)
+                    else:
+                        decimals.append(1)
+
+            poly = Polygon(np.column_stack([xs, ys]), closed=False, fill=False, animated=True)
+
+            # set the draggable line to PolygonInteractor
+            self.axes.add_patch(poly)
+            p = PolygonInteractor(self.axes, poly, ranges, decimals)
+
+            # legends
+            self.axes.legend([p.line], ['Current'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+
+            # boundary
+            self.axes.set_xlim((-1, len(allFeaturesToPlot)))
+            self.axes.set_ylim((-1, xMaxRange))
+
+            # xtick value
+            xTicksValues = [i for i in range(len(allFeaturesToPlot))]
+            self.axes.set_xticks(xTicksValues)
+            # xtick name
+            self.axes.set_xticklabels(allFeaturesToPlot)
             
-            self.figure.canvas.mpl_connect('pick_event', self.onpick)
-
+            # draw the figure
             self.draw()
-
-    def onpick(self, event):
-        # thisline = event.artist
-        # xdata = thisline.get_xdata()
-        # ydata = thisline.get_ydata()
-        ind = event.ind
-        print(ind)
-        # points = tuple(zip(xdata[ind], ydata[ind]))
-        # print('onpick points:', points)
 
     def resizeCanvas(self, width, height):
         self.figure.set_size_inches(width/self.dpi, height/self.dpi) 
 
     def clearAxesAndGraph(self):
         self.figure.clear()
-        self.axes = self.figure.add_subplot(111)
-
+        self.axes = self.figure.add_axes([0.1, 0.15, 0.65, 0.75])
         self.axes.clear()
