@@ -3,31 +3,18 @@ import numpy as np
 from matplotlib.artist import Artist
 from matplotlib.lines import Line2D
 
+from PyQt5.QtCore import pyqtSignal, QObject
 
-def dist(x, y):
-    d = x - y
-    return np.sqrt(np.dot(d, d))
-
-
-def dist_point_to_segment(p, s0, s1):
-    v = s1 - s0
-    w = p - s0
-    c1 = np.dot(w, v)
-    if c1 <= 0:
-        return dist(p, s0)
-    c2 = np.dot(v, v)
-    if c2 <= c1:
-        return dist(p, s1)
-    b = c1 / c2
-    pb = s0 + b * v
-    return dist(p, pb)
-
-
-class PolygonInteractor:
+class PolygonInteractor(QObject):
     showverts = True
     epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, poly, ranges, decimals):
+    # the updated current point values
+    updatedPoint = pyqtSignal(list)
+
+    def __init__(self, ax, poly, ranges, decimals, actionables):
+        super(PolygonInteractor, self).__init__()
+        
         if poly.figure is None:
             raise RuntimeError('You must first add the polygon to a figure '
                                'or canvas before defining the interactor')
@@ -36,10 +23,11 @@ class PolygonInteractor:
         self.poly = poly
         self.ranges = ranges
         self.decimals = decimals
+        self.actionables = actionables
 
         self._x, self._y = zip(*self.poly.xy)
-        self.line = Line2D(self._x, self._y, color='black',
-                           marker='o', markerfacecolor='black',
+        self.line = Line2D(self._x, self._y, color='blue',
+                           marker='o', markerfacecolor='blue',
                            animated=True)
         self.ax.add_line(self.line)
 
@@ -96,7 +84,9 @@ class PolygonInteractor:
             return
         self._ind = None
 
-        print('RELEASED')
+        # emit the current point updated values
+        x, y = zip(*self.poly.xy)
+        self.updatedPoint.emit(list(y))
 
     def on_key_press(self, event):
         if not event.inaxes:
@@ -114,6 +104,7 @@ class PolygonInteractor:
             return
         if event.button != 1:
             return
+
         x, y = event.xdata, event.ydata
 
         if y < 0:
@@ -121,7 +112,11 @@ class PolygonInteractor:
         elif y > self.ranges[self._ind]:
             y = self.ranges[self._ind]
 
-         # to use round function to drag categorical and integer values
+        # feature not actionable 
+        if not self.actionables[self._ind]:
+            y = self._y
+
+        # to use round function to drag categorical and integer values
         self.poly.xy[self._ind] = self._x[self._ind], round(y, self.decimals[self._ind])
 
         self.line.set_data(zip(*self.poly.xy))
