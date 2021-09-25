@@ -10,7 +10,7 @@ class PolygonInteractor(QObject):
     epsilon = 5  # max pixel distance to count as a vertex hit
 
     # the updated current point values
-    updatedPoint = pyqtSignal(list)
+    updatedPoint = pyqtSignal(object, list)
 
     def __init__(self, ax, poly, ranges, decimals, actionables):
         super(PolygonInteractor, self).__init__()
@@ -86,7 +86,7 @@ class PolygonInteractor(QObject):
 
         # emit the current point updated values
         x, y = zip(*self.poly.xy)
-        self.updatedPoint.emit(list(y))
+        self.updatedPoint.emit(self, list(y))
 
     def on_key_press(self, event):
         if not event.inaxes:
@@ -125,3 +125,4 @@ class PolygonInteractor(QObject):
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
         self.canvas.blit(self.ax.bbox)
+        

@@ -41,6 +41,10 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         self.__featuresToPlot = None
         self.__featuresUniqueValues = {}
 
+        self.model = None
+
+        self.polygonInteractable = None
+
 
     def createAxis(self, fig, ax, xRange, yRange, labels):
         # create axis
@@ -66,7 +70,21 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                 pass
 
             elif f == 'prob1':
-                pass
+                value = datapoint.iloc[0][f]
+
+                # append the x, y, range, decimal plate, and actionability
+                xs.append(i)
+                ys.append(float(value)*4)
+                ranges.append(5)
+                decimals.append(0)
+                actionables.append(False)
+                xMaxRange = 5 if 5 > xMaxRange else xMaxRange
+
+                # uniqueValuesFeature
+                uniqueValuesFeature = [0, 0.25, 0.5, 0.75, 1]
+
+                # use the unique values feature to plot the vertical axis
+                self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
 
             elif f == 'Class':
                 value = datapoint.iloc[0][f]
@@ -129,7 +147,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         self.clearAxesAndGraph()
 
         if parameters is not None:
-            model = parameters['model']
+            self.model = parameters['model']
             currentPoint = parameters['currentPoint']
             originalPoint = parameters['originalPoint']
             selectedFeatures = parameters['selectedFeatures']
@@ -147,23 +165,23 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.cla()  
 
             # create the draggable line to current point
-            xDraggable, yDraggable, ranges, decimals, xMaxRange, actionables = self.infToPlot(model, allFeaturesToPlot, currentPoint)
+            xDraggable, yDraggable, ranges, decimals, xMaxRange, actionables = self.infToPlot(self.model, allFeaturesToPlot, currentPoint)
 
             # creating a polygon object
             poly = Polygon(np.column_stack([xDraggable, yDraggable]), closed=False, fill=False, animated=True)
 
             # set the draggable line to PolygonInteractor
             self.axes.add_patch(poly)
-            p = PolygonInteractor(self.axes, poly, ranges, decimals, actionables)
-            p.updatedPoint.connect(self.__onUpdatedCurrentPoint)
+            self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables)
+            self.polygonInteractable.updatedPoint.connect(self.__onUpdatedCurrentPoint)
 
             # creating the line to original point
-            xOriginal, yOriginal, _, _, _, _ = self.infToPlot(model, allFeaturesToPlot, originalPoint)
+            xOriginal, yOriginal, _, _, _, _ = self.infToPlot(self.model, allFeaturesToPlot, originalPoint)
             lineOriginal = Line2D(xOriginal, yOriginal, color='green', animated=False)
             self.axes.add_line(lineOriginal)
             
             # legends
-            self.axes.legend([p.line, lineOriginal], ['Current', 'Original'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+            self.axes.legend([self.polygonInteractable.line, lineOriginal], ['Current editable', 'Original'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))
@@ -181,24 +199,52 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.draw()
 
     # listen the updated point and emit the same to controller
-    def __onUpdatedCurrentPoint(self, point):
-        currentPoint = []
-        indexAux = 0
-        for f in self.__featuresToPlot:
-            if f == 'dist' or f == 'prob1' or f == 'color':
-                # quando colocar essas colunas: necessário atualizar o indexAux
-                pass
+    def __onUpdatedCurrentPoint(self, currentPolygon, point):
+        # to avoid the cached polygon
+        if currentPolygon == self.polygonInteractable:
+            currentPoint = []
+            indexAux = 0
+            for f in self.__featuresToPlot:            
+                if f == 'prob1' or f == 'color':
+                    # quando colocar essas colunas: necessário atualizar o indexAux
+                    pass
 
-            elif f == 'Class':
-                indexAux += 1
-            
-            else:
-                # only need to update the selected features
-                # the other values are obtained by the controller
-                currentPoint.append(self.__featuresUniqueValues[f][int(point[indexAux])])
-                indexAux += 1
+                elif f == 'dist' or f == 'Class':
+                    indexAux += 1
+                
+                else:
+                    # only need to update the selected features
+                    # the other values are obtained by the controller
+                    featureType = self.model.featuresInformations[f]['featureType']
 
-        self.updatedPoint.emit(currentPoint)
+                    if featureType is FeatureType.Binary:
+                        try:
+                            currentPoint.append(self.__featuresUniqueValues[f][int(point[indexAux])])
+                            indexAux += 1
+                        except:
+                            print('ERROR:', f)
+
+                    elif featureType is FeatureType.Discrete:
+                        minValue = min(self.__featuresUniqueValues[f])
+                        currentPoint.append(int(point[indexAux] + minValue))
+                        indexAux += 1
+
+                    elif featureType is FeatureType.Numeric:
+                        minValue = min(self.__featuresUniqueValues[f])
+                        currentPoint.append(point[indexAux] + minValue)
+                        indexAux += 1
+
+                    elif featureType is FeatureType.Categorical:
+                        try:
+                            currentPoint.append(self.__featuresUniqueValues[f][int(point[indexAux])])
+                            indexAux += 1
+                        except:
+                            print('!'*75)
+                            print('ERROR:', f, '---', len(self.__featuresUniqueValues[f]))
+                            print(int(point[indexAux]), self.__featuresUniqueValues[f])
+                            print('!'*75)
+
+            self.updatedPoint.emit(currentPoint)
 
     def resizeCanvas(self, width, height):
         self.figure.set_size_inches(width/self.dpi, height/self.dpi) 

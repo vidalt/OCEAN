@@ -64,14 +64,49 @@ class IterationController():
 
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
+        self.waitCursor()
+
         selectedFeatures = self.view.getSelectedFeatures()
         if len(selectedFeatures) == len(updatedPoint):
-            # fazer calculos das probabilidades, distancias e classes
-            # atualizar o gráfico (canvas)
+
+            # current datapoint
+            currentDataPoint = self.chosenDataPoint.copy()
+            currentDataPoint = np.append(currentDataPoint, self.predictedCurrentClass)
+            currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
+
+            # updating the values
+            for i, f in enumerate(selectedFeatures):
+                currentDataframe[f] = updatedPoint[i]
+
+            transformedCurrent = self.model.transformDataPoint(currentDataframe.to_numpy()[0][:-1])
+            predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedCurrent])
+            predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCurrent])
+
+            # adding the updated prediction class, and percentage
+            currentDataframe['Class'] = predictedCurrentClass[0]
+            currentDataframe['prob1'] = predictedCurrentClassPercentage[0][1]
+
             print('!'*75)
-            print(selectedFeatures)
-            print(updatedPoint)
+            print(currentDataframe)
             print('!'*75)
+
+            # getting the initial datapoint, keeping a historic
+            parentDataPoint = self.parent.chosenDataPoint.copy()
+            parentDataPoint = np.append(parentDataPoint, self.parent.predictedOriginalClass)
+            # transforming the parent datapoint to predict its class
+            transformedParentDataPoint = self.model.transformDataPoint(parentDataPoint[:-1])
+            # predicting the parent datapoint class probabilities
+            predictedParentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedParentDataPoint])
+            # building the parent dataframe
+            parentDataframe = pd.DataFrame(data=[parentDataPoint], columns=self.model.features)
+            # adding the prediction percentage
+            parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
+
+            #parameters to update graph
+            parameters = {'model':self.model, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
+            self.__canvas.updateGraph(parameters)
+
+        self.restorCursor()
 
     def setFeaturesAndValues(self, dictControllersSelectedPoint):
         for feature in self.model.features:
@@ -173,11 +208,21 @@ class IterationController():
             currentDataPoint = self.chosenDataPoint.copy()
             currentDataPoint = np.append(currentDataPoint, self.predictedCurrentClass)
             currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
+            # adding the prediction percentage
+            currentDataframe['prob1'] = self.predictedCurrentClassPercentage[0][1]
 
             # getting the initial datapoint, keeping a historic
             parentDataPoint = self.parent.chosenDataPoint.copy()
             parentDataPoint = np.append(parentDataPoint, self.parent.predictedOriginalClass)
+            # transforming the parent datapoint to predict its class
+            transformedParentDataPoint = self.model.transformDataPoint(parentDataPoint[:-1])
+            # predicting the parent datapoint class probabilities
+            # predictedParentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedParentDataPoint])
+            predictedParentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedParentDataPoint])
+            # building the parent dataframe
             parentDataframe = pd.DataFrame(data=[parentDataPoint], columns=self.model.features)
+            # adding the prediction percentage
+            parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
 
             # parameters to update graph
             parameters = {'model':self.model, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
