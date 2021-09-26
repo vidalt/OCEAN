@@ -4,7 +4,7 @@
 
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
 from .IterationView import IterationView
 from .IterationEnums import IterationEnums
@@ -37,7 +37,7 @@ class IterationController():
 
         self.__initializeView()
 
-        self.__dictControllersSelectedPoint = {}
+        self.dictControllersSelectedPoint = {}
 
         self.chosenDataPoint = None
         self.transformedChosenDataPoint = None
@@ -51,6 +51,7 @@ class IterationController():
 
         self.__canvas = self.view.getCanvas()
         self.__canvas.updatedPoint.connect(self.__onUpdatedCurrentPoint)
+        self.__canvas.errorPlot.connect(self.__errorPlotHandler)
         
         self.__samplesToPlot = None
         self.transformedSamplesToPlot = None
@@ -123,7 +124,7 @@ class IterationController():
                 # adding the view to selectedPoint component
                 self.view.addFeatureWidget(componentController.view)
                 # saving the controller to facilitate the access to components
-                self.__dictControllersSelectedPoint[feature] = componentController
+                self.dictControllersSelectedPoint[feature] = componentController
 
         self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
@@ -169,7 +170,7 @@ class IterationController():
             parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
 
             #parameters to update graph
-            parameters = {'model':self.model, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
+            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
@@ -182,7 +183,7 @@ class IterationController():
         auxiliarDataPoint = []
         for feature in self.model.features:
             if feature != 'Class':
-                content = self.__dictControllersSelectedPoint[feature].getContent()
+                content = self.dictControllersSelectedPoint[feature].getContent()
                 auxiliarDataPoint.append(content['value'])
                 
         self.chosenDataPoint = np.array(auxiliarDataPoint)
@@ -205,7 +206,7 @@ class IterationController():
             auxiliarDataPoint = []
             for feature in self.model.features:
                 if feature != 'Class':
-                    content = self.__dictControllersSelectedPoint[feature].getContent()
+                    content = self.dictControllersSelectedPoint[feature].getContent()
                     auxiliarDataPoint.append(content['value'])
                     
             self.chosenDataPoint = np.array(auxiliarDataPoint)
@@ -243,7 +244,7 @@ class IterationController():
             parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
 
             # parameters to update graph
-            parameters = {'model':self.model, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
+            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
@@ -257,8 +258,8 @@ class IterationController():
                 featureType = self.model.featuresInformations[feature]['featureType']
 
                 currentValue = self.updatedCurrentPoint[i]
-                actionable = self.__dictControllersSelectedPoint[feature].getActionable()
-                content = self.__dictControllersSelectedPoint[feature].getContent()
+                actionable = self.dictControllersSelectedPoint[feature].getActionable()
+                content = self.dictControllersSelectedPoint[feature].getContent()
 
                 if featureType is FeatureType.Binary:
                     value0 = content['value0']
@@ -301,3 +302,6 @@ class IterationController():
     def restorCursor(self):
         # updating cursor
         QApplication.restoreOverrideCursor()
+
+    def __errorPlotHandler(self, featureError):
+        QMessageBox.information(self.view, 'User Information', 'The graph could not be updated, because some constraint is contradictory at feature '+featureError, QMessageBox.Ok)

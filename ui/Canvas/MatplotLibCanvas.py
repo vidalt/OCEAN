@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import mplcursors
 from numpy.core.fromnumeric import size
 import seaborn as sns
+import math
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg  as FigureCanvas
 
 from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
@@ -23,6 +24,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
     # the updated current point values
     updatedPoint = pyqtSignal(list)
+    # inform errors
+    errorPlot = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(MatplotLibCanvas, self).__init__()
@@ -41,7 +44,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         self.__featuresToPlot = None
         self.__featuresUniqueValues = {}
 
-        self.model = None
+        self.controller = None
 
         self.polygonInteractable = None
 
@@ -55,7 +58,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         for i, label in enumerate(labels):
             ax.text(xRange[0], i, ' '+str(label), transform=ax.transData)
 
-    def infToPlot(self, model, allFeaturesToPlot, datapoint):
+    def infToPlot(self, allFeaturesToPlot, datapoint):
         xs = []
         ys = []
         ranges = []
@@ -63,88 +66,108 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         actionables = []
         xMaxRange = 0
 
-        for i, f in enumerate(allFeaturesToPlot):
-            uniqueValuesFeature = None
+        lastFeature = None
+        try:
+            for i, f in enumerate(allFeaturesToPlot):
+                lastFeature = f
+                
+                uniqueValuesFeature = None
 
-            if f == 'dist':
-                pass
+                if f == 'dist':
+                    pass
 
-            elif f == 'prob1':
-                value = datapoint.iloc[0][f]
+                elif f == 'prob1':
+                    value = datapoint.iloc[0][f]
 
-                # append the x, y, range, decimal plate, and actionability
-                xs.append(i)
-                ys.append(float(value)*4)
-                ranges.append(5)
-                decimals.append(0)
-                actionables.append(False)
-                xMaxRange = 5 if 5 > xMaxRange else xMaxRange
-
-                # uniqueValuesFeature
-                uniqueValuesFeature = [0, 0.25, 0.5, 0.75, 1]
-
-                # use the unique values feature to plot the vertical axis
-                self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
-
-            elif f == 'Class':
-                value = datapoint.iloc[0][f]
-
-                # append the x, y, range, decimal plate, and actionability
-                xs.append(i)
-                ys.append(float(value))
-                ranges.append(2)
-                decimals.append(0)
-                actionables.append(False)
-                xMaxRange = 2 if 2 > xMaxRange else xMaxRange
-
-                # uniqueValuesFeature
-                uniqueValuesFeature = [0, 1]
-
-                # use the unique values feature to plot the vertical axis
-                self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
-
-            else:
-                # append ranges to move
-                uniqueValuesFeature = model.data[f].unique()
-                ranges.append(len(uniqueValuesFeature)-1)
-                if model.featuresType[f] == FeatureType.Discrete or model.featuresType[f] == FeatureType.Numeric:
-                    uniqueValuesFeature = pd.to_numeric(uniqueValuesFeature)
-                    uniqueValuesFeature.sort()
-
-                # append x, y
-                value = datapoint.iloc[0][f]
-                xs.append(i)
-                if model.featuresType[f] == FeatureType.Discrete or model.featuresType[f] == FeatureType.Numeric:
-                    ys.append(np.where(uniqueValuesFeature == float(value))[0][0])
-                else:
-                    ys.append(np.where(uniqueValuesFeature == value)[0][0])
-
-                # get x max range
-                if len(uniqueValuesFeature) > xMaxRange:
-                    xMaxRange = len(uniqueValuesFeature)
-
-                # use the unique values feature to plot the vertical axis
-                self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
-
-                # append decimal plates to move
-                if model.featuresType[f] == FeatureType.Binary or model.featuresType[f] == FeatureType.Categorical or model.featuresType[f] == FeatureType.Discrete:
+                    # append the x, y, range, decimal plate, and actionability
+                    xs.append(i)
+                    ys.append(float(value)*4)
+                    ranges.append(5)
                     decimals.append(0)
+                    actionables.append(False)
+                    xMaxRange = 5 if 5 > xMaxRange else xMaxRange
+
+                    # uniqueValuesFeature
+                    uniqueValuesFeature = [0, 0.25, 0.5, 0.75, 1]
+
+                    # use the unique values feature to plot the vertical axis
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
+
+                elif f == 'Class':
+                    value = datapoint.iloc[0][f]
+
+                    # append the x, y, range, decimal plate, and actionability
+                    xs.append(i)
+                    ys.append(float(value))
+                    ranges.append(2)
+                    decimals.append(0)
+                    actionables.append(False)
+                    xMaxRange = 2 if 2 > xMaxRange else xMaxRange
+
+                    # uniqueValuesFeature
+                    uniqueValuesFeature = [0, 1]
+
+                    # use the unique values feature to plot the vertical axis
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
+
                 else:
-                    decimals.append(1)
+                    uniqueValuesFeature = None
+                    if self.controller.model.featuresType[f] is FeatureType.Binary:
+                        content = self.controller.dictControllersSelectedPoint[f].getContent()
+                        uniqueValuesFeature = [content['value0'], content['value1']]
 
-                # append actionability of the features
-                actionables.append(True)
+                    elif self.controller.model.featuresType[f] is FeatureType.Discrete or self.controller.model.featuresType[f] is FeatureType.Numeric:
+                        content = self.controller.dictControllersSelectedPoint[f].getContent()
+                        minimumValue = math.floor(content['minimumValue'])
+                        maximumValue = math.ceil(content['maximumValue'])
+                        uniqueValuesFeature = [i for i in range(minimumValue, maximumValue+1)]
 
-            if uniqueValuesFeature is not None:
-                self.__featuresUniqueValues[f] = uniqueValuesFeature
+                    elif self.controller.model.featuresType[f] is FeatureType.Categorical:
+                        content = self.controller.dictControllersSelectedPoint[f].getContent()
+                        uniqueValuesFeature = content['allowedValues']
 
-        return xs, ys, ranges, decimals, xMaxRange, actionables
+                    # append ranges to move
+                    ranges.append(len(uniqueValuesFeature)-1)
+
+                    # append x, y
+                    value = datapoint.iloc[0][f]
+                    xs.append(i)
+                    if self.controller.model.featuresType[f] == FeatureType.Discrete or self.controller.model.featuresType[f] == FeatureType.Numeric:
+                        content = self.controller.dictControllersSelectedPoint[f].getContent()
+                        maximumValue = math.ceil(content['maximumValue'])
+                        ys.append(float(value)-minimumValue)
+                    else:
+                        ys.append(uniqueValuesFeature.index(value))
+
+                    # get x max range
+                    if len(uniqueValuesFeature) > xMaxRange:
+                        xMaxRange = len(uniqueValuesFeature)
+
+                    # use the unique values feature to plot the vertical axis
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
+
+                    # append decimal plates to move
+                    if self.controller.model.featuresType[f] == FeatureType.Binary or self.controller.model.featuresType[f] == FeatureType.Categorical or self.controller.model.featuresType[f] == FeatureType.Discrete:
+                        decimals.append(0)
+                    else:
+                        decimals.append(1)
+
+                    # append actionability of the features
+                    actionables.append(True)
+
+                if uniqueValuesFeature is not None:
+                    self.__featuresUniqueValues[f] = uniqueValuesFeature
+
+            return xs, ys, ranges, decimals, xMaxRange, actionables
+        
+        except:
+            self.errorPlot.emit(lastFeature)
 
     def updateGraph(self, parameters=None):
         self.clearAxesAndGraph()
 
         if parameters is not None:
-            self.model = parameters['model']
+            self.controller = parameters['controller']
             currentPoint = parameters['currentPoint']
             originalPoint = parameters['originalPoint']
             selectedFeatures = parameters['selectedFeatures']
@@ -161,7 +184,10 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.cla()  
 
             # create the draggable line to current point
-            xDraggable, yDraggable, ranges, decimals, xMaxRange, actionables = self.infToPlot(self.model, allFeaturesToPlot, currentPoint)
+            returnedInfo = self.infToPlot(allFeaturesToPlot, currentPoint)
+            if returnedInfo is None:
+                return
+            xDraggable, yDraggable, ranges, decimals, xMaxRange, actionables = returnedInfo
 
             # creating a polygon object
             poly = Polygon(np.column_stack([xDraggable, yDraggable]), closed=False, fill=False, animated=True)
@@ -172,7 +198,10 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.polygonInteractable.updatedPoint.connect(self.__onUpdatedCurrentPoint)
 
             # creating the line to original point
-            xOriginal, yOriginal, _, _, _, _ = self.infToPlot(self.model, allFeaturesToPlot, originalPoint)
+            returnedOriginalInfo = self.infToPlot(allFeaturesToPlot, originalPoint)
+            if returnedOriginalInfo is None:
+                return
+            xOriginal, yOriginal, _, _, _, _ = returnedOriginalInfo
             lineOriginal = Line2D(xOriginal, yOriginal, color='green', animated=False)
             self.axes.add_line(lineOriginal)
             
@@ -211,7 +240,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                 else:
                     # only need to update the selected features
                     # the other values are obtained by the controller
-                    featureType = self.model.featuresInformations[f]['featureType']
+                    featureType = self.controller.model.featuresInformations[f]['featureType']
 
                     if featureType is FeatureType.Binary:
                         try:
