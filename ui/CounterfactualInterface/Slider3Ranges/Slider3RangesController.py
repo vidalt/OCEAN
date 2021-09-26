@@ -33,6 +33,14 @@ class Slider3RangesController:
         self.__view.setContent(featureName, minValue, maxValue, value, decimalPlaces)
         self.__view.show()
 
+    # this function blocks the user from changing the value
+    def disableComponent(self):
+        self.__view.disableComponent()
+
+    # this function enables the user from changind the value
+    def enableComponent(self):
+        self.__view.enableComponent()
+
     # this function returns the actionability
     def getActionable(self):
         return self.view.getActionable()

@@ -40,11 +40,14 @@ class CheckableComboBox(QComboBox):
 
     def afterActivated(self):
         for i in range ( self.model().rowCount()):
-            item = self.model().item(i)  
-            if item.checkState() == Qt.Checked:
-                self.setCurrentIndex(i)
-                self.model().itemCheckStateChanged.emit()
-                return
+            item = self.model().item(i) 
+            try: 
+                if item.checkState() == Qt.Checked:
+                    self.setCurrentIndex(i)
+                    self.model().itemCheckStateChanged.emit()
+                    return
+            except:
+                pass
 
     def resizeEvent(self, event):
         # Recompute text to elide as needed

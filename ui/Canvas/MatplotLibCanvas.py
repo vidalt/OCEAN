@@ -177,7 +177,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.add_line(lineOriginal)
             
             # legends
-            self.axes.legend([self.polygonInteractable.line, lineOriginal], ['Current editable', 'Previous'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+            self.axes.legend([self.polygonInteractable.line, lineOriginal], ['Current editable', 'Original'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))

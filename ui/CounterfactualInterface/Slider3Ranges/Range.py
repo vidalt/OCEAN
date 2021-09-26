@@ -36,7 +36,29 @@ class Range(QLabel):
         self.setScaledContents(True)
         self.__updateRangeValue()
 
+        self.__enabled = True
 
+
+    # this function enables the user from changind the value
+    def enableComponent(self):
+        self.__enabled = True
+        self.setStyleSheet('''QLabel {
+            background-color: #049DD9;
+            border-style:solid;
+            border-width:1px;
+            border-color: #049DD9;
+        }''')
+    
+    # this function blocks the user from changing the value
+    def disableComponent(self):
+        self.__enabled = False
+        self.setStyleSheet('''QLabel {
+            background-color: grey;
+            border-style:solid;
+            border-width:1px;
+            border-color: #049DD9;
+        }''')
+    
     @property
     def minValue(self):
         return self.__minValue
@@ -116,6 +138,9 @@ class Range(QLabel):
 
     def __updatePos(self, posX):
         assert posX is not None
+
+        if not self.__enabled:
+            return
 
         if posX <= self.__maxX and posX >= self.__minX:  
             value = self.__slider.getValueFromPos(posX)

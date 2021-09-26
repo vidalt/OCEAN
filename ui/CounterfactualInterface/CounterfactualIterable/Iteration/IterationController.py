@@ -95,6 +95,7 @@ class IterationController():
                     componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
                     componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
+                    componentController.disableComponent()
 
                 elif featureType is FeatureType.Numeric:
                     actionable = content['actionable']
@@ -106,6 +107,7 @@ class IterationController():
                     componentController.initializeView(feature, minValue, maxValue)
                     componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
+                    componentController.disableComponent()
                     
                 elif featureType is FeatureType.Categorical:
                     actionable = content['actionable']

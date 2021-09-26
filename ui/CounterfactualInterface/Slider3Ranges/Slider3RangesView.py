@@ -21,6 +21,14 @@ class Slider3RangesView(QWidget, Ui_Slider3Ranges):
         self.checkBoxActionability.stateChanged.connect(lambda: self.__actionabilityOptionHandler())
 
 
+    # this function enables the user from changind the value
+    def enableComponent(self):
+        self.labelRangeValue.setEnabled()
+    
+    # this function blocks the user from changing the value
+    def disableComponent(self):
+        self.labelRangeValue.setDisabled()
+
     # this function disables the component interactions
     def __actionabilityOptionHandler(self):
         if self.checkBoxActionability.isChecked():
