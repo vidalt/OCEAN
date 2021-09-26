@@ -114,8 +114,8 @@ class PolygonInteractor(QObject):
 
         # feature not actionable 
         if not self.actionables[self._ind]:
-            y = self._y
-
+            return
+        
         # to use round function to drag categorical and integer values
         self.poly.xy[self._ind] = self._x[self._ind], round(y, self.decimals[self._ind])
 

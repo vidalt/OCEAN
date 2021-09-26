@@ -42,6 +42,8 @@ class IterationController():
         self.chosenDataPoint = None
         self.transformedChosenDataPoint = None
 
+        self.updatedCurrentPoint = None
+
         self.predictedCurrentClass = None
         self.predictedCurrentClassPercentage = None
 
@@ -56,11 +58,73 @@ class IterationController():
         self.transformedSamplesClassesPercentage = None
 
         self.view.selectedFeatures.connect(lambda: self.__updateGraph())
+        self.view.nextIteration.connect(lambda: self.__handlerNextIteration())
+        self.view.finishIteration.connect(lambda: self.__handlerFinishIteration())
 
 
     # this function takes the dataframe names and send them to interface
     def __initializeView(self):
         self.view.initializeView()
+
+    def setFeaturesAndValues(self, dictNextFeaturesInformation):
+        for feature in self.model.features:
+            if feature != 'Class':
+                featureType = self.model.featuresInformations[feature]['featureType']
+
+                content = dictNextFeaturesInformation[feature]
+
+                if featureType is FeatureType.Binary:
+                    actionable = content['actionable']
+                    value0 = content['value0']
+                    value1 = content['value1']
+                    value = content['value']
+
+                    componentController = DoubleRadioButtonController(self.view)
+                    componentController.initializeView(feature, str(value0), str(value1))
+                    componentController.setActionable(actionable)
+                    componentController.setSelectedValue(value)
+                    componentController.disableComponent()
+
+                elif featureType is FeatureType.Discrete:
+                    actionable = content['actionable']
+                    minValue = content['minimumValue']
+                    maxValue = content['maximumValue']
+                    value = content['value']
+
+                    componentController = Slider3RangesController(self.view, smaller=True)
+                    componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
+                    componentController.setActionable(actionable)
+                    componentController.setSelectedValue(value)
+
+                elif featureType is FeatureType.Numeric:
+                    actionable = content['actionable']
+                    minValue = content['minimumValue']
+                    maxValue = content['maximumValue']
+                    value = content['value']
+
+                    componentController = Slider3RangesController(self.view, smaller=True)
+                    componentController.initializeView(feature, minValue, maxValue)
+                    componentController.setActionable(actionable)
+                    componentController.setSelectedValue(value)
+                    
+                elif featureType is FeatureType.Categorical:
+                    actionable = content['actionable']
+                    allowedValues = content['allowedValues']
+                    value = content['value']
+                    
+                    componentController = ComboboxListController(self.view)
+                    componentController.initializeView(feature, allowedValues)
+                    componentController.setActionable(actionable)
+                    componentController.setSelectedValue(value)
+                    componentController.disableComponent()
+
+                # adding the view to selectedPoint component
+                self.view.addFeatureWidget(componentController.view)
+                # saving the controller to facilitate the access to components
+                self.__dictControllersSelectedPoint[feature] = componentController
+
+        self.view.addFeaturesOptions(list(self.model.features[:-1]))
+        self.__calculateClass()
 
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
@@ -86,9 +150,9 @@ class IterationController():
             currentDataframe['Class'] = predictedCurrentClass[0]
             currentDataframe['prob1'] = predictedCurrentClassPercentage[0][1]
 
-            print('!'*75)
-            print(currentDataframe)
-            print('!'*75)
+            # saving the updated current point values
+            # only needs the features values without the Class and prob1
+            self.updatedCurrentPoint = currentDataframe.to_numpy()[0][:-2]
 
             # getting the initial datapoint, keeping a historic
             parentDataPoint = self.parent.chosenDataPoint.copy()
@@ -107,57 +171,6 @@ class IterationController():
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
-
-    def setFeaturesAndValues(self, dictControllersSelectedPoint):
-        for feature in self.model.features:
-            if feature != 'Class':
-                featureType = self.model.featuresInformations[feature]['featureType']
-
-                content = dictControllersSelectedPoint[feature].getContent()
-
-                if featureType is FeatureType.Binary:
-                    value0 = self.model.featuresInformations[feature]['value0']
-                    value1 = self.model.featuresInformations[feature]['value1']
-                    value = content['value']
-
-                    componentController = DoubleRadioButtonController(self.view)
-                    componentController.initializeView(feature, str(value0), str(value1))
-                    componentController.setSelectedValue(value)
-                    # componentController.disableComponent()
-
-                elif featureType is FeatureType.Discrete:
-                    minValue = content['minimumValue']
-                    maxValue = content['maximumValue']
-                    value = content['value']
-
-                    componentController = Slider3RangesController(self.view, smaller=True)
-                    componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
-                    componentController.setSelectedValue(value)
-
-                elif featureType is FeatureType.Numeric:
-                    minValue = content['minimumValue']
-                    maxValue = content['maximumValue']
-                    value = content['value']
-
-                    componentController = Slider3RangesController(self.view, smaller=True)
-                    componentController.initializeView(feature, minValue, maxValue)
-                    componentController.setSelectedValue(value)
-                    
-                elif featureType is FeatureType.Categorical:
-                    value = content['value']
-                    
-                    componentController = ComboboxListController(self.view)
-                    componentController.initializeView(feature, self.model.featuresInformations[feature]['possibleValues'])
-                    componentController.setSelectedValue(value)
-                    # componentController.disableComponent()
-
-                # adding the view to selectedPoint component
-                self.view.addFeatureWidget(componentController.view)
-                # saving the controller to facilitate the access to components
-                self.__dictControllersSelectedPoint[feature] = componentController
-
-        self.view.addFeaturesOptions(list(self.model.features[:-1]))
-        self.__calculateClass()
 
     # this function takes the selected data point and calculate the respective class
     def __calculateClass(self):
@@ -195,6 +208,9 @@ class IterationController():
                     
             self.chosenDataPoint = np.array(auxiliarDataPoint)
 
+            # saving the updated current point values
+            self.updatedCurrentPoint = self.chosenDataPoint.copy()
+
             # transforming the datapoint to predict its class
             self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
         
@@ -231,9 +247,49 @@ class IterationController():
         self.restorCursor()
 
     def __handlerNextIteration(self):
-        nextIteration = IterationController(self.model, self.randomForestClassifier)
-        nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
-        self.view.addNewIterationTab(nextIteration.view)
+        self.waitCursor()
+
+        dictNextFeaturesInformation = {}
+        for i, feature in enumerate(self.model.features):
+            if feature != 'Class':
+                featureType = self.model.featuresInformations[feature]['featureType']
+
+                currentValue = self.updatedCurrentPoint[i]
+                actionable = self.__dictControllersSelectedPoint[feature].getActionable()
+                content = self.__dictControllersSelectedPoint[feature].getContent()
+
+                if featureType is FeatureType.Binary:
+                    value0 = content['value0']
+                    value1 = content['value1']
+
+                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                            'value0': value0, 
+                                                            'value1': value1, 
+                                                            'value': currentValue}
+
+                elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                    minimumValue = content['minimumValue']
+                    maximumValue = content['maximumValue']
+
+                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                            'minimumValue': minimumValue, 
+                                                            'maximumValue': maximumValue, 
+                                                            'value': currentValue}
+
+                elif featureType is FeatureType.Categorical:
+                    allowedValues = content['allowedValues']
+                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                            'allowedValues': allowedValues, 
+                                                            'value': currentValue}
+
+        nextIteration = IterationController(parent=self.parent, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+        nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
+        self.parent.view.addNewIterationTab(nextIteration.view)
+
+        self.restorCursor()
+
+    def __handlerFinishIteration(self):
+        pass
 
     # this function is used to change the default cursor to wait cursor
     def waitCursor(self):

@@ -103,9 +103,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                 # use the unique values feature to plot the vertical axis
                 self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
 
-            elif f == 'color':
-                pass
-
             else:
                 # append ranges to move
                 uniqueValuesFeature = model.data[f].unique()
@@ -156,7 +153,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             allFeaturesToPlot.insert(0, 'dist')
             allFeaturesToPlot.insert(1, 'prob1')
             allFeaturesToPlot.append('Class')
-            allFeaturesToPlot.append('color')
 
             # save the features to plot
             self.__featuresToPlot = allFeaturesToPlot
@@ -181,7 +177,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.add_line(lineOriginal)
             
             # legends
-            self.axes.legend([self.polygonInteractable.line, lineOriginal], ['Current editable', 'Original'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+            self.axes.legend([self.polygonInteractable.line, lineOriginal], ['Current editable', 'Previous'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))
@@ -205,7 +201,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             currentPoint = []
             indexAux = 0
             for f in self.__featuresToPlot:            
-                if f == 'prob1' or f == 'color':
+                if f == 'prob1':
                     # quando colocar essas colunas: necessário atualizar o indexAux
                     pass
 

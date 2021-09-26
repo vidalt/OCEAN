@@ -32,6 +32,14 @@ class DoubleRadioButtonController:
     def enableComponent(self):
         self.__view.enableComponent()
 
+    # this function returns the actionability
+    def getActionable(self):
+        return self.view.getActionable()
+
+    # this function sets the actionability
+    def setActionable(self, actionable):
+        self.view.setActionable(actionable)
+
     # this function set a specific value to corresponding widget
     def setSelectedValue(self, selectedValue):
         # assert isinstance(selectedValue, str) 

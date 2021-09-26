@@ -10,16 +10,17 @@ from .IterationEnums import IterationEnums
 
 class IterationView(QWidget, Ui_Iteration):
 
-    nextIteration = pyqtSignal()
-    selectedAxisX = pyqtSignal()
-    selectedAxisY = pyqtSignal()
     selectedFeatures = pyqtSignal()
+    nextIteration = pyqtSignal()
+    finishIteration = pyqtSignal()
 
     def __init__(self):
         super(IterationView, self).__init__()
         self.setupUi(self)
 
         self.pushButtonUpdateGraph.clicked.connect(lambda: self.selectedFeatures.emit())
+        self.pushButtonNext.clicked.connect(lambda: self.nextIteration.emit())
+        self.pushButtonFinish.clicked.connect(lambda: self.finishIteration.emit())
 
 
     def initializeView(self):

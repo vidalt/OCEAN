@@ -20,6 +20,14 @@ class DoubleRadioButtonView(QWidget, Ui_DoubleRadioButton):
         self.radioButtonValue0.setEnabled(False)
         self.radioButtonValue1.setEnabled(False)
 
+    # this function returns the actionability
+    def getActionable(self):
+        return True if self.checkBoxActionability.isChecked() else False
+
+    # this function sets the actionability
+    def setActionable(self, actionable):
+        self.checkBoxActionability.setChecked(actionable)
+
     # this function enables the user from changind the value
     def enableComponent(self):
         self.radioButtonValue0.setEnabled(True)
@@ -45,11 +53,13 @@ class DoubleRadioButtonView(QWidget, Ui_DoubleRadioButton):
 
     # this function returns a dictionary with the value of the widgets
     def getContent(self):
-        content = None
+        content = {'value0':self.radioButtonValue0.text(), 'value1':self.radioButtonValue1.text()}
         if self.radioButtonValue0.isChecked():
-            content = {'value':self.radioButtonValue0.text(), 'notAllowedValue':None}
+            content['value'] = self.radioButtonValue0.text() 
+            content['notAllowedValue'] = None
         elif self.radioButtonValue1.isChecked():
-            content = {'value':self.radioButtonValue1.text(), 'notAllowedValue':None}
+            content['value'] = self.radioButtonValue1.text() 
+            content['notAllowedValue'] = None
 
         if not self.checkBoxActionability.isChecked():
             if self.radioButtonValue0.isChecked():

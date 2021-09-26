@@ -58,6 +58,14 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
             self.pushButtonCheckAll.setEnabled(False)
             self.pushButtonUncheckAll.setEnabled(False)
 
+    # this function returns the actionability
+    def getActionable(self):
+        return True if self.checkBoxActionability.isChecked() else False
+
+    # this function sets the actionability
+    def setActionable(self, actionable):
+        self.checkBoxActionability.setChecked(actionable)
+
     # this function set all the options as checked
     def __checkAllHandler(self):
         for i in range(self.listWidgetAllowedValues.count()):

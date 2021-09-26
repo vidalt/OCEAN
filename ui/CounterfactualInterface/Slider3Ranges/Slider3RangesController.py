@@ -33,6 +33,14 @@ class Slider3RangesController:
         self.__view.setContent(featureName, minValue, maxValue, value, decimalPlaces)
         self.__view.show()
 
+    # this function returns the actionability
+    def getActionable(self):
+        return self.view.getActionable()
+
+    # this function sets the actionability
+    def setActionable(self, actionable):
+        self.view.setActionable(actionable)
+
     # this function set a specific value to corresponding widget
     def setSelectedValue(self, selectedValue):
         assert selectedValue is not None

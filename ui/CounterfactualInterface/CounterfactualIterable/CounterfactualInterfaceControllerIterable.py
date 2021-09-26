@@ -183,8 +183,42 @@ class CounterfactualInterfaceControllerIterable:
         self.waitCursor()
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            self.__nextIteration = IterationController(parent=self, model=self.model,randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
-            self.__nextIteration.setFeaturesAndValues(self.__dictControllersSelectedPoint)
+            dictNextFeaturesInformation = {}
+            for i, feature in enumerate(self.model.features):
+                if feature != 'Class':
+                    featureType = self.model.featuresInformations[feature]['featureType']
+
+                    actionable = self.__dictControllersSelectedPoint[feature].getActionable()
+                    content = self.__dictControllersSelectedPoint[feature].getContent()
+                    currentValue = content['value']
+
+                    componentController = None
+                    if featureType is FeatureType.Binary:
+                        value0 = content['value0']
+                        value1 = content['value1']
+
+                        dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                                'value0': value0, 
+                                                                'value1': value1, 
+                                                                'value': currentValue}
+
+                    elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                        minimumValue = content['minimumValue']
+                        maximumValue = content['maximumValue']
+
+                        dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                                'minimumValue': minimumValue, 
+                                                                'maximumValue': maximumValue, 
+                                                                'value': currentValue}
+
+                    elif featureType is FeatureType.Categorical:
+                        allowedValues = content['allowedValues']
+                        dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                                'allowedValues': allowedValues, 
+                                                                'value': currentValue}
+            
+            self.__nextIteration = IterationController(parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+            self.__nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
             self.view.addNewIterationTab(self.__nextIteration.view)
 
         self.restorCursor()

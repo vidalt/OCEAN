@@ -32,6 +32,14 @@ class Slider3RangesViewSmaller(QWidget, Ui_Slider3RangesSmaller):
             self.doubleSpinBoxMinimum.setEnabled(False)
             self.doubleSpinBoxMaximum.setEnabled(False)
 
+    # this function returns the actionability
+    def getActionable(self):
+        return True if self.checkBoxActionability.isChecked() else False
+
+    # this function sets the actionability
+    def setActionable(self, actionable):
+        self.checkBoxActionability.setChecked(actionable)
+
     def setContent(self, featureName, minValue, maxValue, value, decimalPlaces):
         assert isinstance(featureName, str)
         assert minValue is not None
