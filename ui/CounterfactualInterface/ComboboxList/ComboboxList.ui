@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>300</width>
+    <width>293</width>
     <height>175</height>
    </rect>
   </property>
@@ -44,7 +44,23 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1" colspan="2">
+   <item row="1" column="0">
+    <widget class="QComboBox" name="comboBoxValues">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>120</width>
+       <height>25</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2" colspan="3">
     <widget class="QCheckBox" name="checkBoxActionability">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -69,23 +85,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QComboBox" name="comboBoxValues">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>120</width>
-       <height>25</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1" rowspan="2" colspan="2">
+   <item row="1" column="2" rowspan="2" colspan="3">
     <widget class="QListWidget" name="listWidgetAllowedValues">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -101,6 +101,26 @@
      </property>
      <property name="selectionMode">
       <enum>QAbstractItemView::MultiSelection</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="4">
+    <widget class="QPushButton" name="pushButtonUncheckAll">
+     <property name="minimumSize">
+      <size>
+       <width>45</width>
+       <height>25</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;uncheck all&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../Resources/Images.qrc">
+       <normaloff>:/Images/uncheckAll.png</normaloff>:/Images/uncheckAll.png</iconset>
      </property>
     </widget>
    </item>
@@ -128,34 +148,50 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item row="3" column="3">
     <widget class="QPushButton" name="pushButtonCheckAll">
      <property name="minimumSize">
       <size>
-       <width>0</width>
+       <width>45</width>
        <height>25</height>
       </size>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;check all&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
-      <string>Check All</string>
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../Resources/Images.qrc">
+       <normaloff>:/Images/checkAll.png</normaloff>:/Images/checkAll.png</iconset>
      </property>
     </widget>
    </item>
    <item row="3" column="2">
-    <widget class="QPushButton" name="pushButtonUncheckAll">
+    <widget class="QPushButton" name="pushButtonResetOptions">
      <property name="minimumSize">
       <size>
-       <width>0</width>
+       <width>45</width>
        <height>25</height>
       </size>
      </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;reset options&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
      <property name="text">
-      <string>Unckeck All</string>
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset resource="../../Resources/Images.qrc">
+       <normaloff>:/Images/resetOptions.png</normaloff>:/Images/resetOptions.png</iconset>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../Resources/Images.qrc"/>
+ </resources>
  <connections/>
 </ui>

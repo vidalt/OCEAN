@@ -2,11 +2,13 @@
 # this class imports the UI file to be possible to access the interface components
 
 from PyQt5.QtWidgets import QWidget, QCompleter, QListWidgetItem
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from .Ui_ComboboxList import Ui_ComboboxList
 
 class ComboboxListView(QWidget, Ui_ComboboxList):
+
+    resetOptions = pyqtSignal()
     
     def __init__(self, parent=None):
         super(ComboboxListView, self).__init__(parent)
@@ -16,6 +18,7 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
 
         self.comboBoxValues.currentTextChanged.connect(lambda: self.__updateAllowedNotActionable())
         self.checkBoxActionability.stateChanged.connect(lambda: self.__actionabilityOptionHandler())
+        self.pushButtonResetOptions.clicked.connect(lambda: self.resetOptions.emit())
         self.pushButtonCheckAll.clicked.connect(lambda: self.__checkAllHandler())
         self.pushButtonUncheckAll.clicked.connect(lambda: self.__uncheckAllHandler())
 
@@ -77,6 +80,38 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
         for i in range(self.listWidgetAllowedValues.count()):
             if i != 0:
                 self.listWidgetAllowedValues.item(i).setCheckState(Qt.Unchecked)
+
+    # this function updates the possible values
+    def updatePossibleValues(self, content):
+        assert isinstance(content, list)
+        for item in content:
+            assert isinstance(item, str)
+
+        # save the current value 
+        selectedValue = self.comboBoxValues.currentText()
+
+        self.comboBoxValues.clear()
+        self.comboBoxValues.addItems(content)
+        completer = QCompleter(content)
+        completer.setModelSorting(QCompleter.UnsortedModel)
+        completer.setCompletionMode(QCompleter.PopupCompletion)
+        completer.setCaseSensitivity(False)
+        self.comboBoxValues.setCompleter(completer)
+
+        self.listWidgetAllowedValues.clear()
+        item = QListWidgetItem()
+        item.setText('Allowed Values')
+        self.listWidgetAllowedValues.addItem(item)
+        for value in content:
+            item = QListWidgetItem()
+            item.setText(value)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked)
+            self.listWidgetAllowedValues.addItem(item)
+
+        index = self.comboBoxValues.findText(str(selectedValue), Qt.MatchFixedString)
+        if index >= 0:
+            self.comboBoxValues.setCurrentIndex(index)
 
     # this function set the initial values to the component
     def setContent(self, featureName, content):

@@ -131,7 +131,7 @@ class CounterfactualInterfaceControllerIterable:
                         componentController.initializeView(feature, minValue, maxValue)
                         
                     elif featureType is FeatureType.Categorical:
-                        componentController = ComboboxListController(self.view)
+                        componentController = ComboboxListController(self.view, self.model.featuresInformations[feature]['possibleValues'])
                         componentController.initializeView(feature, self.model.featuresInformations[feature]['possibleValues'])
 
                     # adding the view to selectedPoint component
@@ -213,8 +213,10 @@ class CounterfactualInterfaceControllerIterable:
 
                     elif featureType is FeatureType.Categorical:
                         allowedValues = content['allowedValues']
+                        notAllowedValues = content['notAllowedValues']
                         dictNextFeaturesInformation[feature] = {'actionable': actionable,
                                                                 'allowedValues': allowedValues, 
+                                                                'notAllowedValues': notAllowedValues,
                                                                 'value': currentValue}
             
             self.__nextIteration = IterationController(parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)

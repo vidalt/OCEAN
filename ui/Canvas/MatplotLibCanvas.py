@@ -28,7 +28,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
     errorPlot = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        super(MatplotLibCanvas, self).__init__()
+        # super(MatplotLibCanvas, self).__init__()
 
         self.dpi=100
 

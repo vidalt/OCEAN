@@ -113,9 +113,11 @@ class IterationController():
                 elif featureType is FeatureType.Categorical:
                     actionable = content['actionable']
                     allowedValues = content['allowedValues']
+                    notAllowedValues = content['notAllowedValues']
+                    allPossibleValues = allowedValues + notAllowedValues
                     value = content['value']
                     
-                    componentController = ComboboxListController(self.view)
+                    componentController = ComboboxListController(self.view, allPossibleValues)
                     componentController.initializeView(feature, allowedValues)
                     componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
@@ -281,8 +283,10 @@ class IterationController():
 
                 elif featureType is FeatureType.Categorical:
                     allowedValues = content['allowedValues']
+                    notAllowedValues = content['notAllowedValues']
                     dictNextFeaturesInformation[feature] = {'actionable': actionable,
                                                             'allowedValues': allowedValues, 
+                                                            'notAllowedValues': notAllowedValues,
                                                             'value': currentValue}
 
         nextIteration = IterationController(parent=self.parent, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)

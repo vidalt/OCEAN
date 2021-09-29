@@ -7,8 +7,12 @@ from .ComboboxListView import ComboboxListView
 
 class ComboboxListController:
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, allPossibleValues=None):
         self.__view = ComboboxListView(parent)
+
+        self.__allPossibleValues = allPossibleValues
+
+        self.__view.resetOptions.connect(self.__resetOptionsHandler)
 
     @property
     def view(self):
@@ -45,6 +49,18 @@ class ComboboxListController:
         assert selectedValue is not None
 
         self.__view.setSelectedValue(selectedValue)
+
+    # this function updates the possible values
+    def __updatePossibleValues(self, content):
+        assert isinstance(content, list)
+        for item in content:
+            assert isinstance(item, str)
+
+        self.view.updatePossibleValues(content)
+
+    # this function reset the options values using the allOptions attribute
+    def __resetOptionsHandler(self):
+        self.__updatePossibleValues(self.__allPossibleValues)
 
     # this function returns a dictionary with the value of the widgets
     def getContent(self):
