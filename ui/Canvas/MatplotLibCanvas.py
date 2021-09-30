@@ -51,12 +51,12 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
     def createAxis(self, fig, ax, xRange, yRange, labels):
         # create axis
-        line1 = Line2D(xRange, yRange, color='black', alpha=0.5)
+        line1 = Line2D(xRange, yRange, color='#d3d3d3', alpha=0.5)
         fig.axes[0].add_line(line1)
 
         # set annotation ("ytick labels") to each feature
         for i, label in enumerate(labels):
-            ax.text(xRange[0], i, ' '+str(label), transform=ax.transData)
+            ax.text(xRange[0], i, ' '+str(label), transform=ax.transData, fontsize=8)
 
     def infToPlot(self, allFeaturesToPlot, datapoint):
         xs = []
@@ -172,6 +172,12 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             originalPoint = parameters['originalPoint']
             selectedFeatures = parameters['selectedFeatures']
 
+            print('#'*75)
+            print(type(currentPoint.iloc[0].Class))
+            print('#'*75)
+            
+            color = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
+
             allFeaturesToPlot = selectedFeatures.copy()
             allFeaturesToPlot.insert(0, 'dist')
             allFeaturesToPlot.insert(1, 'prob1')
@@ -194,7 +200,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             # set the draggable line to PolygonInteractor
             self.axes.add_patch(poly)
-            self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables)
+            self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables, color)
             self.polygonInteractable.updatedPoint.connect(self.__onUpdatedCurrentPoint)
 
             # creating the line to original point
@@ -202,7 +208,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             if returnedOriginalInfo is None:
                 return
             xOriginal, yOriginal, _, _, _, _ = returnedOriginalInfo
-            lineOriginal = Line2D(xOriginal, yOriginal, color='green', animated=False)
+            lineOriginal = Line2D(xOriginal, yOriginal, color='#a9a9a9', animated=False)
             self.axes.add_line(lineOriginal)
             
             # legends

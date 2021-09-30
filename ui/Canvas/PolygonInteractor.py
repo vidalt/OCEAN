@@ -12,7 +12,7 @@ class PolygonInteractor(QObject):
     # the updated current point values
     updatedPoint = pyqtSignal(object, list)
 
-    def __init__(self, ax, poly, ranges, decimals, actionables):
+    def __init__(self, ax, poly, ranges, decimals, actionables, color):
         super(PolygonInteractor, self).__init__()
         
         if poly.figure is None:
@@ -24,10 +24,11 @@ class PolygonInteractor(QObject):
         self.ranges = ranges
         self.decimals = decimals
         self.actionables = actionables
+        self.color = color
 
         self._x, self._y = zip(*self.poly.xy)
-        self.line = Line2D(self._x, self._y, color='blue',
-                           marker='o', markerfacecolor='blue',
+        self.line = Line2D(self._x, self._y, color=self.color,
+                           marker='o', markerfacecolor=self.color,
                            animated=True)
         self.ax.add_line(self.line)
 
