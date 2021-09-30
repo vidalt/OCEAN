@@ -170,13 +170,10 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.controller = parameters['controller']
             currentPoint = parameters['currentPoint']
             originalPoint = parameters['originalPoint']
+            lastScenarioPoint = parameters['lastScenarioPoint']
             selectedFeatures = parameters['selectedFeatures']
 
-            print('#'*75)
-            print(type(currentPoint.iloc[0].Class))
-            print('#'*75)
-            
-            color = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
+            polygonColor = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
 
             allFeaturesToPlot = selectedFeatures.copy()
             allFeaturesToPlot.insert(0, 'dist')
@@ -200,19 +197,32 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             # set the draggable line to PolygonInteractor
             self.axes.add_patch(poly)
-            self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables, color)
+            self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables, polygonColor)
             self.polygonInteractable.updatedPoint.connect(self.__onUpdatedCurrentPoint)
 
-            # creating the line to original point
+            # creating the line to the original point
             returnedOriginalInfo = self.infToPlot(allFeaturesToPlot, originalPoint)
             if returnedOriginalInfo is None:
                 return
             xOriginal, yOriginal, _, _, _, _ = returnedOriginalInfo
             lineOriginal = Line2D(xOriginal, yOriginal, color='#a9a9a9', animated=False)
             self.axes.add_line(lineOriginal)
+
+            # creating the line to the last scenario point
+            if lastScenarioPoint is not None:
+                returnedLastScenarioInfo = self.infToPlot(allFeaturesToPlot, lastScenarioPoint)
+                if returnedLastScenarioInfo is None:
+                    return
+                xLastScenario, yLastScenario, _, _, _, _ = returnedLastScenarioInfo
+                lineLastScenario = Line2D(xLastScenario, yLastScenario, color='#d3a27f', animated=False)
+                self.axes.add_line(lineLastScenario)
             
             # legends
-            self.axes.legend([self.polygonInteractable.line, lineOriginal], ['Current editable', 'Original'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+            if lastScenarioPoint is not None:
+                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line], ['Original', 'Last Scenario', 'Current editable'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+            
+            else:
+                self.axes.legend([lineOriginal, self.polygonInteractable.line], ['Original', 'Current editable'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))

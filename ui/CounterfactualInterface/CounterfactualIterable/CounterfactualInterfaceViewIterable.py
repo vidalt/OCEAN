@@ -77,10 +77,13 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
             self.comboBoxAxisY.addItems(options)
 
     def addNewIterationTab(self, iterationView):
-        self.tabWidget.addTab(iterationView, 'Scenario'+str(self.__iterationNumber))
+        iterationName = 'Scenario'+str(self.__iterationNumber)
+        self.tabWidget.addTab(iterationView, iterationName)
         self.__iterationNumber += 1
 
         self.tabWidget.setCurrentIndex(self.tabWidget.count()-1)
+
+        return iterationName
 
     def getChosenAxis(self):
         return self.comboBoxAxisX.currentText(), self.comboBoxAxisY.currentText()

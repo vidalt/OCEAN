@@ -26,11 +26,14 @@ from sklearn.utils.extmath import cartesian
 
 class IterationController():
 
-    def __init__(self, parent, model, randomForestClassifier, isolationForest):
+    def __init__(self, original, parent, model, randomForestClassifier, isolationForest):
+        self.original = original
         self.parent = parent
 
         self.view = IterationView()
         self.model = model
+
+        self.iterationName = None
 
         self.randomForestClassifier = randomForestClassifier
         self.isolationForest = isolationForest
@@ -68,6 +71,8 @@ class IterationController():
         self.view.initializeView()
 
     def setFeaturesAndValues(self, dictNextFeaturesInformation):
+        self.iterationName = dictNextFeaturesInformation['iterationName']
+
         for feature in self.model.features:
             if feature != 'Class':
                 featureType = self.model.featuresInformations[feature]['featureType']
@@ -160,8 +165,8 @@ class IterationController():
             self.updatedCurrentPoint = currentDataframe.to_numpy()[0][:-2]
 
             # getting the initial datapoint, keeping a historic
-            parentDataPoint = self.parent.chosenDataPoint.copy()
-            parentDataPoint = np.append(parentDataPoint, self.parent.predictedOriginalClass)
+            parentDataPoint = self.original.chosenDataPoint.copy()
+            parentDataPoint = np.append(parentDataPoint, self.original.predictedOriginalClass)
             # transforming the parent datapoint to predict its class
             transformedParentDataPoint = self.model.transformDataPoint(parentDataPoint[:-1])
             # predicting the parent datapoint class probabilities
@@ -171,8 +176,24 @@ class IterationController():
             # adding the prediction percentage
             parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
 
+            lastScenarioDataframe = None
+            if hasattr(self.parent, 'updatedCurrentPoint'):
+                # getting the last scenario datapoint, keeping a historic
+                lastScenarioDataPoint = self.parent.updatedCurrentPoint.copy()
+                # transforming the parent datapoint to predict its class
+                transformedLastScenarioDataPoint = self.model.transformDataPoint(lastScenarioDataPoint)
+                # predicting the parent datapoint class and probabilities
+                predictedLastScenarioClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                predictedLastScenarioClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                # adding class
+                lastScenarioDataPoint = np.append(lastScenarioDataPoint, predictedLastScenarioClass[0])
+                # building the parent dataframe
+                lastScenarioDataframe = pd.DataFrame(data=[lastScenarioDataPoint], columns=self.model.features)
+                # adding the prediction percentage
+                lastScenarioDataframe['prob1'] = predictedLastScenarioClassPercentage[0][1]
+
             #parameters to update graph
-            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
+            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
@@ -233,8 +254,8 @@ class IterationController():
             currentDataframe['prob1'] = self.predictedCurrentClassPercentage[0][1]
 
             # getting the initial datapoint, keeping a historic
-            parentDataPoint = self.parent.chosenDataPoint.copy()
-            parentDataPoint = np.append(parentDataPoint, self.parent.predictedOriginalClass)
+            parentDataPoint = self.original.chosenDataPoint.copy()
+            parentDataPoint = np.append(parentDataPoint, self.original.predictedOriginalClass)
             # transforming the parent datapoint to predict its class
             transformedParentDataPoint = self.model.transformDataPoint(parentDataPoint[:-1])
             # predicting the parent datapoint class probabilities
@@ -245,8 +266,24 @@ class IterationController():
             # adding the prediction percentage
             parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
 
-            # parameters to update graph
-            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'selectedFeatures':selectedFeatures}
+            lastScenarioDataframe = None
+            if hasattr(self.parent, 'updatedCurrentPoint'):
+                # getting the last scenario datapoint, keeping a historic
+                lastScenarioDataPoint = self.parent.updatedCurrentPoint.copy()
+                # transforming the parent datapoint to predict its class
+                transformedLastScenarioDataPoint = self.model.transformDataPoint(lastScenarioDataPoint)
+                # predicting the parent datapoint class and probabilities
+                predictedLastScenarioClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                predictedLastScenarioClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                # adding class
+                lastScenarioDataPoint = np.append(lastScenarioDataPoint, predictedLastScenarioClass[0])
+                # building the parent dataframe
+                lastScenarioDataframe = pd.DataFrame(data=[lastScenarioDataPoint], columns=self.model.features)
+                # adding the prediction percentage
+                lastScenarioDataframe['prob1'] = predictedLastScenarioClassPercentage[0][1]
+
+            #parameters to update graph
+            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
@@ -289,9 +326,10 @@ class IterationController():
                                                             'notAllowedValues': notAllowedValues,
                                                             'value': currentValue}
 
-        nextIteration = IterationController(parent=self.parent, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+        nextIteration = IterationController(original=self.original, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+        iterationName = self.original.view.addNewIterationTab(nextIteration.view)
+        dictNextFeaturesInformation['iterationName'] = iterationName
         nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
-        self.parent.view.addNewIterationTab(nextIteration.view)
 
         self.restorCursor()
 

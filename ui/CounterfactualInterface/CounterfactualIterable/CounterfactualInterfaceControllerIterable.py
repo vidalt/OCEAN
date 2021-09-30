@@ -219,9 +219,10 @@ class CounterfactualInterfaceControllerIterable:
                                                                 'notAllowedValues': notAllowedValues,
                                                                 'value': currentValue}
             
-            self.__nextIteration = IterationController(parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+            self.__nextIteration = IterationController(original=self, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+            iterationName = self.view.addNewIterationTab(self.__nextIteration.view)
+            dictNextFeaturesInformation['iterationName'] = iterationName
             self.__nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
-            self.view.addNewIterationTab(self.__nextIteration.view)
 
         self.restorCursor()
 
