@@ -192,8 +192,12 @@ class IterationController():
                 # adding the prediction percentage
                 lastScenarioDataframe['prob1'] = predictedLastScenarioClassPercentage[0][1]
 
+            lastScenarioName = None
+            if hasattr(self.parent, 'iterationName'):
+                lastScenarioName = self.parent.iterationName
+
             #parameters to update graph
-            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'selectedFeatures':selectedFeatures}
+            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'lastScenarioName':lastScenarioName, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
@@ -282,8 +286,12 @@ class IterationController():
                 # adding the prediction percentage
                 lastScenarioDataframe['prob1'] = predictedLastScenarioClassPercentage[0][1]
 
+            lastScenarioName = None
+            if hasattr(self.parent, 'iterationName'):
+                lastScenarioName = self.parent.iterationName
+
             #parameters to update graph
-            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'selectedFeatures':selectedFeatures}
+            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'lastScenarioName':lastScenarioName, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()

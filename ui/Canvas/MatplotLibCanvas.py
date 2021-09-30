@@ -171,6 +171,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             currentPoint = parameters['currentPoint']
             originalPoint = parameters['originalPoint']
             lastScenarioPoint = parameters['lastScenarioPoint']
+            lastScenarioName = parameters['lastScenarioName']
             selectedFeatures = parameters['selectedFeatures']
 
             polygonColor = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
@@ -219,7 +220,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             
             # legends
             if lastScenarioPoint is not None:
-                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line], ['Original', 'Last Scenario', 'Current editable'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line], ['Original', lastScenarioName, 'Current editable'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
             
             else:
                 self.axes.legend([lineOriginal, self.polygonInteractable.line], ['Original', 'Current editable'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
