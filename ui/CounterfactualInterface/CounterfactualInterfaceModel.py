@@ -201,6 +201,33 @@ class CounterfactualInterfaceModel():
 
         return dataPoint
 
+    # this function takes an encoded data point and returns a data point user readable in a dictionary
+    def invertTransformedFeatureImportance(self, transformedFeatureImportance):
+        assert transformedFeatureImportance is not None
+        if 'Class' in self.transformedFeatures:
+            assert len(transformedFeatureImportance) == len(self.transformedFeatures)-1
+        else:
+            assert len(transformedFeatureImportance) == len(self.transformedFeatures)
+
+        featureImportance = [0 for i in range(len(self.features)-1)]
+        index = 0
+        for i, feature in enumerate(self.features):
+            if feature != 'Class':
+                if self.featuresType[feature] is FeatureType.Binary:
+                    featureImportance[i] += abs(transformedFeatureImportance[index])
+                    index += 1
+
+                elif self.featuresType[feature] is FeatureType.Discrete or self.featuresType[feature] is FeatureType.Numeric:
+                    featureImportance[i] += abs(transformedFeatureImportance[index])
+                    index += 1
+
+                elif self.featuresType[feature] is FeatureType.Categorical:
+                    for value in self.featuresInformations[feature]['possibleValues']:
+                        featureImportance[i] += abs(transformedFeatureImportance[index])
+                        index += 1
+
+        return featureImportance
+
     # this function takes a feature name and value, and returns a min max scaled value
     def transformSingleNumericalValue(self, feature, value):
         assert isinstance(feature, str)

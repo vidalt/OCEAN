@@ -61,6 +61,8 @@ class IterationController():
         self.transformedSamplesClasses = None
         self.transformedSamplesClassesPercentage = None
 
+        self.__suggestedFeaturesToPlot = None
+
         self.view.selectedFeatures.connect(lambda: self.__updateGraph())
         self.view.nextIteration.connect(lambda: self.__handlerNextIteration())
         self.view.finishIteration.connect(lambda: self.__handlerFinishIteration())
@@ -70,6 +72,7 @@ class IterationController():
     def __initializeView(self):
         self.view.initializeView()
 
+    # this function sets the previous values to the current view
     def setFeaturesAndValues(self, dictNextFeaturesInformation):
         self.iterationName = dictNextFeaturesInformation['iterationName']
 
@@ -135,6 +138,13 @@ class IterationController():
 
         self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
+
+    # this function draw the suggested feature
+    def setSuggestedFeaturesToPlot(self, suggestedFeatures):
+        self.__suggestedFeaturesToPlot = suggestedFeatures
+
+        self.__updateGraph(suggestedFeatures)
+        self.view.selectFeatures(suggestedFeatures)
 
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
@@ -224,10 +234,15 @@ class IterationController():
         
         self.view.showCurrentClass(self.predictedCurrentClass[0])      
 
-    def __updateGraph(self):
+    def __updateGraph(self, suggestedFeatures=None):
         self.waitCursor()
         
-        selectedFeatures = self.view.getSelectedFeatures()
+        selectedFeatures = None
+        if suggestedFeatures is not None:
+            selectedFeatures = suggestedFeatures
+        else:
+            selectedFeatures = self.view.getSelectedFeatures()
+
         if len(selectedFeatures) != 0:
             # getting the current datapoint
             auxiliarDataPoint = []
@@ -338,6 +353,7 @@ class IterationController():
         iterationName = self.original.view.addNewIterationTab(nextIteration.view)
         dictNextFeaturesInformation['iterationName'] = iterationName
         nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
+        nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
 
         self.restorCursor()
 

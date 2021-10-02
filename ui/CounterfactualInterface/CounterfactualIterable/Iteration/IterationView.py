@@ -38,6 +38,9 @@ class IterationView(QWidget, Ui_Iteration):
         self.listWidgetSelectedPoint.addItem(item)
         self.listWidgetSelectedPoint.setItemWidget(item, feature)
 
+    def selectFeatures(self, options):
+        self.comboBoxCheckable.selectItems(options)
+    
     def addFeaturesOptions(self, options):
         assert isinstance(options, list)
         for features in options:

@@ -55,6 +55,8 @@ class CounterfactualInterfaceControllerIterable:
         self.transformedSamplesToPlot = None
         self.transformedSamplesClasses = None
 
+        self.__suggestedFeatureToPlot = None
+
 
     # this function takes the dataframe names and send them to interface
     def __initializeView(self):
@@ -92,7 +94,7 @@ class CounterfactualInterfaceControllerIterable:
                 # plot the features importance
                 importance = self.randomForestClassifier.feature_importances_
                 importances = pd.DataFrame(data={
-                    'features': self.model.transformedFeatures[:-1],
+                    'features': self.model.transformedFeaturesOrdered,
                     'importance': importance
                 })
                 importances = importances.sort_values(by='importance', ascending=False)
@@ -101,6 +103,23 @@ class CounterfactualInterfaceControllerIterable:
 
                 self.__canvas = self.view.getCanvas()
                 self.__canvas.updateFeatureImportanceGraph(parameters)
+
+                # fazer mapeamento inverso dos nomes das features --- OK
+                # ordena-las por importancia e pegar as 4 mais importantes --- OK
+                # ordena-las pela ordem do model --- DOING
+                featureImportance = self.model.invertTransformedFeatureImportance(importance)
+                tempSuggestedFeatureToPlot = []
+                for i in range(4):
+                    index = featureImportance.index(max(featureImportance))
+                    tempSuggestedFeatureToPlot.append(self.model.features[index])
+                    featureImportance[index] = -1
+
+                suggestedFeatureToPlot = []
+                for feature in self.model.features:
+                    if feature in tempSuggestedFeatureToPlot:
+                        suggestedFeatureToPlot.append(feature)
+
+                self.__suggestedFeatureToPlot = suggestedFeatureToPlot
 
             # showing the features components and informations
             for feature in self.model.features:
@@ -192,7 +211,6 @@ class CounterfactualInterfaceControllerIterable:
                     content = self.__dictControllersSelectedPoint[feature].getContent()
                     currentValue = content['value']
 
-                    componentController = None
                     if featureType is FeatureType.Binary:
                         value0 = content['value0']
                         value1 = content['value1']
@@ -223,6 +241,7 @@ class CounterfactualInterfaceControllerIterable:
             iterationName = self.view.addNewIterationTab(self.__nextIteration.view)
             dictNextFeaturesInformation['iterationName'] = iterationName
             self.__nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
+            self.__nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeatureToPlot)
 
         self.restorCursor()
 
