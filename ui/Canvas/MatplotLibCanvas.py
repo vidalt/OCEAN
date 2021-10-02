@@ -28,7 +28,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
     errorPlot = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        # super(MatplotLibCanvas, self).__init__()
+        self.__rectangle = [0, 0.1, 0.8, 0.8] # [left, bottom, width, height]
 
         self.dpi=100
 
@@ -36,7 +36,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         FigureCanvas.__init__(self, self.figure)
 
-        self.axes = self.figure.add_axes([0.1, 0.15, 0.65, 0.75])
+        self.axes = self.figure.add_axes(self.__rectangle)
         self.txt = None
 
         self.setParent(parent)
@@ -56,7 +56,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         # set annotation ("ytick labels") to each feature
         for i, label in enumerate(labels):
-            ax.text(xRange[0], i, ' '+str(label), transform=ax.transData, fontsize=8)
+            ax.text(xRange[0], i, ' '+str(label), transform=ax.transData, fontsize=8, color='#808080')
 
     def infToPlot(self, allFeaturesToPlot, datapoint):
         xs = []
@@ -73,10 +73,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                 
                 uniqueValuesFeature = None
 
-                if f == 'dist':
-                    pass
-
-                elif f == 'prob1':
+                if f == 'prob1':
                     value = datapoint.iloc[0][f]
 
                     # append the x, y, range, decimal plate, and actionability
@@ -166,6 +163,10 @@ class MatplotLibCanvas(FigureCanvas, QObject):
     def updateGraph(self, parameters=None):
         self.clearAxesAndGraph()
 
+        # clear the polygon and the signal connections
+        if self.polygonInteractable is not None:
+            self.polygonInteractable.disconnectAll()
+
         if parameters is not None:
             self.controller = parameters['controller']
             currentPoint = parameters['currentPoint']
@@ -177,8 +178,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             polygonColor = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
 
             allFeaturesToPlot = selectedFeatures.copy()
-            allFeaturesToPlot.insert(0, 'dist')
-            allFeaturesToPlot.insert(1, 'prob1')
+            allFeaturesToPlot.insert(0, 'prob1')
             allFeaturesToPlot.append('Class')
 
             # save the features to plot
@@ -236,6 +236,9 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.set_xticklabels(allFeaturesToPlot)
             # ytick name
             self.axes.set_yticklabels([])
+
+            # set title
+            self.axes.set_title('Drag the dots to update the point values')
             
             # draw the figure
             self.draw()
@@ -247,11 +250,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             currentPoint = []
             indexAux = 0
             for f in self.__featuresToPlot:            
-                if f == 'prob1':
-                    # quando colocar essas colunas: necessário atualizar o indexAux
-                    pass
-
-                elif f == 'dist' or f == 'Class':
+                if f == 'prob1' or f == 'Class':
                     indexAux += 1
                 
                 else:
@@ -293,7 +292,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
     def clearAxesAndGraph(self):
         self.figure.clear()
-        self.axes = self.figure.add_axes([0.1, 0.15, 0.65, 0.75])
+        self.axes = self.figure.add_axes(self.__rectangle)
         self.axes.clear()
         self.__featuresToPlot = None
         self.__featuresUniqueValues = {}

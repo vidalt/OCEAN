@@ -18,6 +18,8 @@ class PolygonInteractor(QObject):
         if poly.figure is None:
             raise RuntimeError('You must first add the polygon to a figure '
                                'or canvas before defining the interactor')
+        
+        self.fig = poly.figure
         self.ax = ax
         canvas = poly.figure.canvas
         self.poly = poly
@@ -35,11 +37,11 @@ class PolygonInteractor(QObject):
         self.cid = self.poly.add_callback(self.poly_changed)
         self._ind = None  # the active vert
 
-        canvas.mpl_connect('draw_event', self.on_draw)
-        canvas.mpl_connect('button_press_event', self.on_button_press)
-        canvas.mpl_connect('key_press_event', self.on_key_press)
-        canvas.mpl_connect('button_release_event', self.on_button_release)
-        canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
+        self.onDraw = canvas.mpl_connect('draw_event', self.on_draw)
+        self.onButtonPress = canvas.mpl_connect('button_press_event', self.on_button_press)
+        self.onKeyPress = canvas.mpl_connect('key_press_event', self.on_key_press)
+        self.onButtonRelease = canvas.mpl_connect('button_release_event', self.on_button_release)
+        self.onMouseMove = canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
         self.canvas = canvas
 
     def on_draw(self, event):
@@ -126,4 +128,39 @@ class PolygonInteractor(QObject):
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
         self.canvas.blit(self.ax.bbox)
+
+    def updateAllPolygon(self, x, y, color):
+        self.line = Line2D(x, y, color=self.color,
+                           marker='o', markerfacecolor=self.color,
+                           animated=True)
+        self.ax.add_line(self.line)
+
+        self.line.set_color(color)
+        self.line.set_markerfacecolor(color)
+
+        self.canvas.restore_region(self.background)
+        self.ax.draw_artist(self.poly)
+        self.ax.draw_artist(self.line)
+        self.canvas.blit(self.ax.bbox)
+
+        #refresh plot
+        self.fig.canvas.draw()
+
+    def updatePolygon(self, index, x, y, color):
+        self.poly.xy[index] = x, y
+
+        self.line.set_data(zip(*self.poly.xy))
+        self.line.set_color(color)
+        self.line.set_markerfacecolor(color)
+
+        self.canvas.restore_region(self.background)
+        self.ax.draw_artist(self.poly)
+        self.ax.draw_artist(self.line)
+        self.canvas.blit(self.ax.bbox)
         
+    def disconnectAll(self):
+        self.canvas.mpl_disconnect(self.onDraw)
+        self.canvas.mpl_disconnect(self.onButtonPress)
+        self.canvas.mpl_disconnect(self.onKeyPress)
+        self.canvas.mpl_disconnect(self.onButtonRelease)
+        self.canvas.mpl_disconnect(self.onMouseMove)

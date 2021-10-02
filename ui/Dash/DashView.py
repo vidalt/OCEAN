@@ -131,5 +131,19 @@ class DashView(QWebView):
 
             dashApp.layout = self.layout
             dashPageManager.addPage(self.canvasID, self.layout)
+
+            self.figure.update_layout(hoverlabel=dict(bgcolor="white"),
+                                      font=dict(size=10),
+                                      legend_font=dict(size=10),
+                                      legend_title_font=dict(size=10), 
+                                    #   font_family="Sans Serif"
+                                      )
+
+            figlayout = self.figure.layout
+
+            figlayout.margin.r = 20
+            figlayout.margin.l = 5
+            figlayout.margin.b = 5
+            figlayout.margin.t = 70
             
             self.load(QUrl("http://127.0.0.1:8050" + "/" + self.canvasID))
