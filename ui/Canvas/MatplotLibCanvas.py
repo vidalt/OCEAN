@@ -28,7 +28,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
     errorPlot = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        self.__rectangle = [0, 0.1, 0.8, 0.8] # [left, bottom, width, height]
+        self.__rectangle = [0, 0.25, 0.8, 0.65] # [left, bottom, width, height]
 
         self.dpi=100
 
@@ -46,17 +46,29 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         self.controller = None
 
+        self.notEditableAxis = None
+
         self.polygonInteractable = None
 
 
-    def createAxis(self, fig, ax, xRange, yRange, labels):
+    def createAxis(self, fig, ax, xRange, yRange, labels, editable, categorical):
+        axisColor = '#000000'
+        if editable:
+            axisColor = '#d3d3d3'
         # create axis
-        line1 = Line2D(xRange, yRange, color='#d3d3d3', alpha=0.5)
+        line1 = Line2D(xRange, yRange, color=axisColor, alpha=0.5)
         fig.axes[0].add_line(line1)
+        
+        if not editable:
+            self.notEditableAxis = line1
+
+        rotation = 0
+        if categorical:
+            rotation = 45
 
         # set annotation ("ytick labels") to each feature
         for i, label in enumerate(labels):
-            ax.text(xRange[0], i, ' '+str(label), transform=ax.transData, fontsize=8, color='#808080')
+            ax.text(xRange[0], i, ' '+str(label), transform=ax.transData, fontsize=8, color='#808080', rotation=rotation)
 
     def infToPlot(self, allFeaturesToPlot, datapoint):
         xs = []
@@ -88,7 +100,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                     uniqueValuesFeature = [0, 0.25, 0.5, 0.75, 1]
 
                     # use the unique values feature to plot the vertical axis
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
 
                 elif f == 'Class':
                     value = datapoint.iloc[0][f]
@@ -105,23 +117,27 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                     uniqueValuesFeature = [0, 1]
 
                     # use the unique values feature to plot the vertical axis
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
 
                 else:
                     uniqueValuesFeature = None
+                    rotation = False
                     if self.controller.model.featuresType[f] is FeatureType.Binary:
                         content = self.controller.dictControllersSelectedPoint[f].getContent()
                         uniqueValuesFeature = [content['value0'], content['value1']]
+                        rotation = False
 
                     elif self.controller.model.featuresType[f] is FeatureType.Discrete or self.controller.model.featuresType[f] is FeatureType.Numeric:
                         content = self.controller.dictControllersSelectedPoint[f].getContent()
                         minimumValue = math.floor(content['minimumValue'])
                         maximumValue = math.ceil(content['maximumValue'])
                         uniqueValuesFeature = [i for i in range(minimumValue, maximumValue+1)]
+                        rotation = False
 
                     elif self.controller.model.featuresType[f] is FeatureType.Categorical:
                         content = self.controller.dictControllersSelectedPoint[f].getContent()
                         uniqueValuesFeature = content['allowedValues']
+                        rotation = True
 
                     # append ranges to move
                     ranges.append(len(uniqueValuesFeature)-1)
@@ -141,7 +157,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                         xMaxRange = len(uniqueValuesFeature)
 
                     # use the unique values feature to plot the vertical axis
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature)
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, True, rotation)
 
                     # append decimal plates to move
                     if self.controller.model.featuresType[f] == FeatureType.Binary or self.controller.model.featuresType[f] == FeatureType.Categorical or self.controller.model.featuresType[f] == FeatureType.Discrete:
@@ -220,10 +236,15 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             
             # legends
             if lastScenarioPoint is not None:
-                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line], ['Original', lastScenarioName, 'Current editable'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+                # self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, self.notEditableAxis], ['Scenario0', lastScenarioName, 'Current editable', 'Not editable axis'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, self.notEditableAxis], 
+                                 ['Scenario0', lastScenarioName, 'Current editable', 'Not editable axis'], 
+                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=4)
             
             else:
-                self.axes.legend([lineOriginal, self.polygonInteractable.line], ['Original', 'Current editable'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+                self.axes.legend([lineOriginal, self.polygonInteractable.line, self.notEditableAxis], 
+                                 ['Scenario0', 'Current editable', 'Not editable axis'], 
+                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=3)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))
@@ -234,6 +255,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.set_xticks(xTicksValues)
             # xtick name
             self.axes.set_xticklabels(allFeaturesToPlot)
+            plt.xticks(rotation=45)
             # ytick name
             self.axes.set_yticklabels([])
 

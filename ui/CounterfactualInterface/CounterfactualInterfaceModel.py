@@ -214,17 +214,22 @@ class CounterfactualInterfaceModel():
         for i, feature in enumerate(self.features):
             if feature != 'Class':
                 if self.featuresType[feature] is FeatureType.Binary:
-                    featureImportance[i] += abs(transformedFeatureImportance[index])
+                    featureImportance[i] = abs(transformedFeatureImportance[index])
                     index += 1
 
                 elif self.featuresType[feature] is FeatureType.Discrete or self.featuresType[feature] is FeatureType.Numeric:
-                    featureImportance[i] += abs(transformedFeatureImportance[index])
+                    featureImportance[i] = abs(transformedFeatureImportance[index])
                     index += 1
 
                 elif self.featuresType[feature] is FeatureType.Categorical:
-                    for value in self.featuresInformations[feature]['possibleValues']:
-                        featureImportance[i] += abs(transformedFeatureImportance[index])
+                    maxValue = 0
+                    for ind in self.featuresInformations[feature]['possibleValues']:
+                        value = abs(transformedFeatureImportance[index])
+                        if value > maxValue:
+                            maxValue = value
                         index += 1
+
+                    featureImportance[i] = maxValue
 
         return featureImportance
 

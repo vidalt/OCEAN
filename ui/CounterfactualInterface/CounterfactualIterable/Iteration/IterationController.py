@@ -152,6 +152,7 @@ class IterationController():
 
         selectedFeatures = self.view.getSelectedFeatures()
         if len(selectedFeatures) == len(updatedPoint):
+            self.__suggestedFeaturesToPlot = selectedFeatures
 
             # current datapoint
             currentDataPoint = self.chosenDataPoint.copy()
@@ -244,6 +245,8 @@ class IterationController():
             selectedFeatures = self.view.getSelectedFeatures()
 
         if len(selectedFeatures) != 0:
+            self.__suggestedFeaturesToPlot = selectedFeatures
+
             # getting the current datapoint
             auxiliarDataPoint = []
             for feature in self.model.features:
@@ -370,4 +373,4 @@ class IterationController():
         QApplication.restoreOverrideCursor()
 
     def __errorPlotHandler(self, featureError):
-        QMessageBox.information(self.view, 'User Information', 'The graph could not be updated, because some constraint is contradictory at feature '+featureError, QMessageBox.Ok)
+        QMessageBox.information(self.view, 'Invalid feature value', 'The graph could not be updated, because some constraint is contradictory at feature '+featureError, QMessageBox.Ok)
