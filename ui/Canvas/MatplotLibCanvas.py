@@ -28,7 +28,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
     errorPlot = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        self.__rectangle = [0, 0.25, 0.8, 0.65] # [left, bottom, width, height]
+        self.__rectangle = [0, 0.25, 0.75, 0.65] # [left, bottom, width, height]
+        self.__distributionRectangle = [0.8, 0.25, 0.18, 0.3]
 
         self.dpi=100
 
@@ -37,6 +38,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         FigureCanvas.__init__(self, self.figure)
 
         self.axes = self.figure.add_axes(self.__rectangle)
+        self.distributionAxes = self.figure.add_axes(self.__distributionRectangle)
         self.txt = None
 
         self.setParent(parent)
@@ -261,6 +263,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             # set title
             self.axes.set_title('Drag the dots to update the point values')
+            self.distributionAxes.set_title('Distribution')
             
             # draw the figure
             self.draw()
@@ -315,6 +318,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
     def clearAxesAndGraph(self):
         self.figure.clear()
         self.axes = self.figure.add_axes(self.__rectangle)
+        self.distributionAxes = self.figure.add_axes(self.__distributionRectangle)
         self.axes.clear()
         self.__featuresToPlot = None
         self.__featuresUniqueValues = {}
