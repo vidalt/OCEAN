@@ -9,6 +9,8 @@ class PolygonInteractor(QObject):
     showverts = True
     epsilon = 5  # max pixel distance to count as a vertex hit
 
+    # current feature 
+    currentIndex = pyqtSignal(object, int)
     # the updated current point values
     updatedPoint = pyqtSignal(object, list)
 
@@ -48,8 +50,6 @@ class PolygonInteractor(QObject):
         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
-        # do not need to blit here, this will fire before the screen is
-        # updated
 
     def poly_changed(self, poly):
         # only copy the artist props to the line (except visibility)
@@ -79,6 +79,8 @@ class PolygonInteractor(QObject):
         if event.button != 1:
             return
         self._ind = self.get_ind_under_point(event)
+        # emit the index to generate the distribution graph
+        self.currentIndex.emit(self, self._ind)
 
     def on_button_release(self, event):
         if not self.showverts:

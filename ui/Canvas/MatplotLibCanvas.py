@@ -29,7 +29,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
     def __init__(self, parent=None):
         self.__rectangle = [0, 0.25, 0.75, 0.65] # [left, bottom, width, height]
-        self.__distributionRectangle = [0.8, 0.25, 0.18, 0.3]
+        self.__distributionRectangle = [0.85, 0.25, 0.1, 0.3]
 
         self.dpi=100
 
@@ -51,6 +51,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         self.notEditableAxis = None
 
         self.polygonInteractable = None
+
+        self.__lastFeatureClicked = None
 
 
     def createAxis(self, fig, ax, xRange, yRange, labels, editable, categorical):
@@ -218,6 +220,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.add_patch(poly)
             self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables, polygonColor)
             self.polygonInteractable.updatedPoint.connect(self.__onUpdatedCurrentPoint)
+            self.polygonInteractable.currentIndex.connect(self.__onUpdateDistributionGraph)
 
             # creating the line to the original point
             returnedOriginalInfo = self.infToPlot(allFeaturesToPlot, originalPoint)
@@ -238,7 +241,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             
             # legends
             if lastScenarioPoint is not None:
-                # self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, self.notEditableAxis], ['Scenario0', lastScenarioName, 'Current editable', 'Not editable axis'], bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
                 self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, self.notEditableAxis], 
                                  ['Scenario0', lastScenarioName, 'Current editable', 'Not editable axis'], 
                                  loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=4)
@@ -312,13 +314,39 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             self.updatedPoint.emit(currentPoint)
 
+    # listen the current index to generate the distribution
+    def __onUpdateDistributionGraph(self, currentPolygon, currentIndex):
+        self.distributionAxes.clear()
+        
+        # to avoid the cached polygon
+        if currentPolygon == self.polygonInteractable:
+            if currentIndex > 0 and currentIndex < (len(self.__featuresToPlot)-1):
+                feature = self.__featuresToPlot[currentIndex]
+
+                encoder = LabelEncoder()
+                encoder.fit(self.controller.model.data[feature].to_numpy())
+
+                dataToBoxPlot = self.controller.model.data[feature].to_numpy()
+                dataToBoxPlotEncoded = encoder.transform(dataToBoxPlot)
+
+                yTicksName = encoder.classes_
+
+                self.distributionAxes.boxplot(dataToBoxPlotEncoded)
+                self.distributionAxes.set_xticks([1])
+                self.distributionAxes.set_xticklabels([feature])
+                self.distributionAxes.set_yticks([i for i in range(len(yTicksName))])
+                self.distributionAxes.set_yticklabels(list(yTicksName))
+
+        self.distributionAxes.set_title('Distribution')
+
+        self.draw()
+
     def resizeCanvas(self, width, height):
         self.figure.set_size_inches(width/self.dpi, height/self.dpi) 
 
     def clearAxesAndGraph(self):
-        self.figure.clear()
+        # self.figure.clear()
         self.axes = self.figure.add_axes(self.__rectangle)
-        self.distributionAxes = self.figure.add_axes(self.__distributionRectangle)
         self.axes.clear()
         self.__featuresToPlot = None
         self.__featuresUniqueValues = {}
