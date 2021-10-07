@@ -204,9 +204,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             # save the features to plot
             self.__featuresToPlot = allFeaturesToPlot
 
-            # clear the canvas
-            self.axes.cla()  
-
             # create the draggable line to current point
             returnedInfo = self.infToPlot(allFeaturesToPlot, currentPoint)
             if returnedInfo is None:
@@ -220,7 +217,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.add_patch(poly)
             self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables, polygonColor)
             self.polygonInteractable.updatedPoint.connect(self.__onUpdatedCurrentPoint)
-            self.polygonInteractable.currentIndex.connect(self.__onUpdateDistributionGraph)
+            self.polygonInteractable.currentIndex.connect(self.__onLastFeatureClicked)
 
             # creating the line to the original point
             returnedOriginalInfo = self.infToPlot(allFeaturesToPlot, originalPoint)
@@ -258,13 +255,32 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             xTicksValues = [i for i in range(len(allFeaturesToPlot))]
             self.axes.set_xticks(xTicksValues)
             # xtick name
-            self.axes.set_xticklabels(allFeaturesToPlot)
-            plt.xticks(rotation=45)
+            self.axes.set_xticklabels(allFeaturesToPlot, rotation = 45)
             # ytick name
             self.axes.set_yticklabels([])
 
             # set title
             self.axes.set_title('Drag the dots to update the point values')
+
+            # distribution graph
+            if self.__lastFeatureClicked is not None:
+                feature = self.__featuresToPlot[self.__lastFeatureClicked]
+
+                encoder = LabelEncoder()
+                encoder.fit(self.controller.model.data[feature].to_numpy())
+
+                dataToBoxPlot = self.controller.model.data[feature].to_numpy()
+                dataToBoxPlotEncoded = encoder.transform(dataToBoxPlot)
+
+                yTicksName = encoder.classes_
+
+                self.distributionAxes.boxplot(dataToBoxPlotEncoded)
+                self.distributionAxes.set_xticks([1])
+                self.distributionAxes.set_xticklabels([feature], rotation = 45)
+                self.distributionAxes.set_yticks([i for i in range(len(yTicksName))])
+                self.distributionAxes.set_yticklabels(list(yTicksName))
+
+            # set title
             self.distributionAxes.set_title('Distribution')
             
             # draw the figure
@@ -315,13 +331,14 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.updatedPoint.emit(currentPoint)
 
     # listen the current index to generate the distribution
-    def __onUpdateDistributionGraph(self, currentPolygon, currentIndex):
+    def __onLastFeatureClicked(self, currentPolygon, currentIndex):
         self.distributionAxes.clear()
-        
+
         # to avoid the cached polygon
         if currentPolygon == self.polygonInteractable:
             if currentIndex > 0 and currentIndex < (len(self.__featuresToPlot)-1):
-                feature = self.__featuresToPlot[currentIndex]
+                self.__lastFeatureClicked = currentIndex
+                feature = self.__featuresToPlot[self.__lastFeatureClicked]
 
                 encoder = LabelEncoder()
                 encoder.fit(self.controller.model.data[feature].to_numpy())
@@ -333,20 +350,25 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
                 self.distributionAxes.boxplot(dataToBoxPlotEncoded)
                 self.distributionAxes.set_xticks([1])
-                self.distributionAxes.set_xticklabels([feature])
+                self.distributionAxes.set_xticklabels([feature], rotation = 45)
                 self.distributionAxes.set_yticks([i for i in range(len(yTicksName))])
                 self.distributionAxes.set_yticklabels(list(yTicksName))
 
+            else:
+                self.__lastFeatureClicked = None
+        
         self.distributionAxes.set_title('Distribution')
 
         self.draw()
-
+                
     def resizeCanvas(self, width, height):
         self.figure.set_size_inches(width/self.dpi, height/self.dpi) 
 
     def clearAxesAndGraph(self):
-        # self.figure.clear()
+        self.figure.clear()
         self.axes = self.figure.add_axes(self.__rectangle)
         self.axes.clear()
+        self.distributionAxes = self.figure.add_axes(self.__distributionRectangle)
+        self.distributionAxes.clear()
         self.__featuresToPlot = None
         self.__featuresUniqueValues = {}
