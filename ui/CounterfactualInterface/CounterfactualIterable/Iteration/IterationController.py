@@ -207,7 +207,7 @@ class IterationController():
             if hasattr(self.parent, 'iterationName'):
                 lastScenarioName = self.parent.iterationName
 
-            #parameters to update graph
+            # parameters to update graph
             parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'lastScenarioName':lastScenarioName, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
@@ -235,6 +235,11 @@ class IterationController():
         
         self.view.showCurrentClass(self.predictedCurrentClass[0])      
 
+    # this function generates the counterfactual given the current point
+    def __generateCounterfactual(self):
+        pass
+    
+    # this function updates the graph with the original, current, last, and the counterfactual points
     def __updateGraph(self, suggestedFeatures=None):
         self.waitCursor()
         
@@ -288,6 +293,7 @@ class IterationController():
             # adding the prediction percentage
             parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
 
+            # getting the last scenario datapoint
             lastScenarioDataframe = None
             if hasattr(self.parent, 'updatedCurrentPoint'):
                 # getting the last scenario datapoint, keeping a historic
@@ -308,7 +314,11 @@ class IterationController():
             if hasattr(self.parent, 'iterationName'):
                 lastScenarioName = self.parent.iterationName
 
-            #parameters to update graph
+            # adding the counterfactual
+            # self.counterfactualToPlot = self.__generateCounterfactual()
+            self.__generateCounterfactual()
+
+            # parameters to update graph
             parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'lastScenarioName':lastScenarioName, 'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 

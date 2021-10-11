@@ -94,34 +94,34 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
                     # append the x, y, range, decimal plate, and actionability
                     xs.append(i)
-                    ys.append(float(value)*4)
-                    ranges.append(5)
+                    ys.append(float(value)*2)
+                    ranges.append(3)
                     decimals.append(0)
                     actionables.append(False)
-                    xMaxRange = 5 if 5 > xMaxRange else xMaxRange
+                    xMaxRange = 3 if 3 > xMaxRange else xMaxRange
 
                     # uniqueValuesFeature
-                    uniqueValuesFeature = [0, 0.25, 0.5, 0.75, 1]
+                    uniqueValuesFeature = [0, 0.5, 1]
 
                     # use the unique values feature to plot the vertical axis
                     self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
 
-                elif f == 'Class':
-                    value = datapoint.iloc[0][f]
+                # elif f == 'Class':
+                #     value = datapoint.iloc[0][f]
 
-                    # append the x, y, range, decimal plate, and actionability
-                    xs.append(i)
-                    ys.append(float(value))
-                    ranges.append(2)
-                    decimals.append(0)
-                    actionables.append(False)
-                    xMaxRange = 2 if 2 > xMaxRange else xMaxRange
+                #     # append the x, y, range, decimal plate, and actionability
+                #     xs.append(i)
+                #     ys.append(float(value))
+                #     ranges.append(2)
+                #     decimals.append(0)
+                #     actionables.append(False)
+                #     xMaxRange = 2 if 2 > xMaxRange else xMaxRange
 
-                    # uniqueValuesFeature
-                    uniqueValuesFeature = [0, 1]
+                #     # uniqueValuesFeature
+                #     uniqueValuesFeature = [0, 1]
 
-                    # use the unique values feature to plot the vertical axis
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
+                #     # use the unique values feature to plot the vertical axis
+                #     self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
 
                 else:
                     uniqueValuesFeature = None
@@ -199,7 +199,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             allFeaturesToPlot = selectedFeatures.copy()
             allFeaturesToPlot.insert(0, 'prob1')
-            allFeaturesToPlot.append('Class')
+            # allFeaturesToPlot.append('Class')
 
             # save the features to plot
             self.__featuresToPlot = allFeaturesToPlot
@@ -255,7 +255,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             xTicksValues = [i for i in range(len(allFeaturesToPlot))]
             self.axes.set_xticks(xTicksValues)
             # xtick name
-            self.axes.set_xticklabels(allFeaturesToPlot, rotation = 45)
+            xTicksLabels = ['class']+allFeaturesToPlot[1:]
+            self.axes.set_xticklabels(xTicksLabels, rotation = 45)
             # ytick name
             self.axes.set_yticklabels([])
 
@@ -293,7 +294,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             currentPoint = []
             indexAux = 0
             for f in self.__featuresToPlot:            
-                if f == 'prob1' or f == 'Class':
+                # if f == 'prob1' or f == 'Class':
+                if f == 'prob1':
                     indexAux += 1
                 
                 else:
