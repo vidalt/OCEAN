@@ -106,23 +106,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                     # use the unique values feature to plot the vertical axis
                     self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
 
-                # elif f == 'Class':
-                #     value = datapoint.iloc[0][f]
-
-                #     # append the x, y, range, decimal plate, and actionability
-                #     xs.append(i)
-                #     ys.append(float(value))
-                #     ranges.append(2)
-                #     decimals.append(0)
-                #     actionables.append(False)
-                #     xMaxRange = 2 if 2 > xMaxRange else xMaxRange
-
-                #     # uniqueValuesFeature
-                #     uniqueValuesFeature = [0, 1]
-
-                #     # use the unique values feature to plot the vertical axis
-                #     self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
-
                 else:
                     uniqueValuesFeature = None
                     rotation = False
@@ -193,13 +176,13 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             originalPoint = parameters['originalPoint']
             lastScenarioPoint = parameters['lastScenarioPoint']
             lastScenarioName = parameters['lastScenarioName']
+            counterfactualPoint = parameters['counterfactualPoint']
             selectedFeatures = parameters['selectedFeatures']
 
             polygonColor = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
 
             allFeaturesToPlot = selectedFeatures.copy()
             allFeaturesToPlot.insert(0, 'prob1')
-            # allFeaturesToPlot.append('Class')
 
             # save the features to plot
             self.__featuresToPlot = allFeaturesToPlot
@@ -236,16 +219,24 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                 lineLastScenario = Line2D(xLastScenario, yLastScenario, color='#d3a27f', animated=False)
                 self.axes.add_line(lineLastScenario)
             
+            # creating the line to the counterfactual point
+            returnedCounterfactualInfo = self.infToPlot(allFeaturesToPlot, counterfactualPoint)
+            if returnedCounterfactualInfo is None:
+                return
+            xCounterfactual, yCounterfactual, _, _, _, _ = returnedCounterfactualInfo
+            lineCounterfactual = Line2D(xCounterfactual, yCounterfactual, color='#98FB98', animated=False)
+            self.axes.add_line(lineCounterfactual)
+
             # legends
             if lastScenarioPoint is not None:
-                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, self.notEditableAxis], 
-                                 ['Scenario0', lastScenarioName, 'Current editable', 'Not editable axis'], 
-                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=4)
+                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, lineCounterfactual, self.notEditableAxis], 
+                                 ['Scenario0', lastScenarioName, 'Current editable', 'Counterfactual', 'Not editable axis'], 
+                                 loc='upper center', bbox_to_anchor=(0.6, -0.25), fancybox=True, shadow=True, ncol=5)
             
             else:
-                self.axes.legend([lineOriginal, self.polygonInteractable.line, self.notEditableAxis], 
-                                 ['Scenario0', 'Current editable', 'Not editable axis'], 
-                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=3)
+                self.axes.legend([lineOriginal, self.polygonInteractable.line, lineCounterfactual, self.notEditableAxis], 
+                                 ['Scenario0', 'Current editable', 'Counterfactual', 'Not editable axis'], 
+                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=4)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))
@@ -338,7 +329,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         # to avoid the cached polygon
         if currentPolygon == self.polygonInteractable:
-            if currentIndex > 0 and currentIndex < (len(self.__featuresToPlot)-1):
+            if currentIndex > 0:
                 self.__lastFeatureClicked = currentIndex
                 feature = self.__featuresToPlot[self.__lastFeatureClicked]
 

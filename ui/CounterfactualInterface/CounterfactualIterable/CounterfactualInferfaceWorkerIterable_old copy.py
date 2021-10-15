@@ -15,8 +15,8 @@ from PyQt5.QtCore import QObject, pyqtSignal
 
 class CounterfactualInferfaceWorkerIterable(QObject):
 
-    finished = pyqtSignal()
-    counterfactualDataframe = pyqtSignal(object)
+    finished = pyqtSignal(list)
+    counterfactualDataframe = pyqtSignal(object, object)
 
     def __init__(self, controller):
         super().__init__()
@@ -34,21 +34,28 @@ class CounterfactualInferfaceWorkerIterable(QObject):
         
 
     def run(self):
-        randomForestMilp = RandomForestCounterFactualMilp(self.__controller.randomForestClassifier,
-            [self.__controller.transformedChosenDataPoint],
-            1-self.__controller.predictedOriginalClass[0],
-            isolationForest=self.__controller.isolationForest,
-            constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
-            objectiveNorm=0, 
-            mutuallyExclusivePlanesCutsActivated=True, 
-            strictCounterFactual=True, 
-            verbose=False,
-            binaryDecisionVariables=BinaryDecisionVariables.PathFlow_y,
-            featuresActionnability=self.__controller.model.transformedFeaturesActionability,
-            featuresType=self.__controller.model.transformedFeaturesType, 
-            featuresPossibleValues=self.__controller.model.transformedFeaturesPossibleValues)
+        points = self.__controller.transformedSamplesToPlot.copy()
+        points.append(self.__controller.transformedChosenDataPoint)
 
-        randomForestMilp.buildModel()
+        classes = list(self.__controller.transformedSamplesClasses.copy())
+        classes.append(self.__controller.predictedCurrentClass[0])
+        for i in range(len(points)):
+            # instantiating the optimization model
+            randomForestMilp = RandomForestCounterFactualMilp(self.__controller.randomForestClassifier,
+                [points[i]],
+                1-classes[i],
+                isolationForest=self.__controller.isolationForest,
+                constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
+                objectiveNorm=0, 
+                mutuallyExclusivePlanesCutsActivated=True, 
+                strictCounterFactual=True, 
+                verbose=False,
+                binaryDecisionVariables=BinaryDecisionVariables.PathFlow_y,
+                featuresActionnability=self.__controller.model.transformedFeaturesActionability,
+                featuresType=self.__controller.model.transformedFeaturesType, 
+                featuresPossibleValues=self.__controller.model.transformedFeaturesPossibleValues)
+
+            randomForestMilp.buildModel()
 
             # adding the user constraints over the optimization model
             # if i == len(points)-1:
@@ -82,24 +89,26 @@ class CounterfactualInferfaceWorkerIterable(QObject):
 
             #                     constraintIndex += 1
 
-        randomForestMilp.solveModel()
-        counterfactualResult = randomForestMilp.x_sol
+            randomForestMilp.solveModel()
 
-        # getting the counterfactual to the current datapoint
-        counterfactualResult = randomForestMilp.x_sol
+            if i == len(points) - 1:
+                # getting the counterfactual to the current datapoint
+                counterfactualResult = randomForestMilp.x_sol
 
-        if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
-            print('!'*75)
-            print('ERROR: Model is infeasible')
-            print('!'*75)
-        elif counterfactualResult is not None:
-            counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
+                if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
+                    self.progress.emit('Model is infeasible')
+                elif counterfactualResult is not None:
+                    counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
+                    counterfactualResultClassProbability = self.__controller.randomForestClassifier.predict_proba(counterfactualResult)
 
-            result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
-            result = np.append(result, counterfactualResultClass[0])
-            
-            # sending the counterfactual
-            self.counterfactualDataframe.emit(result)
+                    result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
+                    result = np.append(result, counterfactualResultClass[0])
+                    
+                    # sending the counterfactual
+                    self.counterfactualDataframe.emit(result, counterfactualResultClassProbability)
+
+            # saving the value from objective function
+            self.__values.append(randomForestMilp.model.getObjective().getValue())
 
         # sending the objective function values        
-        self.finished.emit()
+        self.finished.emit(self.__values)

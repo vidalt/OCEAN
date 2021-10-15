@@ -47,8 +47,8 @@ class IterationController():
 
         self.updatedCurrentPoint = None
 
-        self.predictedCurrentClass = None
-        self.predictedCurrentClassPercentage = None
+        self.predictedOriginalClass = None
+        self.predictedOriginalClassPercentage = None
 
         self.counterfactualToPlot = None
 
@@ -143,7 +143,8 @@ class IterationController():
     def setSuggestedFeaturesToPlot(self, suggestedFeatures):
         self.__suggestedFeaturesToPlot = suggestedFeatures
 
-        self.__updateGraph(suggestedFeatures)
+        self.__generateCounterfactual()
+        
         self.view.selectFeatures(suggestedFeatures)
 
     # listen the updated point to redraw the graph
@@ -156,7 +157,7 @@ class IterationController():
 
             # current datapoint
             currentDataPoint = self.chosenDataPoint.copy()
-            currentDataPoint = np.append(currentDataPoint, self.predictedCurrentClass)
+            currentDataPoint = np.append(currentDataPoint, self.predictedOriginalClass)
             currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
 
             # updating the values
@@ -207,8 +208,20 @@ class IterationController():
             if hasattr(self.parent, 'iterationName'):
                 lastScenarioName = self.parent.iterationName
 
+            # adding the counterfactual
+            counterfactualToPlotDataframe = pd.DataFrame(data=[self.counterfactualToPlot], columns=self.model.features)
+            transformedCounterfactualDataPoint = self.model.transformDataPoint(self.counterfactualToPlot[:-1])
+            predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCounterfactualDataPoint])
+            counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
+
             # parameters to update graph
-            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'lastScenarioName':lastScenarioName, 'selectedFeatures':selectedFeatures}
+            parameters = {'controller':self, 
+                          'currentPoint':currentDataframe, 
+                          'originalPoint':parentDataframe, 
+                          'lastScenarioPoint':lastScenarioDataframe, 
+                          'lastScenarioName':lastScenarioName, 
+                          'counterfactualPoint':counterfactualToPlotDataframe,
+                          'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
@@ -230,14 +243,28 @@ class IterationController():
         self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
         
         # predicting the datapoint class and showing its value
-        self.predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
-        self.predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
+        self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+        self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
         
-        self.view.showCurrentClass(self.predictedCurrentClass[0])      
+        self.view.showCurrentClass(self.predictedOriginalClass[0])      
+
+    def getCounterfactualExplanation(self, counterfactual):
+        self.counterfactualToPlot = counterfactual
+        self.__updateGraph(self.__suggestedFeaturesToPlot)
 
     # this function generates the counterfactual given the current point
     def __generateCounterfactual(self):
-        pass
+        # running the counterfactual generation in another thread
+        self.thread = QThread()
+        self.worker = CounterfactualInferfaceWorkerIterable(self)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.counterfactualDataframe.connect(self.getCounterfactualExplanation)
+        self.worker.finished.connect(self.restorCursor)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
     
     # this function updates the graph with the original, current, last, and the counterfactual points
     def __updateGraph(self, suggestedFeatures=None):
@@ -268,17 +295,17 @@ class IterationController():
             self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
         
             # predicting the datapoint class and showing its value
-            self.predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
-            self.predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
+            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+            self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
             # SE A MUDANÇA DE VALOR ESTIVER DESABILITADA, ESSA PARTE É DESNECESSÁRIA
-            self.view.showCurrentClass(self.predictedCurrentClass[0])
+            self.view.showCurrentClass(self.predictedOriginalClass[0])
 
             # current datapoint
             currentDataPoint = self.chosenDataPoint.copy()
-            currentDataPoint = np.append(currentDataPoint, self.predictedCurrentClass)
+            currentDataPoint = np.append(currentDataPoint, self.predictedOriginalClass)
             currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
             # adding the prediction percentage
-            currentDataframe['prob1'] = self.predictedCurrentClassPercentage[0][1]
+            currentDataframe['prob1'] = self.predictedOriginalClassPercentage[0][1]
 
             # getting the initial datapoint, keeping a historic
             parentDataPoint = self.original.chosenDataPoint.copy()
@@ -315,11 +342,19 @@ class IterationController():
                 lastScenarioName = self.parent.iterationName
 
             # adding the counterfactual
-            # self.counterfactualToPlot = self.__generateCounterfactual()
-            self.__generateCounterfactual()
+            counterfactualToPlotDataframe = pd.DataFrame(data=[self.counterfactualToPlot], columns=self.model.features)
+            transformedCounterfactualDataPoint = self.model.transformDataPoint(self.counterfactualToPlot[:-1])
+            predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCounterfactualDataPoint])
+            counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
 
             # parameters to update graph
-            parameters = {'controller':self, 'currentPoint':currentDataframe, 'originalPoint':parentDataframe, 'lastScenarioPoint':lastScenarioDataframe, 'lastScenarioName':lastScenarioName, 'selectedFeatures':selectedFeatures}
+            parameters = {'controller':self, 
+                          'currentPoint':currentDataframe, 
+                          'originalPoint':parentDataframe, 
+                          'lastScenarioPoint':lastScenarioDataframe, 
+                          'lastScenarioName':lastScenarioName, 
+                          'counterfactualPoint':counterfactualToPlotDataframe,
+                          'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
