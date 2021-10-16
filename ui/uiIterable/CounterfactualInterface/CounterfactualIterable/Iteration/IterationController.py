@@ -131,8 +131,8 @@ class IterationController():
                     componentController.setSelectedValue(value)
                     componentController.disableComponent()
 
-                # adding the view to selectedPoint component
-                self.view.addFeatureWidget(componentController.view)
+                # hiding the components
+                componentController.view.hide()
                 # saving the controller to facilitate the access to components
                 self.dictControllersSelectedPoint[feature] = componentController
 
@@ -228,8 +228,6 @@ class IterationController():
 
     # this function takes the selected data point and calculate the respective class
     def __calculateClass(self):
-        self.view.clearClass()
-        
         # getting the datapoint
         auxiliarDataPoint = []
         for feature in self.model.features:
@@ -246,8 +244,6 @@ class IterationController():
         self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
         self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
         
-        self.view.showCurrentClass(self.predictedOriginalClass[0])      
-
     def getCounterfactualExplanation(self, counterfactual):
         self.counterfactualToPlot = counterfactual
         self.__updateGraph(self.__suggestedFeaturesToPlot)
@@ -297,8 +293,6 @@ class IterationController():
             # predicting the datapoint class and showing its value
             self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
             self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
-            # SE A MUDANÇA DE VALOR ESTIVER DESABILITADA, ESSA PARTE É DESNECESSÁRIA
-            self.view.showCurrentClass(self.predictedOriginalClass[0])
 
             # current datapoint
             currentDataPoint = self.chosenDataPoint.copy()

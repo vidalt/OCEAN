@@ -48,24 +48,19 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         self.controller = None
 
-        self.notEditableAxis = None
-
         self.polygonInteractable = None
 
         self.__lastFeatureClicked = None
 
 
     def createAxis(self, fig, ax, xRange, yRange, labels, editable, categorical):
-        axisColor = '#000000'
+        axisColor = '#d3d3d3'
         if editable:
-            axisColor = '#d3d3d3'
+            axisColor = '#c0c0c0' #'#d3d3d3'
         # create axis
         line1 = Line2D(xRange, yRange, color=axisColor, alpha=0.5)
         fig.axes[0].add_line(line1)
         
-        if not editable:
-            self.notEditableAxis = line1
-
         rotation = 0
         if categorical:
             rotation = 45
@@ -90,18 +85,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                 uniqueValuesFeature = None
 
                 if f == 'prob1':
-                    value = datapoint.iloc[0][f]
-
-                    # append the x, y, range, decimal plate, and actionability
-                    xs.append(i)
-                    ys.append(float(value)*2)
-                    ranges.append(3)
-                    decimals.append(0)
-                    actionables.append(False)
-                    xMaxRange = 3 if 3 > xMaxRange else xMaxRange
-
                     # uniqueValuesFeature
-                    uniqueValuesFeature = [0, 0.5, 1]
+                    uniqueValuesFeature = [0, '-', 1]
 
                     # use the unique values feature to plot the vertical axis
                     self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
@@ -162,7 +147,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         
         except:
             self.errorPlot.emit(lastFeature)
-
     def updateGraph(self, parameters=None):
         self.clearAxesAndGraph()
 
@@ -227,16 +211,37 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             lineCounterfactual = Line2D(xCounterfactual, yCounterfactual, color='#98FB98', animated=False)
             self.axes.add_line(lineCounterfactual)
 
+
+            # probability axis
+            xs = 0
+            ys = float(currentPoint.iloc[0]['prob1'])*2
+            self.axes.plot(xs, ys, color=polygonColor, marker='o', markerfacecolor=polygonColor)
+
+            ys = float(originalPoint.iloc[0]['prob1'])*2
+            self.axes.plot(xs, ys, color='#a9a9a9', marker='o', markerfacecolor='#a9a9a9')
+
+            if lastScenarioPoint is not None:
+                ys = float(lastScenarioPoint.iloc[0]['prob1'])*2
+                self.axes.plot(xs, ys, color='#d3a27f', marker='o', markerfacecolor='#d3a27f')
+
+            ys = float(counterfactualPoint.iloc[0]['prob1'])*2
+            self.axes.plot(xs, ys, color='#98FB98', marker='o', markerfacecolor='#98FB98')
+
+            # currentPoint
+            # originalPoint
+            # lastScenarioPoint
+            # counterfactualPoint
+
             # legends
             if lastScenarioPoint is not None:
-                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, lineCounterfactual, self.notEditableAxis], 
+                self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, lineCounterfactual], 
                                  ['Scenario0', lastScenarioName, 'Current editable', 'Counterfactual', 'Not editable axis'], 
-                                 loc='upper center', bbox_to_anchor=(0.6, -0.25), fancybox=True, shadow=True, ncol=5)
+                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=4)
             
             else:
-                self.axes.legend([lineOriginal, self.polygonInteractable.line, lineCounterfactual, self.notEditableAxis], 
+                self.axes.legend([lineOriginal, self.polygonInteractable.line, lineCounterfactual], 
                                  ['Scenario0', 'Current editable', 'Counterfactual', 'Not editable axis'], 
-                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=4)
+                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=3)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))
@@ -252,7 +257,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.set_yticklabels([])
 
             # set title
-            self.axes.set_title('Drag the dots to update the point values')
+            self.axes.set_title('Drag the dots to change the point values')
 
             # distribution graph
             if self.__lastFeatureClicked is not None:
@@ -285,9 +290,9 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             currentPoint = []
             indexAux = 0
             for f in self.__featuresToPlot:            
-                # if f == 'prob1' or f == 'Class':
                 if f == 'prob1':
-                    indexAux += 1
+                    # indexAux += 1
+                    pass
                 
                 else:
                     # only need to update the selected features
@@ -329,8 +334,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         # to avoid the cached polygon
         if currentPolygon == self.polygonInteractable:
-            if currentIndex > 0:
-                self.__lastFeatureClicked = currentIndex
+            if currentIndex >= 0:
+                self.__lastFeatureClicked = currentIndex+1
                 feature = self.__featuresToPlot[self.__lastFeatureClicked]
 
                 encoder = LabelEncoder()

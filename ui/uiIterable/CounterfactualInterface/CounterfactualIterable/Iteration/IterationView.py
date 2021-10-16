@@ -29,15 +29,6 @@ class IterationView(QWidget, Ui_Iteration):
     def getCanvas(self):
         return self.widgetContainerCanvas
 
-    # this function is used to add the features components inside the main view
-    def addFeatureWidget(self, feature:'QWidget'):
-        assert isinstance(feature, QWidget)
-
-        item = QListWidgetItem(self.listWidgetSelectedPoint)
-        item.setSizeHint(feature.size())
-        self.listWidgetSelectedPoint.addItem(item)
-        self.listWidgetSelectedPoint.setItemWidget(item, feature)
-
     def selectFeatures(self, options):
         self.comboBoxCheckable.selectItems(options)
     
@@ -50,13 +41,3 @@ class IterationView(QWidget, Ui_Iteration):
 
     def getSelectedFeatures(self):
         return self.comboBoxCheckable.currentData()
-
-    # this function is used to clean the calculated class
-    def clearClass(self):
-        self.labelCurrentClass.setText('Current Class: ')
-
-    # this function is used to update the class component
-    def showCurrentClass(self, classValue):
-        assert classValue is not None
-
-        self.labelCurrentClass.setText('Current Class: '+str(classValue))
