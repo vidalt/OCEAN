@@ -15,7 +15,7 @@ class CounterfactualInterfaceModel():
 
     def __init__(self):
         self.datasetsPath = os.getcwd()
-        self.datasetsPath = os.path.join(self.datasetsPath, '..', 'datasets')
+        self.datasetsPath = os.path.join(self.datasetsPath, '..', '..', 'datasets')
 
         self.currentDatasetReader = None
 

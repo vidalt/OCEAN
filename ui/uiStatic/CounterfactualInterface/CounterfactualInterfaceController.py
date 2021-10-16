@@ -6,7 +6,6 @@ import numpy as np
 
 from .CounterfactualInterfaceView import CounterfactualInterfaceView
 from .CounterfactualStatic.CounterfactualInterfaceControllerStatic import CounterfactualInterfaceControllerStatic
-from .CounterfactualIterable.CounterfactualInterfaceControllerIterable import CounterfactualInterfaceControllerIterable
 
 class CounterfactualInterfaceController():
 
@@ -14,8 +13,6 @@ class CounterfactualInterfaceController():
         self.view = CounterfactualInterfaceView()
 
         self.counterfactualInterfaceControllerStatic = CounterfactualInterfaceControllerStatic()
-        self.counterfactualInterfaceControllerIterable = CounterfactualInterfaceControllerIterable()
 
         # setar cada view em uma aba
         self.view.tabWidget.addTab(self.counterfactualInterfaceControllerStatic.view, 'Static Counterfactual')
-        self.view.tabWidget.addTab(self.counterfactualInterfaceControllerIterable.view, 'Iterable Counterfactual')

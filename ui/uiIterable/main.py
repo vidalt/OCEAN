@@ -6,15 +6,10 @@ import os
 
 # these two lines is needed because the files to generate the counterfactual are inside the src
 path0 = sys.path[0]
-sys.path.insert(0,os.path.join(path0, '..', 'src'))
+sys.path.insert(0,os.path.join(path0, '..', '..', 'src'))
+sys.path.insert(1,os.path.join(path0, '..'))
 
 from MainApplication.MainApplication import MainApplication
-
-# def run_application():
-#     application = MainApplication()
-#     application.run()
-
-# run_application()
 
 def main():
     application = MainApplication()
