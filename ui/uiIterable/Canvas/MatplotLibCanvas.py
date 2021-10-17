@@ -147,6 +147,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         
         except:
             self.errorPlot.emit(lastFeature)
+            
     def updateGraph(self, parameters=None):
         self.clearAxesAndGraph()
 
@@ -164,6 +165,9 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             selectedFeatures = parameters['selectedFeatures']
 
             polygonColor = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
+            originalColor = '#696969'
+            lastScenarioColor = '#d3a27f'
+            counterfactualColor = '#98FB98'
 
             allFeaturesToPlot = selectedFeatures.copy()
             allFeaturesToPlot.insert(0, 'prob1')
@@ -191,7 +195,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             if returnedOriginalInfo is None:
                 return
             xOriginal, yOriginal, _, _, _, _ = returnedOriginalInfo
-            lineOriginal = Line2D(xOriginal, yOriginal, color='#a9a9a9', animated=False)
+            lineOriginal = Line2D(xOriginal, yOriginal, color=originalColor, animated=False)
             self.axes.add_line(lineOriginal)
 
             # creating the line to the last scenario point
@@ -200,7 +204,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                 if returnedLastScenarioInfo is None:
                     return
                 xLastScenario, yLastScenario, _, _, _, _ = returnedLastScenarioInfo
-                lineLastScenario = Line2D(xLastScenario, yLastScenario, color='#d3a27f', animated=False)
+                lineLastScenario = Line2D(xLastScenario, yLastScenario, color=lastScenarioColor, animated=False)
                 self.axes.add_line(lineLastScenario)
             
             # creating the line to the counterfactual point
@@ -208,29 +212,23 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             if returnedCounterfactualInfo is None:
                 return
             xCounterfactual, yCounterfactual, _, _, _, _ = returnedCounterfactualInfo
-            lineCounterfactual = Line2D(xCounterfactual, yCounterfactual, color='#98FB98', animated=False)
+            lineCounterfactual = Line2D(xCounterfactual, yCounterfactual, color=counterfactualColor, animated=False)
             self.axes.add_line(lineCounterfactual)
-
 
             # probability axis
             xs = 0
             ys = float(currentPoint.iloc[0]['prob1'])*2
-            self.axes.plot(xs, ys, color=polygonColor, marker='o', markerfacecolor=polygonColor)
+            self.axes.plot(xs-0.02, ys, color=polygonColor, marker='o', markerfacecolor=polygonColor)
 
             ys = float(originalPoint.iloc[0]['prob1'])*2
-            self.axes.plot(xs, ys, color='#a9a9a9', marker='o', markerfacecolor='#a9a9a9')
+            self.axes.plot(xs-0.01, ys, color=originalColor, marker='o', markerfacecolor=originalColor)
 
             if lastScenarioPoint is not None:
                 ys = float(lastScenarioPoint.iloc[0]['prob1'])*2
-                self.axes.plot(xs, ys, color='#d3a27f', marker='o', markerfacecolor='#d3a27f')
+                self.axes.plot(xs+0.01, ys, color=lastScenarioColor, marker='o', markerfacecolor=lastScenarioColor)
 
             ys = float(counterfactualPoint.iloc[0]['prob1'])*2
-            self.axes.plot(xs, ys, color='#98FB98', marker='o', markerfacecolor='#98FB98')
-
-            # currentPoint
-            # originalPoint
-            # lastScenarioPoint
-            # counterfactualPoint
+            self.axes.plot(xs+0.02, ys, color=counterfactualColor, marker='o', markerfacecolor=counterfactualColor)
 
             # legends
             if lastScenarioPoint is not None:
@@ -259,26 +257,13 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             # set title
             self.axes.set_title('Drag the dots to change the point values')
 
-            # distribution graph
-            if self.__lastFeatureClicked is not None:
-                feature = self.__featuresToPlot[self.__lastFeatureClicked]
-
-                encoder = LabelEncoder()
-                encoder.fit(self.controller.model.data[feature].to_numpy())
-
-                dataToBoxPlot = self.controller.model.data[feature].to_numpy()
-                dataToBoxPlotEncoded = encoder.transform(dataToBoxPlot)
-
-                yTicksName = encoder.classes_
-
-                self.distributionAxes.boxplot(dataToBoxPlotEncoded)
-                self.distributionAxes.set_xticks([1])
-                self.distributionAxes.set_xticklabels([feature], rotation = 45)
-                self.distributionAxes.set_yticks([i for i in range(len(yTicksName))])
-                self.distributionAxes.set_yticklabels(list(yTicksName))
-
             # set title
             self.distributionAxes.set_title('Distribution')
+            self.distributionAxes.set_ylabel('count')
+
+            # distribution graph
+            if self.__lastFeatureClicked is not None:
+                self.__updateProbability()
             
             # draw the figure
             self.draw()
@@ -328,6 +313,29 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             self.updatedPoint.emit(currentPoint)
 
+    # 
+    def __updateProbability(self):
+        feature = self.__featuresToPlot[self.__lastFeatureClicked]
+
+        rotation = 0
+        if self.controller.model.featuresType[feature] is FeatureType.Categorical:
+            rotation = 45
+
+        encoder = LabelEncoder()
+        encoder.fit(self.controller.model.data[feature].to_numpy())
+
+        dataToBoxPlot = self.controller.model.data[feature].to_numpy()
+        dataToBoxPlotEncoded = encoder.transform(dataToBoxPlot)
+
+        xTicksName = encoder.classes_
+        xTicksValues = [i+0.5 for i in range(len(xTicksName))]
+
+        self.distributionAxes.hist(dataToBoxPlotEncoded, bins=len(xTicksName), range=(0,len(xTicksName)))
+        self.distributionAxes.set_xticks(xTicksValues)
+        self.distributionAxes.set_xticklabels(xTicksName, rotation=rotation)
+        self.distributionAxes.set_xlabel(feature)
+        self.distributionAxes.set_ylabel('count')
+
     # listen the current index to generate the distribution
     def __onLastFeatureClicked(self, currentPolygon, currentIndex):
         self.distributionAxes.clear()
@@ -336,26 +344,15 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         if currentPolygon == self.polygonInteractable:
             if currentIndex >= 0:
                 self.__lastFeatureClicked = currentIndex+1
-                feature = self.__featuresToPlot[self.__lastFeatureClicked]
-
-                encoder = LabelEncoder()
-                encoder.fit(self.controller.model.data[feature].to_numpy())
-
-                dataToBoxPlot = self.controller.model.data[feature].to_numpy()
-                dataToBoxPlotEncoded = encoder.transform(dataToBoxPlot)
-
-                yTicksName = encoder.classes_
-
-                self.distributionAxes.boxplot(dataToBoxPlotEncoded)
-                self.distributionAxes.set_xticks([1])
-                self.distributionAxes.set_xticklabels([feature], rotation = 45)
-                self.distributionAxes.set_yticks([i for i in range(len(yTicksName))])
-                self.distributionAxes.set_yticklabels(list(yTicksName))
+                
+                self.__updateProbability()
 
             else:
                 self.__lastFeatureClicked = None
+                self.distributionAxes.set_xlabel('')
         
         self.distributionAxes.set_title('Distribution')
+        self.distributionAxes.set_ylabel('count')
 
         self.draw()
                 
