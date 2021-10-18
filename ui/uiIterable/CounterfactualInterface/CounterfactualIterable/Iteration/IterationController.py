@@ -54,7 +54,10 @@ class IterationController():
 
         self.__canvas = self.view.getCanvas()
         self.__canvas.updatedPoint.connect(self.__onUpdatedCurrentPoint)
+        self.__canvas.lastFeatureClicked.connect(self.__lastFeatureClickedHandler)
         self.__canvas.errorPlot.connect(self.__errorPlotHandler)
+
+        self.__canvasDistribution = self.view.getCanvasDistribution()
         
         self.__samplesToPlot = None
         self.transformedSamplesToPlot = None
@@ -132,7 +135,7 @@ class IterationController():
                     componentController.disableComponent()
 
                 # hiding the components
-                componentController.view.hide()
+                self.view.addFeatureWidget(feature, componentController.view)
                 # saving the controller to facilitate the access to components
                 self.dictControllersSelectedPoint[feature] = componentController
 
@@ -225,6 +228,20 @@ class IterationController():
             self.__canvas.updateGraph(parameters)
 
         self.restorCursor()
+
+    # listen the last feature clicked and draw the distribution graph, and show the feature informations
+    def __lastFeatureClickedHandler(self, featureIndex):
+        if featureIndex is not None:
+            selectedFeatures = self.view.getSelectedFeatures()
+            feature = selectedFeatures[featureIndex]
+
+            parameters = {'controller':self, 'featureToPlot':feature}
+            self.__canvasDistribution.updateGraphDistribution(parameters)
+
+            self.view.showItemByFeature(feature)
+
+        else:
+            pass
 
     # this function takes the selected data point and calculate the respective class
     def __calculateClass(self):

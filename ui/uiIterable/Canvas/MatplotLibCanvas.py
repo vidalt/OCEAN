@@ -24,12 +24,13 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
     # the updated current point values
     updatedPoint = pyqtSignal(list)
+    # the last feature clicked to plot the distribution and informations
+    lastFeatureClicked = pyqtSignal(object)
     # inform errors
     errorPlot = pyqtSignal(str)
 
     def __init__(self, parent=None):
-        self.__rectangle = [0, 0.25, 0.75, 0.65] # [left, bottom, width, height]
-        self.__distributionRectangle = [0.85, 0.25, 0.1, 0.3]
+        self.__rectangle = [0, 0.25, 0.98, 0.65] # [left, bottom, width, height]
 
         self.dpi=100
 
@@ -38,7 +39,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         FigureCanvas.__init__(self, self.figure)
 
         self.axes = self.figure.add_axes(self.__rectangle)
-        self.distributionAxes = self.figure.add_axes(self.__distributionRectangle)
         self.txt = None
 
         self.setParent(parent)
@@ -56,7 +56,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
     def createAxis(self, fig, ax, xRange, yRange, labels, editable, categorical):
         axisColor = '#d3d3d3'
         if editable:
-            axisColor = '#c0c0c0' #'#d3d3d3'
+            axisColor = '#c0c0c0' 
         # create axis
         line1 = Line2D(xRange, yRange, color=axisColor, alpha=0.5)
         fig.axes[0].add_line(line1)
@@ -256,14 +256,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             # set title
             self.axes.set_title('Drag the dots to change the point values')
-
-            # set title
-            self.distributionAxes.set_title('Distribution')
-            self.distributionAxes.set_ylabel('count')
-
-            # distribution graph
-            if self.__lastFeatureClicked is not None:
-                self.__updateProbability()
             
             # draw the figure
             self.draw()
@@ -276,7 +268,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             indexAux = 0
             for f in self.__featuresToPlot:            
                 if f == 'prob1':
-                    # indexAux += 1
                     pass
                 
                 else:
@@ -313,48 +304,18 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             self.updatedPoint.emit(currentPoint)
 
-    # 
-    def __updateProbability(self):
-        feature = self.__featuresToPlot[self.__lastFeatureClicked]
-
-        rotation = 0
-        if self.controller.model.featuresType[feature] is FeatureType.Categorical:
-            rotation = 45
-
-        encoder = LabelEncoder()
-        encoder.fit(self.controller.model.data[feature].to_numpy())
-
-        dataToBoxPlot = self.controller.model.data[feature].to_numpy()
-        dataToBoxPlotEncoded = encoder.transform(dataToBoxPlot)
-
-        xTicksName = encoder.classes_
-        xTicksValues = [i+0.5 for i in range(len(xTicksName))]
-
-        self.distributionAxes.hist(dataToBoxPlotEncoded, bins=len(xTicksName), range=(0,len(xTicksName)))
-        self.distributionAxes.set_xticks(xTicksValues)
-        self.distributionAxes.set_xticklabels(xTicksName, rotation=rotation)
-        self.distributionAxes.set_xlabel(feature)
-        self.distributionAxes.set_ylabel('count')
-
     # listen the current index to generate the distribution
     def __onLastFeatureClicked(self, currentPolygon, currentIndex):
-        self.distributionAxes.clear()
-
         # to avoid the cached polygon
         if currentPolygon == self.polygonInteractable:
             if currentIndex >= 0:
-                self.__lastFeatureClicked = currentIndex+1
+                # self.__lastFeatureClicked = currentIndex+1
+                self.__lastFeatureClicked = currentIndex
                 
-                self.__updateProbability()
-
             else:
                 self.__lastFeatureClicked = None
-                self.distributionAxes.set_xlabel('')
-        
-        self.distributionAxes.set_title('Distribution')
-        self.distributionAxes.set_ylabel('count')
 
-        self.draw()
+            self.lastFeatureClicked.emit(self.__lastFeatureClicked)
                 
     def resizeCanvas(self, width, height):
         self.figure.set_size_inches(width/self.dpi, height/self.dpi) 
@@ -363,7 +324,6 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         self.figure.clear()
         self.axes = self.figure.add_axes(self.__rectangle)
         self.axes.clear()
-        self.distributionAxes = self.figure.add_axes(self.__distributionRectangle)
-        self.distributionAxes.clear()
         self.__featuresToPlot = None
         self.__featuresUniqueValues = {}
+        self.__lastFeatureClicked = None
