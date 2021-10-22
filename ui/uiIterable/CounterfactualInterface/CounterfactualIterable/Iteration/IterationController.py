@@ -95,7 +95,6 @@ class IterationController():
                     componentController.initializeView(feature, str(value0), str(value1))
                     componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
-                    componentController.disableComponent()
 
                 elif featureType is FeatureType.Discrete:
                     actionable = content['actionable']
@@ -107,7 +106,6 @@ class IterationController():
                     componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
                     componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
-                    componentController.disableComponent()
 
                 elif featureType is FeatureType.Numeric:
                     actionable = content['actionable']
@@ -119,7 +117,6 @@ class IterationController():
                     componentController.initializeView(feature, minValue, maxValue)
                     componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
-                    componentController.disableComponent()
                     
                 elif featureType is FeatureType.Categorical:
                     actionable = content['actionable']
@@ -132,9 +129,11 @@ class IterationController():
                     componentController.initializeView(feature, allowedValues)
                     componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
-                    componentController.disableComponent()
-
+                
+                # disabling the edition
+                componentController.disableComponent()
                 # hiding the components
+                componentController.view.checkBoxActionability.hide()
                 self.view.addFeatureWidget(feature, componentController.view)
                 # saving the controller to facilitate the access to components
                 self.dictControllersSelectedPoint[feature] = componentController

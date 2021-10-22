@@ -104,9 +104,6 @@ class CounterfactualInterfaceControllerIterable:
                 self.__canvas = self.view.getCanvas()
                 self.__canvas.updateFeatureImportanceGraph(parameters)
 
-                # fazer mapeamento inverso dos nomes das features --- OK
-                # ordena-las por importancia e pegar as 4 mais importantes --- OK
-                # ordena-las pela ordem do model --- DOING
                 featureImportance = self.model.invertTransformedFeatureImportance(importance)
                 tempSuggestedFeatureToPlot = []
                 for i in range(4):
@@ -154,6 +151,7 @@ class CounterfactualInterfaceControllerIterable:
                         componentController.initializeView(feature, self.model.featuresInformations[feature]['possibleValues'])
 
                     # adding the view to selectedPoint component
+                    componentController.view.checkBoxActionability.hide()
                     self.view.addFeatureWidget(componentController.view)
                     # saving the controller to facilitate the access to components
                     self.__dictControllersSelectedPoint[feature] = componentController
