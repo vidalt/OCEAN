@@ -196,6 +196,14 @@ class CounterfactualInterfaceControllerIterable:
             self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
             self.view.showOriginalClass(self.predictedOriginalClass[0])      
 
+    def addNewIterationTab(self, nextIterationView):
+        iterationName = self.view.addNewIterationTab(nextIterationView)
+
+        return iterationName
+
+    def addFinalIteration(self, finalIterationView):
+        self.view.addFinalIteration(finalIterationView)
+
     def __handlerNextIteration(self):
         self.waitCursor()
 
@@ -236,7 +244,7 @@ class CounterfactualInterfaceControllerIterable:
                                                                 'value': currentValue}
             
             self.__nextIteration = IterationController(original=self, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
-            iterationName = self.view.addNewIterationTab(self.__nextIteration.view)
+            iterationName = self.addNewIterationTab(self.__nextIteration.view)
             dictNextFeaturesInformation['iterationName'] = iterationName
             self.__nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
             self.__nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeatureToPlot)

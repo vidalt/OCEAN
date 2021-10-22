@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from .IterationView import IterationView
 from .IterationEnums import IterationEnums
 
+from .FinalIteration.FinalIterationController import FinalIterationController
+
 from CounterFactualParameters import FeatureType
 
 from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
@@ -46,6 +48,7 @@ class IterationController():
         self.transformedChosenDataPoint = None
 
         self.updatedCurrentPoint = None
+        self.updatedCurrentClass = None
 
         self.predictedOriginalClass = None
         self.predictedOriginalClassPercentage = None
@@ -177,6 +180,7 @@ class IterationController():
             # saving the updated current point values
             # only needs the features values without the Class and prob1
             self.updatedCurrentPoint = currentDataframe.to_numpy()[0][:-2]
+            self.updatedCurrentClass = predictedCurrentClass[0]
 
             # getting the initial datapoint, keeping a historic
             parentDataPoint = self.original.chosenDataPoint.copy()
@@ -300,15 +304,16 @@ class IterationController():
                     
             self.chosenDataPoint = np.array(auxiliarDataPoint)
 
-            # saving the updated current point values
-            self.updatedCurrentPoint = self.chosenDataPoint.copy()
-
             # transforming the datapoint to predict its class
             self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
         
             # predicting the datapoint class and showing its value
             self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
             self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
+
+            # saving the updated current point values and class
+            self.updatedCurrentPoint = self.chosenDataPoint.copy()
+            self.updatedCurrentClass = self.predictedOriginalClass[0]
 
             # current datapoint
             currentDataPoint = self.chosenDataPoint.copy()
@@ -416,7 +421,21 @@ class IterationController():
         self.restorCursor()
 
     def __handlerFinishIteration(self):
-        pass
+        self.waitCursor()
+
+        counterfactualComparison = []
+        for i, feature in enumerate(self.model.features):
+            if feature != 'Class':
+                counterfactualComparison.append([feature, str(self.original.chosenDataPoint[i]), str(self.updatedCurrentPoint[i])])
+
+        finalIteration = FinalIterationController(self)
+        finalIteration.updateComparisonLabel('Comparison between the Scenario0 and the '+self.iterationName)
+        finalIteration.setViewScenariosName('Scenario0', self.iterationName)
+        finalIteration.updateClasses(self.predictedOriginalClass[0], self.updatedCurrentClass)
+        finalIteration.updateCounterfactualTable(counterfactualComparison)
+        self.original.addFinalIteration(finalIteration.view)
+
+        self.restorCursor()
 
     # this function is used to change the default cursor to wait cursor
     def waitCursor(self):
