@@ -8,47 +8,51 @@
 
 <h1>TROCAR AS IMAGENS</h1>
 
-<p>OceanUI é um sistema que usa o <a href="https://github.com/vidalt/OCEAN" target="_blank">OCEAN</a> para geração de contrafactuais, mas permitindo uma "caminhada" nesse processo. A ideia desse sistema é que se use gráficos para estudar e entender possíveis contrafactuais e com isso, contruir um contrafactual personalizado.</p>
+<p>OceanUI is a system that uses the <a href="https://github.com/vidalt/OCEAN" target="_blank">OCEAN</a> to generate counterfactuals explanations, but allowing a "walkthrough" in this process. The idea of ​​this system is to use graphics to study and understand possible counterfactuals and, with that, build a personalized counterfactual.</p>
 
-<p>Inicialmente temos a interface abaixo. Nela podemos selecionar um dataset para trabalho.</p>
+<p>At first, we have the interface below. In it, we can select a dataset to work on.</p>
 
 <img src="cleanInterface.png" alt="cleanInterface" width="1000">
 
-<p>Ao selecionar um dataset, todas as suas features serão exibidas em uma lista com algumas informações. Tais features podem ser binárias, categóricas, númericas discretas ou númericas contínuas, com isso, dependendo do tipo da feature, um componente correspondente será adicionado à lista. Além disso, temos um gráfico informando a importância de cada feature para o modelo de predição que é usado para a predição da classe e o cálculo dos contrafactuais. Vale ressaltar que usamos One-Hot-Encoding para transformar os dados de treinamento, por isso podemos ver que algumas labels do gráfico de importância seguem a nomenclatura de "nomeDaFeature_valor".</p>
+<p>When selecting a dataset, all its features will be displayed in a list with some information. Such features can be binary, categorical, discrete numeric, or continuous numeric, so depending on the type of feature, a corresponding component will be added to the list. Besides that, we have a graph stating the importance of each feature to the prediction model that is used for class prediction and counterfactual calculation. It is noteworthy that the One-Hot-Encoding is used to transform training data, so we can see that some importance chart labels follow the "FeatureName_value" nomenclature.</p>
 
 <img src="selectedDataset.png" alt="selectedDataset" width="1000"> 
 
-<p>Já selecionado um dataset, podemos usar a opção "Random Point" para preencher os componentes da lista com valores de um ponto aleatório do dataset cuja classe seja "0", ou preenchemos manualmente cada um deles. Se formos para o preenchimento manual, então podemos observar melhor cada um dos possíveis componentes citados anteriormente.</p>
+<p>Once a dataset has been selected, we can use the "Random Point" option to fill the list components with values ​​from a random point of the dataset whose class is "0" or manually fill each one. If we go to manual filling, then we can better observe each of the possible components mentioned above.</p>
 
-<p>No componente para as features binárias temos apenas os dois valores possíveis, de modo que apenas um deles pode ser selecionado.</p>
+<p>In the component for binary features, we have only two possible values, so only one can be selected.</p>
 
 <img src="binaryComponent.png" alt="binaryComponent" width="300"> 
 
-<p>No componente para as features categóricas temos um combobox para selecão do valor desejado e uma lista à direita que informa todos os valores disponíveis. Dentro desta lista é possível marcar quais desses valores são permitidos para o contrafactual e quais não são, dessa forma o contrafactual gerado, não terá nenhum dos valores sugerindo uma mudança para um valor não permitido.</p>
+<p>In the component for categorical features, we have a combobox to select the desired value and a list on the right side that informs all available values. With this list, it is possible to mark which of these values ​​are allowed for the counterfactual and which are not; in this way, the counterfactual generated will not have any of the values ​​suggesting a change to a non-allowed value.</p>
 
 <img src="categoricalComponent.png" alt="categoricalComponent" width="300"> 
 
-<p>No componente para as features numéricas temos um slider com três ranges para informar os limites superior e inferior e também o valor desejado, além disso também é possível ajustar esses limites usando os spinboxes logo abaixo dos respectivos ranges.</p>
+<p>In the component for numerical features, we have a slider with three ranges to inform the upper and lower bounds and the desired value; in addition, it is also possible to adjust these limits using the spinboxes just below the respective ranges.</p>
 
 <img src="numericalComponent.png" alt="numericalComponent" width="300"> 
 
-<p>Assim que os componentes forem preenchidos, podemos usar a opção "Calculate Class" para termos a classe correspondente e em seguida usamos "Next" para criarmos o próximo cenário da geração iterativa do contrafactual.</p>
+<p>Once the components are filled, we can use the option "Calculate Class" to get the corresponding class, and then we use the option "Next" to create the next scenario of iterative counterfactual generation.</p>
 
 <img src="selectedPoint.png" alt="selectedPoint" width="1000"> 
 
-<p>Neste novo cenário ("Scenário1") temos um gráfico de coordenadas paralelas, onde cada eixo corresponde a uma feature do dataset exceto o primeiro eixo, que corresponde à classe de cada ponto, um referente ao ponto escolhido no "Scenario0", outro referente ao ponto corrente (como ainda não houve nenhuma alteração nos valores do ponto corrente, o ponto corrente é igual ao ponto do "Scenario0") e o último referente a um contrafactual sugerido. Dentre estes três, apenas o ponto corrente pode ser editado clicando no eixo que se deseja alterar e então puxando pra cima ou para baixo. Este gráfico inicia com 4 das features mais importantes setadas como default, mas é possível adicionar mais ou remove-las do gráfico utilizando o combobox abaixo de "Select Features To Plot". Ao selecionar as features desejadas, usamos a opção "Update Graph" para atualizar o gráfico de acordo com as features selecionadas.</p>
+<p>In the new scenario ("Scenario1"), we have a parallel coordinate chart, where each axis corresponds to a feature of the dataset except for the first axis, which corresponds to the class of each point, one referring to the chosen point in "Scenario0", another referring to the current point (since there has been no change in the current point values, the current point is equal to the point of "Scenario0") and the last one referring to a suggested counterfactual. Among these three, only the current point can be edited by clicking on the dot over the axis you want to change and then pulling it up or down. This graph starts with 4 of the most important features set by default, but it is possible to add more or remove them from the graph using the combobox under "Select Features To Plot.” When selecting the desired features, we use the "Update Graph" option to update the graph according to the selected features.</p>
 
 <img src="scenario1Initial.png" alt="scenario1Initial" width="1000"> 
 
-<p>Como dito acima, outras features podem ser adicionadas ou removidas do gráfico e os valores do ponto corrente podem ser alterados (vide axie da feature "health"). Ao clicar em um valor (em um dos eixos editáveis) do ponto corrente podemos ver no lado direito, a distribuição dos dados da feature clicada e também o componente associado, neste componente podemos alterar as restrições sobre a feature (o contrafactual sugerido só sentirá a mudança no próximo cenário - vide componente da feature Mjob).</p>
+<p>As said above, other features can be added or removed from the graph and the current point values ​​can be changed (see axie of the "health" feature). By clicking on a value (on one of the editable axes) of the current point, we can see on the right side the distribution of the clicked feature's data and also the associated component; in this component, we can change the restrictions on the feature (the suggested counterfactual will only feel the change in the next scenario - see component of feature Mjob).</p>
 
 <img src="scenario1Changed.png" alt="scenario1Changed" width="1000"> 
 
-<p>Tendo terminado o estudo do "Scenario1", utilizamos a opção "Next" para criarmos um novo cenário. Neste cenário podemos ver que além dos pontos referentes ao "Scenário0", ao corrente e ao contrafactual, também temos um ponto referente ao cenário anterior, de modo que possamos acompanhar a "caminhada" até o nosso contrafactual. Tendo alterado novamente o valor de "health", vemos que o ponto corrente mudou de cor para indicar que chegamos na classe deseja. Dessa forma podemos então terminar a busca pelo contrafactual personalizado, clicando na opção "Finish".</p>
+<p>Finished studying "Scenario1", we use the option "Next" to create a new scenario. In this scenario, we can see that in addition to the points referring to "Scenario0", the current, and the counterfactual, we also have a point referring to the previous scenario to follow the "walk" to our counterfactual. Having changed some values again, we see that the current point has changed its color to indicate that we have reached the desired class. That way, we can then finish the search for the custom counterfactual by clicking on the option "Finish".</p>
 
 <img src="scenario2.png" alt="scenario2" width="1000"> 
 
-<p></p>
+<p>By clicking on option "Finish", we then have a parallel between the values ​​of "Scenario0" and the last scenario, where all values ​​different from each other are indicated with a blue background to facilitate identification.</p>
+
+<img src="finalScenario.png" alt="finalScenario" width="1000"> 
+
+<p>With that, we conclude the presentation of the OceanUI.</p>
 
 </body>
 </html>
