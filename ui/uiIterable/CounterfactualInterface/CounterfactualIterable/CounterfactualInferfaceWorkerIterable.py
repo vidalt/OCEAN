@@ -50,37 +50,39 @@ class CounterfactualInferfaceWorkerIterable(QObject):
 
         randomForestMilp.buildModel()
 
-            # adding the user constraints over the optimization model
-            # if i == len(points)-1:
-            #     constraintIndex = 0
-            #     for feature in self.__controller.model.features:
-            #         if feature != 'Class':
-            #             if self.__controller.model.featuresType[feature] is FeatureType.Binary:
-            #                 notAllowedValue = self.__controller.featuresConstraints[feature]['notAllowedValue']
-            #                 if notAllowedValue == self.__controller.model.featuresInformations[feature]['value0']:
-            #                     randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 1, notAllowedValue+' not allowed')
-            #                 elif notAllowedValue == self.__controller.model.featuresInformations[feature]['value1']:
-            #                     randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 0, notAllowedValue+' not allowed')
+        # adding the user constraints over the optimization model
+        # constraintIndex = 0
+        # for feature in self.__controller.model.features:
+        #     if feature != 'Class':
+        #         if self.__controller.model.featuresType[feature] is FeatureType.Binary:
+        #             content = self.__controller.dictControllersSelectedPoint[feature].getContent()
+        #             notAllowedValue = content['notAllowedValue']
+        #             if notAllowedValue == self.__controller.model.featuresInformations[feature]['value0']:
+        #                 randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 1, notAllowedValue+' not allowed')
+        #             elif notAllowedValue == self.__controller.model.featuresInformations[feature]['value1']:
+        #                 randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 0, notAllowedValue+' not allowed')
 
-            #                 constraintIndex += 1
+        #             constraintIndex += 1
 
-            #             elif self.__controller.model.featuresType[feature] is FeatureType.Discrete or self.__controller.model.featuresType[feature] is FeatureType.Numeric:
-            #                 selectedMinimum = self.__controller.featuresConstraints[feature]['selectedMinimum']
-            #                 selectedMaximum = self.__controller.featuresConstraints[feature]['selectedMaximum']
+        #         elif self.__controller.model.featuresType[feature] is FeatureType.Discrete or self.__controller.model.featuresType[feature] is FeatureType.Numeric:
+        #             content = self.__controller.dictControllersSelectedPoint[feature].getContent()
+        #             minimumValue = content['minimumValue']
+        #             maximumValue = content['maximumValue']
 
-            #                 randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] >= selectedMinimum, feature+' minimum constraint')
-            #                 randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] <= selectedMaximum, feature+' maximum constraint')
+        #             randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] >= minimumValue, feature+' minimum constraint')
+        #             randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] <= maximumValue, feature+' maximum constraint')
 
-            #                 constraintIndex += 1
+        #             constraintIndex += 1
 
-            #             elif self.__controller.model.featuresType[feature] is FeatureType.Categorical:
-            #                 notAllowedValues = self.__controller.featuresConstraints[feature]['notAllowedValues']
+        #         elif self.__controller.model.featuresType[feature] is FeatureType.Categorical:
+        #             content = self.__controller.dictControllersSelectedPoint[feature].getContent()
+        #             notAllowedValues = content['notAllowedValues']
 
-            #                 for value in self.__controller.model.featuresInformations[feature]['possibleValues']:
-            #                     if value in notAllowedValues:
-            #                         randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 0, feature+'_'+value+' not allowed')
+        #             for value in self.__controller.model.featuresInformations[feature]['possibleValues']:
+        #                 if value in notAllowedValues:
+        #                     randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 0, feature+'_'+value+' not allowed')
 
-            #                     constraintIndex += 1
+        #                 constraintIndex += 1
 
         randomForestMilp.solveModel()
         counterfactualResult = randomForestMilp.x_sol

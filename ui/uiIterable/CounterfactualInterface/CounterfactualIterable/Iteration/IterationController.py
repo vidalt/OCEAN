@@ -152,12 +152,24 @@ class IterationController():
         
         self.view.selectFeatures(suggestedFeatures)
 
+    # this function sets the actionability to the components
+    def __setActionable(self, features):
+        for feature in self.model.features:
+            if feature != 'Class': 
+                self.dictControllersSelectedPoint[feature].setActionable(False)
+
+        for feature in features:
+            self.dictControllersSelectedPoint[feature].setActionable(True)
+
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
         self.waitCursor()
 
         selectedFeatures = self.view.getSelectedFeatures()
         if len(selectedFeatures) == len(updatedPoint):
+            # setting actionability
+            self.__setActionable(selectedFeatures)
+
             self.__suggestedFeaturesToPlot = selectedFeatures
 
             # current datapoint
@@ -291,6 +303,9 @@ class IterationController():
             selectedFeatures = suggestedFeatures
         else:
             selectedFeatures = self.view.getSelectedFeatures()
+
+        # setting actionability
+        self.__setActionable(selectedFeatures)
 
         if len(selectedFeatures) != 0:
             self.__suggestedFeaturesToPlot = selectedFeatures

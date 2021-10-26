@@ -24,6 +24,8 @@ class IterationView(QWidget, Ui_Iteration):
 
         self.__dictItems = {}
 
+        self.comboBoxCheckable.itemsChanged.connect(lambda: self.__onItemsChanged())
+
 
     def initializeView(self):
         pass
@@ -70,3 +72,8 @@ class IterationView(QWidget, Ui_Iteration):
 
         height = self.__dictItems[feature].sizeHint().height()
         self.listWidgetFeatureInformations.setMinimumHeight(height)
+
+    def __onItemsChanged(self):
+        print('#'*75)
+        print('GRÁFICO DESATUALIZADO')
+        print('#'*75)

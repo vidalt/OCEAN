@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>831</width>
-    <height>505</height>
+    <width>951</width>
+    <height>512</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -80,11 +80,12 @@
             <property name="maximumSize">
              <size>
               <width>16777215</width>
-              <height>25</height>
+              <height>16777215</height>
              </size>
             </property>
             <property name="text">
-             <string>Select Dataset and Datapoint</string>
+             <string>Select Dataset and Datapoint: select the dataset using the combobox below 
+and fill the following list features using the button &quot;Random Point&quot; or manually</string>
             </property>
            </widget>
           </item>
@@ -131,6 +132,19 @@
           </item>
           <item>
            <widget class="QListWidget" name="listWidgetSelectedPoint"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelClassInfo">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>The button &quot;Calculate Class&quot; calculates the class to the above-filled point</string>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QWidget" name="widget" native="true">
@@ -180,6 +194,19 @@
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="labelNextInfo">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>25</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>The button &quot;Next&quot; instantiates a new scenario</string>
+            </property>
            </widget>
           </item>
           <item>
@@ -240,7 +267,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Feature Importance</string>
+             <string>Feature Importance: a graph with the prediction model features importance</string>
             </property>
            </widget>
           </item>

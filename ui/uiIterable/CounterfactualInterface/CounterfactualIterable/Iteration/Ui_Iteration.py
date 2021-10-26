@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Iteration(object):
     def setupUi(self, Iteration):
         Iteration.setObjectName("Iteration")
-        Iteration.resize(904, 366)
+        Iteration.resize(904, 548)
         self.horizontalLayout = QtWidgets.QHBoxLayout(Iteration)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.widgetContainerGraph = QtWidgets.QWidget(Iteration)
@@ -49,6 +49,15 @@ class Ui_Iteration(object):
         self.pushButtonUpdateGraph.setMinimumSize(QtCore.QSize(0, 25))
         self.pushButtonUpdateGraph.setObjectName("pushButtonUpdateGraph")
         self.horizontalLayout_9.addWidget(self.pushButtonUpdateGraph)
+        self.pushButtonOutdatedGraph = QtWidgets.QPushButton(self.widgetContainerAxes)
+        self.pushButtonOutdatedGraph.setMinimumSize(QtCore.QSize(25, 25))
+        self.pushButtonOutdatedGraph.setMaximumSize(QtCore.QSize(25, 16777215))
+        self.pushButtonOutdatedGraph.setText("")
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(":/Images/outdatedChart.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        self.pushButtonOutdatedGraph.setIcon(icon)
+        self.pushButtonOutdatedGraph.setObjectName("pushButtonOutdatedGraph")
+        self.horizontalLayout_9.addWidget(self.pushButtonOutdatedGraph)
         self.verticalLayout_2.addWidget(self.widgetContainerAxes)
         self.widgetContainer = QtWidgets.QWidget(self.widgetContainerGraph)
         self.widgetContainer.setObjectName("widgetContainer")
@@ -75,8 +84,8 @@ class Ui_Iteration(object):
         self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.labelFeatureInformations = QtWidgets.QLabel(self.widgetContainerFeatureInformations)
-        self.labelFeatureInformations.setMinimumSize(QtCore.QSize(0, 25))
-        self.labelFeatureInformations.setMaximumSize(QtCore.QSize(16777215, 25))
+        self.labelFeatureInformations.setMinimumSize(QtCore.QSize(0, 26))
+        self.labelFeatureInformations.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.labelFeatureInformations.setObjectName("labelFeatureInformations")
         self.verticalLayout_3.addWidget(self.labelFeatureInformations)
         self.listWidgetFeatureInformations = QtWidgets.QListWidget(self.widgetContainerFeatureInformations)
@@ -104,6 +113,10 @@ class Ui_Iteration(object):
         self.verticalLayout_3.addWidget(self.widgetCanvasDistribution)
         self.horizontalLayout_3.addWidget(self.widgetContainerFeatureInformations)
         self.verticalLayout_2.addWidget(self.widgetContainer)
+        self.labelNextInfo = QtWidgets.QLabel(self.widgetContainerGraph)
+        self.labelNextInfo.setMinimumSize(QtCore.QSize(0, 25))
+        self.labelNextInfo.setObjectName("labelNextInfo")
+        self.verticalLayout_2.addWidget(self.labelNextInfo)
         self.widgetNextFinish = QtWidgets.QWidget(self.widgetContainerGraph)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -131,12 +144,16 @@ class Ui_Iteration(object):
     def retranslateUi(self, Iteration):
         _translate = QtCore.QCoreApplication.translate
         Iteration.setWindowTitle(_translate("Iteration", "Form"))
-        self.labelSelectFeaturesToPlot.setText(_translate("Iteration", "Select Features To Plot"))
+        self.labelSelectFeaturesToPlot.setText(_translate("Iteration", "Select Features To Plot: select the desired features using the multiselection combobox below and use the button \"Update Graph\" to update the current graph"))
         self.pushButtonUpdateGraph.setText(_translate("Iteration", "Update Graph"))
-        self.labelFeatureInformations.setText(_translate("Iteration", "Feature Informations"))
-        self.labelFeatureDistribution.setText(_translate("Iteration", "Feature Distribution"))
+        self.pushButtonOutdatedGraph.setToolTip(_translate("Iteration", "<html><head/><body><p>the graph is outdated</p></body></html>"))
+        self.labelFeatureInformations.setText(_translate("Iteration", "Feature Informations: shows the clicked feature informations \n"
+"and allows to update its constraints"))
+        self.labelFeatureDistribution.setText(_translate("Iteration", "Feature Distribution: shows the clicked feature distribution"))
+        self.labelNextInfo.setText(_translate("Iteration", "The button \"Next\" instantiates a new scenario, and the button \"Finish\" instantiates the \"FinalScenario\""))
         self.pushButtonNext.setText(_translate("Iteration", "Next"))
         self.pushButtonFinish.setText(_translate("Iteration", "Finish"))
 from Canvas.MatplotLibCanvas import MatplotLibCanvas
 from Canvas.MatplotLibCanvasDistribution import MatplotLibCanvasDistribution
 from CounterfactualInterface.CheckableComboBox.CheckableComboBox import CheckableComboBox
+import Resources.Images_rc

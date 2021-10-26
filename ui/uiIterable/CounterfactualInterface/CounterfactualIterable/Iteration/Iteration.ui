@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>904</width>
-    <height>366</height>
+    <height>548</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -44,7 +44,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Select Features To Plot</string>
+         <string>Select Features To Plot: select the desired features using the multiselection combobox below and use the button &quot;Update Graph&quot; to update the current graph</string>
         </property>
        </widget>
       </item>
@@ -89,6 +89,33 @@
            </property>
            <property name="text">
             <string>Update Graph</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonOutdatedGraph">
+           <property name="minimumSize">
+            <size>
+             <width>25</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>25</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;the graph is outdated&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normalon>:/Images/outdatedChart.png</normalon>
+            </iconset>
            </property>
           </widget>
          </item>
@@ -157,17 +184,18 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>25</height>
+                <height>26</height>
                </size>
               </property>
               <property name="maximumSize">
                <size>
                 <width>16777215</width>
-                <height>25</height>
+                <height>16777215</height>
                </size>
               </property>
               <property name="text">
-               <string>Feature Informations</string>
+               <string>Feature Informations: shows the clicked feature informations 
+and allows to update its constraints</string>
               </property>
              </widget>
             </item>
@@ -218,7 +246,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Feature Distribution</string>
+               <string>Feature Distribution: shows the clicked feature distribution</string>
               </property>
              </widget>
             </item>
@@ -242,6 +270,19 @@
           </widget>
          </item>
         </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelNextInfo">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>The button &quot;Next&quot; instantiates a new scenario, and the button &quot;Finish&quot; instantiates the &quot;FinalScenario&quot;</string>
+        </property>
        </widget>
       </item>
       <item>
@@ -318,6 +359,8 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../../../../Resources/Images.qrc"/>
+ </resources>
  <connections/>
 </ui>
