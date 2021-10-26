@@ -19,12 +19,12 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
 
         self.comboBoxValues.currentTextChanged.connect(lambda: self.__updateAllowedNotActionable())
         self.checkBoxActionability.stateChanged.connect(lambda: self.__actionabilityOptionHandler())
-        self.pushButtonResetOptions.clicked.connect(lambda: self.__resetOptionsHandler())
+        # self.pushButtonResetOptions.clicked.connect(lambda: self.__resetOptionsHandler())
         self.pushButtonResetOptions.clicked.connect(lambda: self.resetOptions.emit())
         self.pushButtonCheckAll.clicked.connect(lambda: self.__checkAllHandler())
         self.pushButtonUncheckAll.clicked.connect(lambda: self.__uncheckAllHandler())
 
-        self.listWidgetAllowedValues.model().dataChanged.connect(lambda: self.outdatedGraph.emit())
+        # self.listWidgetAllowedValues.model().dataChanged.connect(lambda: self.outdatedGraph.emit())
 
 
     # this function blocks the user from changing the value
@@ -53,7 +53,6 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
             self.listWidgetAllowedValues.setEnabled(True)
             self.pushButtonCheckAll.setEnabled(True)
             self.pushButtonUncheckAll.setEnabled(True)
-            self.__checkAllHandler()
         else:
             # self.checkBoxActionability.setText('not actionable')
             self.listWidgetAllowedValues.setEnabled(False)
@@ -74,9 +73,9 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
     def setActionable(self, actionable):
         self.checkBoxActionability.setChecked(actionable)
 
-    def __resetOptionsHandler(self):
-        self.resetOptions.emit()
-        self.outdatedGraph.emit()
+    # def __resetOptionsHandler(self):
+    #     self.resetOptions.emit()
+    #     self.outdatedGraph.emit()
 
     # this function set all the options as checked
     def __checkAllHandler(self):

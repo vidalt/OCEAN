@@ -9,6 +9,8 @@ from .Slider import Slider
 
 class Range(QLabel):
                
+    outdatedGraph = pyqtSignal()
+
     def __init__(self, parent=None):
         super(Range, self).__init__(parent)
 
@@ -121,6 +123,7 @@ class Range(QLabel):
         if self.__isPressed:
             posX =  self.mapToParent(event.pos()).x() 
             self.__updatePos(posX)
+            self.outdatedGraph.emit()
 
     @pyqtSlot(int)
     def setValue(self, newValue):

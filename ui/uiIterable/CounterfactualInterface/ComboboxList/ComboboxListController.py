@@ -5,14 +5,21 @@
 
 from .ComboboxListView import ComboboxListView
 
-class ComboboxListController:
+from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import pyqtSignal
+
+class ComboboxListController(QWidget):
+
+    outdatedGraph = pyqtSignal()
 
     def __init__(self, parent=None, allPossibleValues=None):
+        super(ComboboxListController, self).__init__()
         self.__view = ComboboxListView(parent)
 
         self.__allPossibleValues = allPossibleValues
 
         self.__view.resetOptions.connect(self.__resetOptionsHandler)
+        self.__view.outdatedGraph.connect(lambda: self.outdatedGraph.emit())
 
     @property
     def view(self):

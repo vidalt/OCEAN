@@ -6,9 +6,15 @@
 from numpy.lib.arraysetops import isin
 from .DoubleRadioButtonView import DoubleRadioButtonView
 
-class DoubleRadioButtonController:
+from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import pyqtSignal
+
+class DoubleRadioButtonController(QWidget):
+
+    outdatedGraph = pyqtSignal()
 
     def __init__(self, parent=None):
+        super(DoubleRadioButtonController, self).__init__()
         self.__view = DoubleRadioButtonView(parent)
 
     @property

@@ -13,6 +13,7 @@ class IterationView(QWidget, Ui_Iteration):
     selectedFeatures = pyqtSignal()
     nextIteration = pyqtSignal()
     finishIteration = pyqtSignal()
+    outdatedGraph = pyqtSignal()
 
     def __init__(self):
         super(IterationView, self).__init__()
@@ -74,6 +75,10 @@ class IterationView(QWidget, Ui_Iteration):
         self.listWidgetFeatureInformations.setMinimumHeight(height)
 
     def __onItemsChanged(self):
-        print('#'*75)
-        print('GRÁFICO DESATUALIZADO')
-        print('#'*75)
+        self.outdatedGraph.emit()
+
+    def showOutdatedGraph(self):
+        self.pushButtonOutdatedGraph.show()
+
+    def hideOutdatedGraph(self):
+        self.pushButtonOutdatedGraph.hide()

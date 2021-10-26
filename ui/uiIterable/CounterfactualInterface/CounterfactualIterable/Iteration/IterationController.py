@@ -33,6 +33,7 @@ class IterationController():
         self.parent = parent
 
         self.view = IterationView()
+        self.view.outdatedGraph.connect(self.__onOutdatedGraph)
         self.model = model
 
         self.iterationName = None
@@ -78,6 +79,9 @@ class IterationController():
     def __initializeView(self):
         self.view.initializeView()
 
+    def __onOutdatedGraph(self):
+        self.view.showOutdatedGraph()
+
     # this function sets the previous values to the current view
     def setFeaturesAndValues(self, dictNextFeaturesInformation):
         self.iterationName = dictNextFeaturesInformation['iterationName']
@@ -96,8 +100,8 @@ class IterationController():
 
                     componentController = DoubleRadioButtonController(self.view)
                     componentController.initializeView(feature, str(value0), str(value1))
-                    componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
+                    # componentController.setActionable(actionable)
 
                 elif featureType is FeatureType.Discrete:
                     actionable = content['actionable']
@@ -107,8 +111,8 @@ class IterationController():
 
                     componentController = Slider3RangesController(self.view, smaller=True)
                     componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
-                    componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
+                    # componentController.setActionable(actionable)
 
                 elif featureType is FeatureType.Numeric:
                     actionable = content['actionable']
@@ -118,8 +122,8 @@ class IterationController():
 
                     componentController = Slider3RangesController(self.view, smaller=True)
                     componentController.initializeView(feature, minValue, maxValue)
-                    componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
+                    # componentController.setActionable(actionable)
                     
                 elif featureType is FeatureType.Categorical:
                     actionable = content['actionable']
@@ -130,11 +134,13 @@ class IterationController():
                     
                     componentController = ComboboxListController(self.view, allPossibleValues)
                     componentController.initializeView(feature, allowedValues)
-                    componentController.setActionable(actionable)
                     componentController.setSelectedValue(value)
+                    # componentController.setActionable(actionable)
                 
                 # disabling the edition
                 componentController.disableComponent()
+                # connecting the signals
+                componentController.outdatedGraph.connect(self.__onOutdatedGraph)
                 # hiding the components
                 componentController.view.checkBoxActionability.hide()
                 self.view.addFeatureWidget(feature, componentController.view)
@@ -143,6 +149,7 @@ class IterationController():
 
         self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
+        self.view.hideOutdatedGraph()
 
     # this function draw the suggested feature
     def setSuggestedFeaturesToPlot(self, suggestedFeatures):
@@ -153,13 +160,13 @@ class IterationController():
         self.view.selectFeatures(suggestedFeatures)
 
     # this function sets the actionability to the components
-    def __setActionable(self, features):
-        for feature in self.model.features:
-            if feature != 'Class': 
-                self.dictControllersSelectedPoint[feature].setActionable(False)
+    # def __setActionable(self, features):
+    #     for feature in self.model.features:
+    #         if feature != 'Class': 
+    #             self.dictControllersSelectedPoint[feature].setActionable(False)
 
-        for feature in features:
-            self.dictControllersSelectedPoint[feature].setActionable(True)
+    #     for feature in features:
+    #         self.dictControllersSelectedPoint[feature].setActionable(True)
 
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
@@ -168,7 +175,7 @@ class IterationController():
         selectedFeatures = self.view.getSelectedFeatures()
         if len(selectedFeatures) == len(updatedPoint):
             # setting actionability
-            self.__setActionable(selectedFeatures)
+            # self.__setActionable(selectedFeatures)
 
             self.__suggestedFeaturesToPlot = selectedFeatures
 
@@ -242,6 +249,7 @@ class IterationController():
                           'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
+        self.view.hideOutdatedGraph()
         self.restorCursor()
 
     # listen the last feature clicked and draw the distribution graph, and show the feature informations
@@ -305,7 +313,7 @@ class IterationController():
             selectedFeatures = self.view.getSelectedFeatures()
 
         # setting actionability
-        self.__setActionable(selectedFeatures)
+        # self.__setActionable(selectedFeatures)
 
         if len(selectedFeatures) != 0:
             self.__suggestedFeaturesToPlot = selectedFeatures
@@ -387,6 +395,7 @@ class IterationController():
                           'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
+        self.view.hideOutdatedGraph()
         self.restorCursor()
 
     def __handlerNextIteration(self):

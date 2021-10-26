@@ -4,6 +4,8 @@ from PyQt5.QtCore import *
 
 class CheckableComboBox(QComboBox):
 
+    itemsChanged = pyqtSignal()
+
     # Subclass Delegate to increase item height
     class Delegate(QStyledItemDelegate):
         def sizeHint(self, option, index):
@@ -51,7 +53,7 @@ class CheckableComboBox(QComboBox):
 
     def resizeEvent(self, event):
         # Recompute text to elide as needed
-        self.updateText()
+        self.updateText(emitSignal=False)
         super().resizeEvent(event)
 
     def eventFilter(self, object, event):
@@ -87,14 +89,14 @@ class CheckableComboBox(QComboBox):
         # Used to prevent immediate reopening when clicking on the lineEdit
         self.startTimer(100)
         # Refresh the display text when closing
-        self.updateText()
+        self.updateText(emitSignal=False)
 
     def timerEvent(self, event):
         # After timeout, kill timer, and reenable click on line edit
         self.killTimer(event.timerId())
         self.closeOnLineEditClick = False
 
-    def updateText(self):
+    def updateText(self, emitSignal=True):
         texts = []
         for i in range(self.model().rowCount()):
             if self.model().item(i).checkState() == Qt.Checked:
@@ -105,6 +107,10 @@ class CheckableComboBox(QComboBox):
         metrics = QFontMetrics(self.lineEdit().font())
         elidedText = metrics.elidedText(text, Qt.ElideRight, self.lineEdit().width())
         self.lineEdit().setText(elidedText)
+
+        # emit when the graph probably is outupdated
+        if emitSignal:
+            self.itemsChanged.emit()
 
     def addItem(self, text, data=None):
         item = QStandardItem()

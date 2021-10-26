@@ -2,11 +2,14 @@
 # this class imports the UI file to be possible to access the interface components
 
 from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import pyqtSignal
 
 from .Slider3RangesEnums import Slider3RangesEnums
 from .Ui_Slider3RangesSmaller import Ui_Slider3RangesSmaller
 
 class Slider3RangesViewSmaller(QWidget, Ui_Slider3RangesSmaller):
+
+    outdatedGraph = pyqtSignal()
 
     def __init__(self, parent=None):
         super(Slider3RangesViewSmaller, self).__init__(parent)
@@ -68,12 +71,15 @@ class Slider3RangesViewSmaller(QWidget, Ui_Slider3RangesSmaller):
 
         self.labelRangeMinimum.setSlider(self.labelSlider)
         self.labelRangeMinimum.initializeRange(minValue, maxValue, minValue, Slider3RangesEnums.Space.MIN_MAX.value)
+        self.labelRangeMinimum.outdatedGraph.connect(lambda: self.outdatedGraph.emit())
 
         self.labelRangeValue.setSlider(self.labelSlider)
         self.labelRangeValue.initializeRange(minValue, maxValue, value, Slider3RangesEnums.Space.VALUE.value)
+        self.labelRangeValue.outdatedGraph.connect(lambda: self.outdatedGraph.emit())
 
         self.labelRangeMaximum.setSlider(self.labelSlider)
         self.labelRangeMaximum.initializeRange(minValue, maxValue, maxValue, Slider3RangesEnums.Space.MIN_MAX.value)
+        self.labelRangeMaximum.outdatedGraph.connect(lambda: self.outdatedGraph.emit())
 
         self.doubleSpinBoxMinimum.setValue(minValue)
 
@@ -112,10 +118,12 @@ class Slider3RangesViewSmaller(QWidget, Ui_Slider3RangesSmaller):
     # this function update the bounds of the slider
     def __onUpdateMinimumValue(self):
         self.__updateView(self.doubleSpinBoxMinimum.value(), self.__maxValue, self.__getRangeCurrentValue())
+        self.outdatedGraph.emit()
 
     # this function update the bounds of the slider
     def __onUpdateMaximumValue(self):
         self.__updateView(self.__minValue, self.doubleSpinBoxMaximum.value(), self.__getRangeCurrentValue())
+        self.outdatedGraph.emit()
 
     # this function is used to set the value to the main range
     def setSelectedValue(self, selectedValue):

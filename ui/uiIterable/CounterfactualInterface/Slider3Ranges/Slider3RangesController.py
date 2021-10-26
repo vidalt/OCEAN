@@ -6,15 +6,23 @@
 from .Slider3RangesView import Slider3RangesView
 from .Slider3RangesViewSmaller import Slider3RangesViewSmaller
 
-class Slider3RangesController:
+from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import pyqtSignal
+
+class Slider3RangesController(QWidget):
+
+    outdatedGraph = pyqtSignal()
 
     def __init__(self, parent=None, smaller=False):
+        super(Slider3RangesController, self).__init__()
         self.__view = None
 
         if smaller:
             self.__view = Slider3RangesViewSmaller(parent)
         else:
             self.__view = Slider3RangesView(parent)
+
+        self.__view.outdatedGraph.connect(lambda: self.outdatedGraph.emit())
             
 
     @property
