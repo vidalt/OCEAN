@@ -101,7 +101,7 @@ class IterationController():
                     componentController = DoubleRadioButtonController(self.view)
                     componentController.initializeView(feature, str(value0), str(value1))
                     componentController.setSelectedValue(value)
-                    # componentController.setActionable(actionable)
+                    componentController.setActionable(actionable)
 
                 elif featureType is FeatureType.Discrete:
                     actionable = content['actionable']
@@ -112,7 +112,7 @@ class IterationController():
                     componentController = Slider3RangesController(self.view, smaller=True)
                     componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
                     componentController.setSelectedValue(value)
-                    # componentController.setActionable(actionable)
+                    componentController.setActionable(actionable)
 
                 elif featureType is FeatureType.Numeric:
                     actionable = content['actionable']
@@ -123,7 +123,7 @@ class IterationController():
                     componentController = Slider3RangesController(self.view, smaller=True)
                     componentController.initializeView(feature, minValue, maxValue)
                     componentController.setSelectedValue(value)
-                    # componentController.setActionable(actionable)
+                    componentController.setActionable(actionable)
                     
                 elif featureType is FeatureType.Categorical:
                     actionable = content['actionable']
@@ -135,7 +135,7 @@ class IterationController():
                     componentController = ComboboxListController(self.view, allPossibleValues)
                     componentController.initializeView(feature, allowedValues)
                     componentController.setSelectedValue(value)
-                    # componentController.setActionable(actionable)
+                    componentController.setActionable(actionable)
                 
                 # disabling the edition
                 componentController.disableComponent()
@@ -160,13 +160,13 @@ class IterationController():
         self.view.selectFeatures(suggestedFeatures)
 
     # this function sets the actionability to the components
-    # def __setActionable(self, features):
-    #     for feature in self.model.features:
-    #         if feature != 'Class': 
-    #             self.dictControllersSelectedPoint[feature].setActionable(False)
+    def __setActionable(self, features):
+        for feature in self.model.features:
+            if feature != 'Class': 
+                self.dictControllersSelectedPoint[feature].setActionable(False)
 
-    #     for feature in features:
-    #         self.dictControllersSelectedPoint[feature].setActionable(True)
+        for feature in features:
+            self.dictControllersSelectedPoint[feature].setActionable(True)
 
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
@@ -175,7 +175,7 @@ class IterationController():
         selectedFeatures = self.view.getSelectedFeatures()
         if len(selectedFeatures) == len(updatedPoint):
             # setting actionability
-            # self.__setActionable(selectedFeatures)
+            self.__setActionable(selectedFeatures)
 
             self.__suggestedFeaturesToPlot = selectedFeatures
 
@@ -313,7 +313,7 @@ class IterationController():
             selectedFeatures = self.view.getSelectedFeatures()
 
         # setting actionability
-        # self.__setActionable(selectedFeatures)
+        self.__setActionable(selectedFeatures)
 
         if len(selectedFeatures) != 0:
             self.__suggestedFeaturesToPlot = selectedFeatures
@@ -404,6 +404,7 @@ class IterationController():
         dictNextFeaturesInformation = {}
         for i, feature in enumerate(self.model.features):
             if feature != 'Class':
+                self.dictControllersSelectedPoint[feature].setActionable(True)
                 featureType = self.model.featuresInformations[feature]['featureType']
 
                 currentValue = self.updatedCurrentPoint[i]

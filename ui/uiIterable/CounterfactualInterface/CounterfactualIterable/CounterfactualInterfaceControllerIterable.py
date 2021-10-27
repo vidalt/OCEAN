@@ -106,7 +106,7 @@ class CounterfactualInterfaceControllerIterable:
 
                 featureImportance = self.model.invertTransformedFeatureImportance(importance)
                 tempSuggestedFeatureToPlot = []
-                for i in range(6):
+                for i in range(4):
                     index = featureImportance.index(max(featureImportance))
                     tempSuggestedFeatureToPlot.append(self.model.features[index])
                     featureImportance[index] = -1
