@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
 from ..CounterfactualInterfaceModel import CounterfactualInterfaceModel
 from ..CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
@@ -180,21 +180,26 @@ class CounterfactualInterfaceControllerIterable:
         self.view.clearClass()
         
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            # getting the datapoint
-            auxiliarDataPoint = []
-            for feature in self.model.features:
-                if feature != 'Class':
-                    content = self.__dictControllersSelectedPoint[feature].getContent()
-                    auxiliarDataPoint.append(content['value'])
-                    
-            self.chosenDataPoint = np.array(auxiliarDataPoint)
+            auxiliarFeatureName = ''
+            try:
+                # getting the datapoint
+                auxiliarDataPoint = []
+                for feature in self.model.features:
+                    if feature != 'Class':
+                        auxiliarFeatureName = feature
+                        content = self.__dictControllersSelectedPoint[feature].getContent()
+                        auxiliarDataPoint.append(content['value'])
+                        
+                self.chosenDataPoint = np.array(auxiliarDataPoint)
 
-            # transforming the datapoint to predict its class
-            self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
-            
-            # predicting the datapoint class and showing its value
-            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
-            self.view.showOriginalClass(self.predictedOriginalClass[0])      
+                # transforming the datapoint to predict its class
+                self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
+                
+                # predicting the datapoint class and showing its value
+                self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+                self.view.showOriginalClass(self.predictedOriginalClass[0])   
+            except:
+                QMessageBox.information(self.view, 'Missing value', 'Please verify the following feature '+auxiliarFeatureName, QMessageBox.Ok)
 
     def addNewIterationTab(self, nextIterationView):
         iterationName = self.view.addNewIterationTab(nextIterationView)
