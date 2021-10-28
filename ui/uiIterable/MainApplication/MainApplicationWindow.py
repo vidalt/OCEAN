@@ -1,12 +1,12 @@
 # Author: Moises Henrique Pereira
 # this class instantiates the controller responsible by the entire counterfactual interface
 
+import os
 import requests
 
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, Qt
 
 from CounterfactualInterface.CounterfactualInterfaceController import CounterfactualInterfaceController
-# from Dash.DashView import DashView
 
 class MainApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -22,8 +22,25 @@ class MainApplicationWindow(QtWidgets.QMainWindow):
         self.__counterfactualInterfaceController.view.show()
         self.setCentralWidget(self.__counterfactualInterfaceController.view)
 
+        helpAction = QtWidgets.QAction('&About', self)        
+        # helpAction.setShortcut('Ctrl+Q')
+        helpAction.setStatusTip('About')
+        helpAction.triggered.connect(self.menuAction)
+        
+        menubar = self.menuBar()
+        helpMenu = menubar.addMenu('&Help')
+        helpMenu.addAction(helpAction)
+
         self.showMaximized()
 
+
+    def menuAction(self):
+        currentPath = os.getcwd()
+        tutorialPath = os.path.join(currentPath, 'tutorial', 'index.html')
+        # the browser needs / instead of \
+        tutorialPath = tutorialPath.replace('\\', '/')
+        url = Qt.QUrl(tutorialPath)
+        Qt.QDesktopServices.openUrl(url)
 
     # this function event is used to kill the flask server
     def closeEvent(self, event):
