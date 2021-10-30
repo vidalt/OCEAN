@@ -17,7 +17,7 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
 
         self.comboBoxValues.setEditable(True)
 
-        self.comboBoxValues.currentTextChanged.connect(lambda: self.__updateAllowedNotActionable())
+        # self.comboBoxValues.currentTextChanged.connect(lambda: self.__updateAllowedNotActionable())
         self.checkBoxActionability.stateChanged.connect(lambda: self.__actionabilityOptionHandler())
         self.pushButtonResetOptions.clicked.connect(lambda: self.__resetOptionsHandler())
         self.pushButtonResetOptions.clicked.connect(lambda: self.resetOptions.emit())
@@ -53,7 +53,7 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
             self.listWidgetAllowedValues.setEnabled(True)
             self.pushButtonCheckAll.setEnabled(True)
             self.pushButtonUncheckAll.setEnabled(True)
-            self.__checkAllHandler()
+            # self.__checkAllHandler()
         else:
             # self.checkBoxActionability.setText('not actionable')
             self.listWidgetAllowedValues.setEnabled(False)
