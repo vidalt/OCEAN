@@ -198,6 +198,8 @@ class CounterfactualInterfaceControllerIterable:
                 # predicting the datapoint class and showing its value
                 self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
                 self.view.showOriginalClass(self.predictedOriginalClass[0])   
+                self.view.enableNext()
+                
             except:
                 QMessageBox.information(self.view, 'Missing value', 'Please verify the following feature '+auxiliarFeatureName, QMessageBox.Ok)
 

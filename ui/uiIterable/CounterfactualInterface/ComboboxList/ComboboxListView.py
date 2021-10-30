@@ -57,12 +57,12 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
         else:
             # self.checkBoxActionability.setText('not actionable')
             self.listWidgetAllowedValues.setEnabled(False)
-            for i in range(self.listWidgetAllowedValues.count()):
-                if i != 0:
-                    if self.listWidgetAllowedValues.item(i).text() != self.comboBoxValues.currentText():
-                        self.listWidgetAllowedValues.item(i).setCheckState(Qt.Unchecked)
-                    else:
-                        self.listWidgetAllowedValues.item(i).setCheckState(Qt.Checked)
+            # for i in range(self.listWidgetAllowedValues.count()):
+            #     if i != 0:
+            #         if self.listWidgetAllowedValues.item(i).text() != self.comboBoxValues.currentText():
+            #             self.listWidgetAllowedValues.item(i).setCheckState(Qt.Unchecked)
+            #         else:
+            #             self.listWidgetAllowedValues.item(i).setCheckState(Qt.Checked)
             self.pushButtonCheckAll.setEnabled(False)
             self.pushButtonUncheckAll.setEnabled(False)
 
@@ -171,19 +171,27 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
             self.comboBoxValues.setCurrentIndex(index)
 
     def __getAllowedValues(self):
-        allowedValues = []
-        for i in range(self.listWidgetAllowedValues.count()):
-            if i != 0:
-                if self.listWidgetAllowedValues.item(i).checkState() == Qt.Checked:
-                    allowedValues.append(self.listWidgetAllowedValues.item(i).text())
+        if self.checkBoxActionability.isChecked():
+            allowedValues = []
+            for i in range(self.listWidgetAllowedValues.count()):
+                if i != 0:
+                    if self.listWidgetAllowedValues.item(i).checkState() == Qt.Checked:
+                        allowedValues.append(self.listWidgetAllowedValues.item(i).text())
 
-        return allowedValues
+            return allowedValues
+
+        else:
+            return self.__getSelectedValue()
 
     def __getNotAllowedValues(self):
-        notAllowedValues = []
-        for i in range(self.listWidgetAllowedValues.count()):
-            if i != 0:
-                if not self.listWidgetAllowedValues.item(i).checkState() == Qt.Checked:
-                    notAllowedValues.append(self.listWidgetAllowedValues.item(i).text())
-        
-        return notAllowedValues
+        if self.checkBoxActionability.isChecked():
+            notAllowedValues = []
+            for i in range(self.listWidgetAllowedValues.count()):
+                if i != 0:
+                    if not self.listWidgetAllowedValues.item(i).checkState() == Qt.Checked:
+                        notAllowedValues.append(self.listWidgetAllowedValues.item(i).text())
+            
+            return notAllowedValues
+
+        else:
+            return self.__getSelectedValue()

@@ -24,6 +24,8 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
         self.tabWidget.tabBar().setTabButton(0, self.tabWidget.tabBar().RightSide, None)
         self.tabWidget.tabCloseRequested.connect(lambda index: self.tabWidget.removeTab(index))
 
+        self.pushButtonNext.setEnabled(False)
+
 
     def getCanvas(self):
         return self.widgetContainerCanvas
@@ -99,3 +101,6 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
         assert classValue is not None
 
         self.labelOriginalClass.setText('Original Class: '+str(classValue))
+
+    def enableNext(self):
+        self.pushButtonNext.setEnabled(True)
