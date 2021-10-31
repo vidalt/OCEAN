@@ -1,56 +1,88 @@
 <!DOCTYPE html>
 <html>
-<body>
 
-<title>OceanUI tutorial</title>
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-<h3>How to use</h3>
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
 
-<p>OceanUI is a system that uses the <a href="https://github.com/vidalt/OCEAN" target="_blank">OCEAN</a> to generate counterfactuals explanations, but allowing a "walkthrough" in this process. The idea of ​​this system is to use graphics to study and understand possible counterfactuals and, with that, build a personalized counterfactual.</p>
+        <title>OceanUI tutorial</title>
+    </head>
 
-<p>At first, we have the interface below. In it, we can select a dataset to work on using the combobox.</p>
+    <body>
 
-<img src="cleanInterface.png" alt="cleanInterface" width="1000">
+        <div class="card-body">
+            <div class="text-center"><h3>How to use</h3></div>
 
-<p>When selecting a dataset, all its features will be displayed in a list with some information. Such features can be binary, categorical, discrete numeric, or continuous numeric, so depending on the type of feature, a corresponding component will be added to the list. Besides that, we have a graph stating the importance of each feature to the prediction model that is used for class prediction and counterfactual calculation. It is noteworthy that the One-Hot-Encoding is used to transform training data, so we can see that some importance chart labels follow the "FeatureName_value" nomenclature.</p>
+            <p class="text-justify">OceanUI is a system that uses the <a href="https://github.com/vidalt/OCEAN" target="_blank">OCEAN</a> to generate counterfactuals explanations, but allowing a "walkthrough" in this process. The idea of ​​this system is to use graphics to study and understand possible counterfactuals and, with that, build a personalized counterfactual.</p>
 
-<img src="selectedDataset.png" alt="selectedDataset" width="1000"> 
+            <p class="text-justify">At first, we have the interface below. In it, we can select a dataset to work on using the combobox.</p>
+            
+            <div class="text-center">
+                <img src="cleanInterface.png" alt="cleanInterface" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
 
-<p>Once a dataset has been selected, we can use the "Random Point" option to fill the list components with values ​​from a random point of the dataset whose class is "0" or manually fill each one. If we go to manual filling, then we can better observe each of the possible components mentioned above.</p>
+            <p class="text-justify">When selecting a dataset, all its features will be displayed in a list with some information. Such features can be binary, categorical, discrete numeric, or continuous numeric, so depending on the type of feature, a corresponding component will be added to the list. Besides that, we have a graph stating the importance of each feature to the prediction model that is used for class prediction and counterfactual calculation. It is noteworthy that the One-Hot-Encoding is used to transform training data, so we can see that some importance chart labels follow the "FeatureName_value" nomenclature.</p>
 
-<p>In the component for binary features, we have only two possible values, so only one can be selected.</p>
+            <div class="text-center">
+                <img src="selectedDataset.png" alt="selectedDataset" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
 
-<img src="binaryComponent.png" alt="binaryComponent" width="300"> 
+            <p class="text-justify">Once a dataset has been selected, we can use the "Random Point" option to fill the list components with values ​​from a random point of the dataset whose class is "0" or manually fill each one. If we go to manual filling, then we can better observe each of the possible components mentioned above.</p>
 
-<p>In the component for categorical features, we have a combobox to select the desired value and a list on the right side that informs all available values. With this list, it is possible to mark which of these values ​​are allowed for the counterfactual and which are not; in this way, the counterfactual generated will not have any of the values ​​suggesting a change to a non-allowed value.</p>
+            <p class="text-justify">In the component for binary features, we have only two possible values, so only one can be selected.</p>
 
-<img src="categoricalComponent.png" alt="categoricalComponent" width="300"> 
+            <div class="text-center">
+                <img src="binaryComponent.png" alt="binaryComponent" class="img-fluid" alt="Responsive image" width="300">
+            </div>
 
-<p>In the component for numerical features, we have a slider with three ranges to inform the upper and lower bounds and the desired value; in addition, it is also possible to adjust these limits using the spinboxes just below the respective ranges.</p>
+            <p class="text-justify">In the component for categorical features, we have a combobox to select the desired value and a list on the right side that informs all available values. With this list, it is possible to mark which of these values ​​are allowed for the counterfactual and which are not; in this way, the counterfactual generated will not have any of the values ​​suggesting a change to a non-allowed value.</p>
 
-<img src="numericalComponent.png" alt="numericalComponent" width="300"> 
+            <div class="text-center">
+                <img src="categoricalComponent.png" alt="categoricalComponent" class="img-fluid" alt="Responsive image" width="300">
+            </div>
 
-<p>Once the components are filled, we can use the option "Calculate Class" to get the corresponding class, and then we use the option "Next" to create the next scenario of iterative counterfactual generation.</p>
+            <p class="text-justify">In the component for numerical features, we have a slider with three ranges to inform the upper and lower bounds and the desired value; in addition, it is also possible to adjust these limits using the spinboxes just below the respective ranges.</p>
 
-<img src="selectedPoint.png" alt="selectedPoint" width="1000"> 
+            <div class="text-center">
+                <img src="numericalComponent.png" alt="numericalComponent" class="img-fluid" alt="Responsive image" width="300">
+            </div>
 
-<p>In the new scenario ("Scenario1"), we have a parallel coordinate chart, where each axis corresponds to a feature of the dataset except for the first axis, which corresponds to the class of each point, one referring to the chosen point in "Scenario0", another referring to the current point (since there has been no change in the current point values, the current point is equal to the point of "Scenario0") and the last one referring to a suggested counterfactual. Among these three, only the current point can be edited by clicking on the dot over the axis you want to change and then pulling it up or down. This graph starts with 4 of the most important features set by default, but it is possible to add more or remove them from the graph using the combobox under "Select Features To Plot.” When selecting the desired features, we use the "Update Graph" option to update the graph according to the selected features.</p>
+            <p class="text-justify">Once the components are filled, we can use the option "Calculate Class" to get the corresponding class, and then we use the option "Next" to create the next scenario of iterative counterfactual generation.</p>
 
-<img src="scenario1Initial.png" alt="scenario1Initial" width="1000"> 
+            <div class="text-center">
+                <img src="selectedPoint.png" alt="selectedPoint" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
 
-<p>As said above, other features can be added or removed from the graph and the current point values ​​can be changed (see axie of the "health" feature). By clicking on a value (on one of the editable axes) of the current point, we can see on the right side the distribution of the clicked feature's data and also the associated component; in this component, we can change the restrictions on the feature (the suggested counterfactual will only feel the change in the next scenario - see component of feature Mjob).</p>
+            <p class="text-justify">In the new scenario ("Scenario1"), we have a parallel coordinate chart, where each axis corresponds to a feature of the dataset except for the first axis, which corresponds to the class of each point, one referring to the chosen point in "Scenario0", another referring to the current point (since there has been no change in the current point values, the current point is equal to the point of "Scenario0") and the last one referring to a suggested counterfactual. Among these three, only the current point can be edited by clicking on the dot over the axis you want to change and then pulling it up or down. This graph starts with 4 of the most important features set by default, but it is possible to add more or remove them from the graph using the combobox under "Select Features To Plot.” When selecting the desired features, we use the "Update Graph" option to update the graph according to the selected features.</p>
 
-<img src="scenario1Changed.png" alt="scenario1Changed" width="1000"> 
+            <div class="text-center">
+                <img src="scenario1Initial.png" alt="scenario1Initial" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
 
-<p>Finished studying "Scenario1", we use the option "Next" to create a new scenario. In this scenario, we can see that in addition to the points referring to "Scenario0", the current, and the counterfactual, we also have a point referring to the previous scenario to follow the "walk" to our counterfactual. Having changed some values again, we see that the current point has changed its color to indicate that we have reached the desired class. That way, we can then finish the search for the custom counterfactual by clicking on the option "Finish".</p>
+            <p class="text-justify">As said above, other features can be added or removed from the graph and the current point values ​​can be changed (see axie of the "health" feature). By clicking on a value (on one of the editable axes) of the current point, we can see on the right side the distribution of the clicked feature's data and also the associated component; in this component, we can change the restrictions on the feature (the suggested counterfactual will only feel the change in the next scenario - see component of feature Mjob). While we are working on the selection of features or on the restrictions on some feature, we can see an exclamation mark next to the option "Update Graph", this sign indicates that the graph is outdated, being necessary to update it.</p>
 
-<img src="scenario2.png" alt="scenario2" width="1000"> 
+            <div class="text-center">
+                <img src="scenario1Changed.png" alt="scenario1Changed" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
 
-<p>By clicking on option "Finish", we then have a parallel between the values ​​of "Scenario0" and the last scenario, where all values ​​different from each other are indicated with a blue background to facilitate identification.</p>
+            <p class="text-justify">Finished studying "Scenario1", we use the option "Next" to create a new scenario. In this scenario, we can see that in addition to the points referring to "Scenario0", the current, and the counterfactual, we also have a point referring to the previous scenario to follow the "walk" to our counterfactual. Having changed some values again, we see that the current point has changed its color to indicate that we have reached the desired class. That way, we can then finish the search for the custom counterfactual by clicking on the option "Finish".</p>
 
-<img src="finalScenario.png" alt="finalScenario" width="1000"> 
+            <div class="text-center">
+                <img src="scenario2.png" alt="scenario2" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
 
-<p>With that, we conclude the presentation of the OceanUI.</p>
+            <p class="text-justify">By clicking on option "Finish", we then have a parallel between the values ​​of "Scenario0" and the last scenario, where all values ​​different from each other are indicated with a blue background to facilitate identification.</p>
 
-</body>
+            <div class="text-center">
+                <img src="finalScenario.png" alt="finalScenario" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
+
+            <p class="text-justify">With that, we conclude the presentation of the OceanUI.</p>
+        </div>
+
+    </body>
 </html>
