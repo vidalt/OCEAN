@@ -170,6 +170,7 @@ class IterationController():
 
     # this function checks if the current datapoint is allowed, considering the constraints
     def getCurrentDataframeAllowance(self, selectedFeatures, currentDataframe):
+        allowed = True
         allowedDict = {}
         for feature in selectedFeatures:
             featureType = self.model.featuresInformations[feature]['featureType']
@@ -187,6 +188,7 @@ class IterationController():
 
                 allowedDict[feature] = True
                 if currentValue < minValue or currentValue > maxValue:
+                    allowed = False
                     allowedDict[feature] = False
 
             elif featureType is FeatureType.Categorical:
@@ -194,7 +196,11 @@ class IterationController():
 
                 allowedDict[feature] = True
                 if not currentValue in allowedValues:
+                    allowed = False
                     allowedDict[feature] = False
+
+        # enable/disable nextIteration
+        self.view.enabledNextIteration(allowed)
 
         return allowedDict
 
@@ -205,7 +211,7 @@ class IterationController():
         selectedFeatures = self.view.getSelectedFeatures()
         if len(selectedFeatures) == len(updatedPoint):
             # setting actionability
-            self.__setActionable(selectedFeatures)
+            # self.__setActionable(selectedFeatures)
 
             self.__suggestedFeaturesToPlot = selectedFeatures
 
@@ -349,7 +355,7 @@ class IterationController():
             selectedFeatures = self.view.getSelectedFeatures()
 
         # setting actionability
-        self.__setActionable(selectedFeatures)
+        # self.__setActionable(selectedFeatures)
 
         if len(selectedFeatures) != 0:
             self.__suggestedFeaturesToPlot = selectedFeatures

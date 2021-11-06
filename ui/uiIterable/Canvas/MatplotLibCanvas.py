@@ -84,91 +84,81 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         xMaxRange = 0
 
         lastFeature = None
-        try:
-            for i, f in enumerate(allFeaturesToPlot):
-                lastFeature = f
-                
+        # try:
+        for i, f in enumerate(allFeaturesToPlot):
+            lastFeature = f
+            
+            uniqueValuesFeature = None
+
+            if f == 'prob1':
+                # uniqueValuesFeature
+                uniqueValuesFeature = [0, '-', 1]
+
+                # use the unique values feature to plot the vertical axis
+                self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False, True)
+
+            else:
                 uniqueValuesFeature = None
-
-                if f == 'prob1':
-                    # uniqueValuesFeature
-                    uniqueValuesFeature = [0, '-', 1]
-
-                    # use the unique values feature to plot the vertical axis
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False, True)
-
-                else:
-                    uniqueValuesFeature = None
+                rotation = False
+                if self.controller.model.featuresType[f] is FeatureType.Binary:
+                    content = self.controller.dictControllersSelectedPoint[f].getContent()
+                    uniqueValuesFeature = [content['value0'], content['value1']]
                     rotation = False
-                    if self.controller.model.featuresType[f] is FeatureType.Binary:
-                        content = self.controller.dictControllersSelectedPoint[f].getContent()
-                        uniqueValuesFeature = [content['value0'], content['value1']]
-                        rotation = False
 
-                    elif self.controller.model.featuresType[f] is FeatureType.Discrete or self.controller.model.featuresType[f] is FeatureType.Numeric:
-                        content = self.controller.dictControllersSelectedPoint[f].getContent()
-                        minimumValue = math.floor(content['minimumValue'])
-                        maximumValue = math.ceil(content['maximumValue'])
-                        value = math.floor(float(datapoint.iloc[0][f]))
+                elif self.controller.model.featuresType[f] is FeatureType.Discrete or self.controller.model.featuresType[f] is FeatureType.Numeric:
+                    content = self.controller.dictControllersSelectedPoint[f].getContent()
+                    minimumValue = math.floor(content['minimumValue'])
+                    minimumValue = min(minimumValue, self.__dictMinimumValues[f])
+                    
+                    maximumValue = math.ceil(content['maximumValue'])
+                    maximumValue = max(maximumValue, self.__dictMaximumValues[f])
 
-                        if f in self.__dictMinimumValues.keys():
-                            minimumValue = min(minimumValue, self.__dictMinimumValues[f], value)
-                            self.__dictMinimumValues[f] = minimumValue
-                        else: 
-                            self.__dictMinimumValues[f] = minimumValue
+                    uniqueValuesFeature = [i for i in range(minimumValue, maximumValue+1)]
+                    rotation = False
 
-                        if f in self.__dictMaximumValues.keys():
-                            maximumValue = max(maximumValue, self.__dictMaximumValues[f], value)
-                            self.__dictMaximumValues[f] = maximumValue
-                        else:
-                            self.__dictMaximumValues[f] = maximumValue
+                elif self.controller.model.featuresType[f] is FeatureType.Categorical:
+                    content = self.controller.dictControllersSelectedPoint[f].getContent()
+                    # uniqueValuesFeature = content['allowedValues']
+                    uniqueValuesFeature = content['allPossibleValues']
+                    rotation = True
 
-                        uniqueValuesFeature = [i for i in range(minimumValue, maximumValue+1)]
-                        rotation = False
+                # append ranges to move
+                ranges.append(len(uniqueValuesFeature)-1)
 
-                    elif self.controller.model.featuresType[f] is FeatureType.Categorical:
-                        content = self.controller.dictControllersSelectedPoint[f].getContent()
-                        # uniqueValuesFeature = content['allowedValues']
-                        uniqueValuesFeature = content['allPossibleValues']
-                        rotation = True
+                # append x, y
+                value = datapoint.iloc[0][f]
+                xs.append(i)
+                if self.controller.model.featuresType[f] == FeatureType.Discrete or self.controller.model.featuresType[f] == FeatureType.Numeric:
+                    content = self.controller.dictControllersSelectedPoint[f].getContent()
+                    maximumValue = math.ceil(content['maximumValue'])
+                    ys.append(float(value)-minimumValue)
+                else:
+                    ys.append(uniqueValuesFeature.index(value))
 
-                    # append ranges to move
-                    ranges.append(len(uniqueValuesFeature)-1)
+                # get x max range
+                if len(uniqueValuesFeature) > xMaxRange:
+                    xMaxRange = len(uniqueValuesFeature)
 
-                    # append x, y
-                    value = datapoint.iloc[0][f]
-                    xs.append(i)
-                    if self.controller.model.featuresType[f] == FeatureType.Discrete or self.controller.model.featuresType[f] == FeatureType.Numeric:
-                        content = self.controller.dictControllersSelectedPoint[f].getContent()
-                        maximumValue = math.ceil(content['maximumValue'])
-                        ys.append(float(value)-minimumValue)
-                    else:
-                        ys.append(uniqueValuesFeature.index(value))
+                # use the unique values feature to plot the vertical axis
+                allowedAxis = self.__currentDataframeAllowance[f]
+                self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, True, rotation, allowedAxis)
 
-                    # get x max range
-                    if len(uniqueValuesFeature) > xMaxRange:
-                        xMaxRange = len(uniqueValuesFeature)
+                # append decimal plates to move
+                if self.controller.model.featuresType[f] == FeatureType.Binary or self.controller.model.featuresType[f] == FeatureType.Categorical or self.controller.model.featuresType[f] == FeatureType.Discrete:
+                    decimals.append(0)
+                else:
+                    decimals.append(1)
 
-                    # use the unique values feature to plot the vertical axis
-                    allowedAxis = self.__currentDataframeAllowance[f]
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, True, rotation, allowedAxis)
+                # append actionability of the features
+                actionables.append(True)
 
-                    # append decimal plates to move
-                    if self.controller.model.featuresType[f] == FeatureType.Binary or self.controller.model.featuresType[f] == FeatureType.Categorical or self.controller.model.featuresType[f] == FeatureType.Discrete:
-                        decimals.append(0)
-                    else:
-                        decimals.append(1)
+            if uniqueValuesFeature is not None:
+                self.__featuresUniqueValues[f] = uniqueValuesFeature
 
-                    # append actionability of the features
-                    actionables.append(True)
-
-                if uniqueValuesFeature is not None:
-                    self.__featuresUniqueValues[f] = uniqueValuesFeature
-
-            return xs, ys, ranges, decimals, xMaxRange, actionables
+        return xs, ys, ranges, decimals, xMaxRange, actionables
         
-        except:
-            self.errorPlot.emit(lastFeature)
+        # except:
+        #     self.errorPlot.emit(lastFeature)
             
     def updateGraph(self, parameters=None):
         self.clearAxesAndGraph()
@@ -195,6 +185,20 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             allFeaturesToPlot = selectedFeatures.copy()
             allFeaturesToPlot.insert(0, 'prob1')
+
+            for i, f in enumerate(allFeaturesToPlot):
+                if f == 'prob1':
+                    pass
+
+                else:
+                    if self.controller.model.featuresType[f] is FeatureType.Discrete or self.controller.model.featuresType[f] is FeatureType.Numeric:
+                        if lastScenarioPoint is not None:
+                            self.__dictMinimumValues[f] = min(int(float(currentPoint.iloc[0][f])), int(float(originalPoint.iloc[0][f])), int(float(lastScenarioPoint.iloc[0][f])), int(float(counterfactualPoint.iloc[0][f])))
+                            self.__dictMaximumValues[f] = max(int(float(currentPoint.iloc[0][f])), int(float(originalPoint.iloc[0][f])), int(float(lastScenarioPoint.iloc[0][f])), int(float(counterfactualPoint.iloc[0][f])))
+                        
+                        else:
+                            self.__dictMinimumValues[f] = min(int(float(currentPoint.iloc[0][f])), int(float(originalPoint.iloc[0][f])), int(float(counterfactualPoint.iloc[0][f])))
+                            self.__dictMaximumValues[f] = max(int(float(currentPoint.iloc[0][f])), int(float(originalPoint.iloc[0][f])), int(float(counterfactualPoint.iloc[0][f])))
 
             # save the features to plot
             self.__featuresToPlot = allFeaturesToPlot

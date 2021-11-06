@@ -82,3 +82,7 @@ class IterationView(QWidget, Ui_Iteration):
 
     def hideOutdatedGraph(self):
         self.pushButtonOutdatedGraph.hide()
+
+    def enabledNextIteration(self, enabled):
+        self.pushButtonNext.setEnabled(enabled)
+        self.pushButtonFinish.setEnabled(enabled)

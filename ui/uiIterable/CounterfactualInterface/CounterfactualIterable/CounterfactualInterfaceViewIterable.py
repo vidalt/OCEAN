@@ -102,5 +102,5 @@ class CounterfactualInterfaceViewIterable(QWidget, Ui_CounterfactualInterfaceIte
 
         self.labelOriginalClass.setText('Original Class: '+str(classValue))
 
-    def enableNext(self):
-        self.pushButtonNext.setEnabled(True)
+    def enableNext(self, enabled):
+        self.pushButtonNext.setEnabled(enabled)

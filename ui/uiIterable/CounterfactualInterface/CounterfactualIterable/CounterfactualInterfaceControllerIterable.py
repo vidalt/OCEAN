@@ -175,6 +175,8 @@ class CounterfactualInterfaceControllerIterable:
                 if feature != 'Class':
                     self.__dictControllersSelectedPoint[feature].setSelectedValue(randomDataPoint[index])
 
+            self.view.enableNext(False)
+
     # this function takes the selected data point and calculate the respective class
     def __handlerCalculateClass(self):
         self.view.clearClass()
@@ -198,7 +200,7 @@ class CounterfactualInterfaceControllerIterable:
                 # predicting the datapoint class and showing its value
                 self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
                 self.view.showOriginalClass(self.predictedOriginalClass[0])   
-                self.view.enableNext()
+                self.view.enableNext(True)
                 
             except:
                 QMessageBox.information(self.view, 'Missing value', 'Please verify the following feature '+auxiliarFeatureName, QMessageBox.Ok)
