@@ -52,6 +52,9 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         self.__lastFeatureClicked = None
 
+        self.__dictMinimumValues = {}
+        self.__dictMaximumValues = {}
+
 
     def createAxis(self, fig, ax, xRange, yRange, labels, editable, categorical):
         axisColor = '#d3d3d3'
@@ -103,12 +106,27 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                         content = self.controller.dictControllersSelectedPoint[f].getContent()
                         minimumValue = math.floor(content['minimumValue'])
                         maximumValue = math.ceil(content['maximumValue'])
+                        value = math.floor(float(datapoint.iloc[0][f]))
+
+                        if f in self.__dictMinimumValues.keys():
+                            minimumValue = min(minimumValue, self.__dictMinimumValues[f], value)
+                            self.__dictMinimumValues[f] = minimumValue
+                        else: 
+                            self.__dictMinimumValues[f] = minimumValue
+
+                        if f in self.__dictMaximumValues.keys():
+                            maximumValue = max(maximumValue, self.__dictMaximumValues[f], value)
+                            self.__dictMaximumValues[f] = maximumValue
+                        else:
+                            self.__dictMaximumValues[f] = maximumValue
+
                         uniqueValuesFeature = [i for i in range(minimumValue, maximumValue+1)]
                         rotation = False
 
                     elif self.controller.model.featuresType[f] is FeatureType.Categorical:
                         content = self.controller.dictControllersSelectedPoint[f].getContent()
-                        uniqueValuesFeature = content['allowedValues']
+                        # uniqueValuesFeature = content['allowedValues']
+                        uniqueValuesFeature = content['allPossibleValues']
                         rotation = True
 
                     # append ranges to move
@@ -158,13 +176,21 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         if parameters is not None:
             self.controller = parameters['controller']
             currentPoint = parameters['currentPoint']
+            currentDataframeAllowance = parameters['currentDataframeAllowance']
             originalPoint = parameters['originalPoint']
             lastScenarioPoint = parameters['lastScenarioPoint']
             lastScenarioName = parameters['lastScenarioName']
             counterfactualPoint = parameters['counterfactualPoint']
             selectedFeatures = parameters['selectedFeatures']
 
-            polygonColor = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
+            polygonColor = None 
+            if currentDataframeAllowance:
+                if float(currentPoint.iloc[0].Class) == 0:
+                    polygonColor = 'blue' 
+                else:
+                    polygonColor = 'green'
+            else:
+                polygonColor = 'red'
             originalColor = '#696969'
             lastScenarioColor = '#d3a27f'
             counterfactualColor = '#98FB98'

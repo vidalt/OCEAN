@@ -71,4 +71,7 @@ class ComboboxListController(QWidget):
 
     # this function returns a dictionary with the value of the widgets
     def getContent(self):
-        return self.__view.getContent()
+        content = self.__view.getContent()
+        content['allPossibleValues'] = self.__allPossibleValues
+        
+        return content

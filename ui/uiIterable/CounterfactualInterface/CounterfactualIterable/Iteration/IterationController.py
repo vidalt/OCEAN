@@ -129,7 +129,7 @@ class IterationController():
                     actionable = content['actionable']
                     allowedValues = content['allowedValues']
                     notAllowedValues = content['notAllowedValues']
-                    allPossibleValues = allowedValues + notAllowedValues
+                    allPossibleValues = content['allPossibleValues']
                     value = content['value']
                     
                     componentController = ComboboxListController(self.view, allPossibleValues)
@@ -167,6 +167,34 @@ class IterationController():
 
         for feature in features:
             self.dictControllersSelectedPoint[feature].setActionable(True)
+
+    # this function checks if the current datapoint is allowed, considering the constraints
+    def getCurrentDataframeAllowance(self, selectedFeatures, currentDataframe):
+        allowed = True
+        for feature in selectedFeatures:
+            featureType = self.model.featuresInformations[feature]['featureType']
+
+            currentValue = currentDataframe[feature].tolist()[0]
+            content = self.dictControllersSelectedPoint[feature].getContent()
+
+            if featureType is FeatureType.Binary:
+                pass
+
+            elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                minValue = float(content['minimumValue'])
+                maxValue = float(content['maximumValue'])
+                currentValue = float(currentValue)
+
+                if currentValue < minValue or currentValue > maxValue:
+                    allowed = False
+
+            elif featureType is FeatureType.Categorical:
+                allowedValues = content['allowedValues']
+
+                if not currentValue in allowedValues:
+                    allowed = False
+
+        return allowed
 
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
@@ -239,9 +267,13 @@ class IterationController():
             predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCounterfactualDataPoint])
             counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
 
+            # get current point allowance
+            currentDataframeAllowance = self.getCurrentDataframeAllowance(selectedFeatures, currentDataframe)
+
             # parameters to update graph
             parameters = {'controller':self, 
                           'currentPoint':currentDataframe, 
+                          'currentDataframeAllowance':currentDataframeAllowance,
                           'originalPoint':parentDataframe, 
                           'lastScenarioPoint':lastScenarioDataframe, 
                           'lastScenarioName':lastScenarioName, 
@@ -254,17 +286,19 @@ class IterationController():
 
     # listen the last feature clicked and draw the distribution graph, and show the feature informations
     def __lastFeatureClickedHandler(self, featureIndex):
-        if featureIndex is not None:
-            selectedFeatures = self.view.getSelectedFeatures()
-            feature = selectedFeatures[featureIndex]
+        selectedFeatures = self.view.getSelectedFeatures()
+        
+        if featureIndex is None:
+            return
+        if featureIndex < 0 or featureIndex > len(selectedFeatures)-1:
+            return
+            
+        feature = selectedFeatures[featureIndex]
 
-            parameters = {'controller':self, 'featureToPlot':feature}
-            self.__canvasDistribution.updateGraphDistribution(parameters)
+        parameters = {'controller':self, 'featureToPlot':feature}
+        self.__canvasDistribution.updateGraphDistribution(parameters)
 
-            self.view.showItemByFeature(feature)
-
-        else:
-            pass
+        self.view.showItemByFeature(feature)
 
     # this function takes the selected data point and calculate the respective class
     def __calculateClass(self):
@@ -385,9 +419,13 @@ class IterationController():
             predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCounterfactualDataPoint])
             counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
 
+            # get current point allowance
+            currentDataframeAllowance = self.getCurrentDataframeAllowance(selectedFeatures, currentDataframe)
+
             # parameters to update graph
             parameters = {'controller':self, 
                           'currentPoint':currentDataframe, 
+                          'currentDataframeAllowance':currentDataframeAllowance,
                           'originalPoint':parentDataframe, 
                           'lastScenarioPoint':lastScenarioDataframe, 
                           'lastScenarioName':lastScenarioName, 
@@ -432,9 +470,11 @@ class IterationController():
                 elif featureType is FeatureType.Categorical:
                     allowedValues = content['allowedValues']
                     notAllowedValues = content['notAllowedValues']
+                    allPossibleValues = content['allPossibleValues']
                     dictNextFeaturesInformation[feature] = {'actionable': actionable,
                                                             'allowedValues': allowedValues, 
                                                             'notAllowedValues': notAllowedValues,
+                                                            'allPossibleValues': allPossibleValues,
                                                             'value': currentValue}
 
         nextIteration = IterationController(original=self.original, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)

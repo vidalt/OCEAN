@@ -245,9 +245,11 @@ class CounterfactualInterfaceControllerIterable:
                     elif featureType is FeatureType.Categorical:
                         allowedValues = content['allowedValues']
                         notAllowedValues = content['notAllowedValues']
+                        allPossibleValues = content['allPossibleValues']
                         dictNextFeaturesInformation[feature] = {'actionable': actionable,
                                                                 'allowedValues': allowedValues, 
                                                                 'notAllowedValues': notAllowedValues,
+                                                                'allPossibleValues': allPossibleValues,
                                                                 'value': currentValue}
             
             self.__nextIteration = IterationController(original=self, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
