@@ -50,16 +50,19 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
         self.polygonInteractable = None
 
+        self.__currentDataframeAllowance = None
         self.__lastFeatureClicked = None
 
         self.__dictMinimumValues = {}
         self.__dictMaximumValues = {}
 
 
-    def createAxis(self, fig, ax, xRange, yRange, labels, editable, categorical):
+    def createAxis(self, fig, ax, xRange, yRange, labels, editable, categorical, allowedAxis):
         axisColor = '#d3d3d3'
         if editable:
             axisColor = '#c0c0c0' 
+        if not allowedAxis:
+            axisColor = 'red'
         # create axis
         line1 = Line2D(xRange, yRange, color=axisColor, alpha=0.5)
         fig.axes[0].add_line(line1)
@@ -92,7 +95,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                     uniqueValuesFeature = [0, '-', 1]
 
                     # use the unique values feature to plot the vertical axis
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False)
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, False, False, True)
 
                 else:
                     uniqueValuesFeature = None
@@ -147,7 +150,8 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                         xMaxRange = len(uniqueValuesFeature)
 
                     # use the unique values feature to plot the vertical axis
-                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, True, rotation)
+                    allowedAxis = self.__currentDataframeAllowance[f]
+                    self.createAxis(self.figure, self.axes, [i, i], [0, len(uniqueValuesFeature)-1], uniqueValuesFeature, True, rotation, allowedAxis)
 
                     # append decimal plates to move
                     if self.controller.model.featuresType[f] == FeatureType.Binary or self.controller.model.featuresType[f] == FeatureType.Categorical or self.controller.model.featuresType[f] == FeatureType.Discrete:
@@ -176,21 +180,15 @@ class MatplotLibCanvas(FigureCanvas, QObject):
         if parameters is not None:
             self.controller = parameters['controller']
             currentPoint = parameters['currentPoint']
-            currentDataframeAllowance = parameters['currentDataframeAllowance']
             originalPoint = parameters['originalPoint']
             lastScenarioPoint = parameters['lastScenarioPoint']
             lastScenarioName = parameters['lastScenarioName']
             counterfactualPoint = parameters['counterfactualPoint']
             selectedFeatures = parameters['selectedFeatures']
 
-            polygonColor = None 
-            if currentDataframeAllowance:
-                if float(currentPoint.iloc[0].Class) == 0:
-                    polygonColor = 'blue' 
-                else:
-                    polygonColor = 'green'
-            else:
-                polygonColor = 'red'
+            self.__currentDataframeAllowance = parameters['currentDataframeAllowance']
+
+            polygonColor = 'blue' if float(currentPoint.iloc[0].Class) == 0 else 'green'
             originalColor = '#696969'
             lastScenarioColor = '#d3a27f'
             counterfactualColor = '#98FB98'

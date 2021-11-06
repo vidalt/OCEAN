@@ -170,7 +170,7 @@ class IterationController():
 
     # this function checks if the current datapoint is allowed, considering the constraints
     def getCurrentDataframeAllowance(self, selectedFeatures, currentDataframe):
-        allowed = True
+        allowedDict = {}
         for feature in selectedFeatures:
             featureType = self.model.featuresInformations[feature]['featureType']
 
@@ -178,23 +178,25 @@ class IterationController():
             content = self.dictControllersSelectedPoint[feature].getContent()
 
             if featureType is FeatureType.Binary:
-                pass
+                allowedDict[feature] = True
 
             elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
                 minValue = float(content['minimumValue'])
                 maxValue = float(content['maximumValue'])
                 currentValue = float(currentValue)
 
+                allowedDict[feature] = True
                 if currentValue < minValue or currentValue > maxValue:
-                    allowed = False
+                    allowedDict[feature] = False
 
             elif featureType is FeatureType.Categorical:
                 allowedValues = content['allowedValues']
 
+                allowedDict[feature] = True
                 if not currentValue in allowedValues:
-                    allowed = False
+                    allowedDict[feature] = False
 
-        return allowed
+        return allowedDict
 
     # listen the updated point to redraw the graph
     def __onUpdatedCurrentPoint(self, updatedPoint):
