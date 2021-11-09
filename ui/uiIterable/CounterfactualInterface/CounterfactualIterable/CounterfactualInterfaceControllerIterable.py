@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from PyQt5.QtCore import QThread
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMessageBox
 
@@ -18,6 +19,8 @@ from ..ComboboxList.ComboboxListController import ComboboxListController
 from ..DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
 from ..Slider3Ranges.Slider3RangesController import Slider3RangesController
 
+from .CounterfactualInferfaceWorkerIterable import CounterfactualInferfaceWorkerIterable
+
 from .Iteration.IterationController import IterationController
 
 class CounterfactualInterfaceControllerIterable:
@@ -34,12 +37,6 @@ class CounterfactualInterfaceControllerIterable:
         self.view.calculateClass.connect(self.__handlerCalculateClass)
         self.view.nextIteration.connect(self.__handlerNextIteration)
 
-        self.__nextIteration = None
-
-        # self.view.calculateDistances.connect(self.__handlerCalculateDistances)
-
-        # self.view.updateGraph.connect(self.__updateGraph)
-
         self.randomForestClassifier = None
         self.isolationForest = None
 
@@ -50,12 +47,12 @@ class CounterfactualInterfaceControllerIterable:
 
         self.__canvas = None
 
-        self.__dictControllersSelectedPoint = {}
+        self.dictControllersSelectedPoint = {}
         self.__samplesToPlot = None
         self.transformedSamplesToPlot = None
         self.transformedSamplesClasses = None
 
-        self.__suggestedFeatureToPlot = None
+        self.__suggestedFeaturesToPlot = None
 
 
     # this function takes the dataframe names and send them to interface
@@ -75,12 +72,14 @@ class CounterfactualInterfaceControllerIterable:
     # trains the random forest and the isolation forest,
     # and present the features components and its respectives informations
     def __handlerChosenDataset(self):
+        self.view.enableNext(False)
+
         # getting the name of the desired dataset
         self.__chosenDataset = self.view.getChosenDataset()
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             # cleaning the view
             self.view.clearView()
-            self.__dictControllersSelectedPoint.clear()
+            self.dictControllersSelectedPoint.clear()
 
             # opening the desired dataset
             self.model.openChosenDataset(self.__chosenDataset)
@@ -116,7 +115,7 @@ class CounterfactualInterfaceControllerIterable:
                     if feature in tempSuggestedFeatureToPlot:
                         suggestedFeatureToPlot.append(feature)
 
-                self.__suggestedFeatureToPlot = suggestedFeatureToPlot
+                self.__suggestedFeaturesToPlot = suggestedFeatureToPlot
 
             # showing the features components and informations
             for feature in self.model.features:
@@ -154,14 +153,12 @@ class CounterfactualInterfaceControllerIterable:
                     componentController.view.checkBoxActionability.hide()
                     self.view.addFeatureWidget(componentController.view)
                     # saving the controller to facilitate the access to components
-                    self.__dictControllersSelectedPoint[feature] = componentController
+                    self.dictControllersSelectedPoint[feature] = componentController
 
-            # self.view.addAxisOptions(list(self.model.features))
-            
         else:
             # cleaning the view
             self.view.clearView()
-            self.__dictControllersSelectedPoint.clear()
+            self.dictControllersSelectedPoint.clear()
 
     # this function get a random datapoint from dataset 
     def __handlerRandomPoint(self):
@@ -169,11 +166,15 @@ class CounterfactualInterfaceControllerIterable:
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             randomDataPoint = self.model.getRandomPoint(self.randomForestClassifier)
+            # randomDataPoint = ['GP', 'M', '17', 'U', 'LE3', 'T', '4', '4', 'teacher', 
+            #                    'health', 'reputation', 'mother', '1', '2', '0', 'no', 
+            #                    'yes', 'yes', 'no', 'yes', 'yes', 'yes', 'no', '3', '3', 
+            #                    '3', '1', '2', '2', '0']
 
             # showing the values in their respective component
             for index, feature in enumerate(self.model.features):
                 if feature != 'Class':
-                    self.__dictControllersSelectedPoint[feature].setSelectedValue(randomDataPoint[index])
+                    self.dictControllersSelectedPoint[feature].setSelectedValue(randomDataPoint[index])
 
             self.view.enableNext(False)
 
@@ -189,7 +190,7 @@ class CounterfactualInterfaceControllerIterable:
                 for feature in self.model.features:
                     if feature != 'Class':
                         auxiliarFeatureName = feature
-                        content = self.__dictControllersSelectedPoint[feature].getContent()
+                        content = self.dictControllersSelectedPoint[feature].getContent()
                         auxiliarDataPoint.append(content['value'])
                         
                 self.chosenDataPoint = np.array(auxiliarDataPoint)
@@ -213,52 +214,78 @@ class CounterfactualInterfaceControllerIterable:
     def addFinalIteration(self, finalIterationView):
         self.view.addFinalIteration(finalIterationView)
 
+    def getCounterfactualExplanation(self, counterfactual):
+        self.view.enableNext(True)
+        
+        dictNextFeaturesInformation = {}
+        for i, feature in enumerate(self.model.features):
+            if feature != 'Class':
+                featureType = self.model.featuresInformations[feature]['featureType']
+
+                actionable = self.dictControllersSelectedPoint[feature].getActionable()
+                content = self.dictControllersSelectedPoint[feature].getContent()
+                currentValue = content['value']
+
+                if featureType is FeatureType.Binary:
+                    value0 = content['value0']
+                    value1 = content['value1']
+
+                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                            'value0': value0, 
+                                                            'value1': value1, 
+                                                            'value': currentValue}
+
+                elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                    minimumValue = content['minimumValue']
+                    maximumValue = content['maximumValue']
+
+                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                            'minimumValue': minimumValue, 
+                                                            'maximumValue': maximumValue, 
+                                                            'value': currentValue}
+
+                elif featureType is FeatureType.Categorical:
+                    allowedValues = content['allowedValues']
+                    notAllowedValues = content['notAllowedValues']
+                    allPossibleValues = content['allPossibleValues']
+                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
+                                                            'allowedValues': allowedValues, 
+                                                            'notAllowedValues': notAllowedValues,
+                                                            'allPossibleValues': allPossibleValues,
+                                                            'value': currentValue}
+        
+        nextIteration = IterationController(original=self, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+        iterationName = self.addNewIterationTab(nextIteration.view)
+        dictNextFeaturesInformation['iterationName'] = iterationName
+        nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
+        nextIteration.setCounterfactual(counterfactual)
+        nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
+
+    def handlerCounterfactualError(self):
+        QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
+        self.view.enableNext(True)
+
+    # this function generates the counterfactual given the current point
+    def __generateCounterfactualAndNextIteration(self):
+        # running the counterfactual generation in another thread
+        self.thread = QThread()
+        self.worker = CounterfactualInferfaceWorkerIterable(self)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.counterfactualDataframe.connect(self.getCounterfactualExplanation)
+        self.worker.counterfactualError.connect(self.handlerCounterfactualError)
+        self.worker.finished.connect(self.restorCursor)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+
     def __handlerNextIteration(self):
         self.waitCursor()
+        self.view.enableNext(False)
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            dictNextFeaturesInformation = {}
-            for i, feature in enumerate(self.model.features):
-                if feature != 'Class':
-                    featureType = self.model.featuresInformations[feature]['featureType']
-
-                    actionable = self.__dictControllersSelectedPoint[feature].getActionable()
-                    content = self.__dictControllersSelectedPoint[feature].getContent()
-                    currentValue = content['value']
-
-                    if featureType is FeatureType.Binary:
-                        value0 = content['value0']
-                        value1 = content['value1']
-
-                        dictNextFeaturesInformation[feature] = {'actionable': actionable,
-                                                                'value0': value0, 
-                                                                'value1': value1, 
-                                                                'value': currentValue}
-
-                    elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
-                        minimumValue = content['minimumValue']
-                        maximumValue = content['maximumValue']
-
-                        dictNextFeaturesInformation[feature] = {'actionable': actionable,
-                                                                'minimumValue': minimumValue, 
-                                                                'maximumValue': maximumValue, 
-                                                                'value': currentValue}
-
-                    elif featureType is FeatureType.Categorical:
-                        allowedValues = content['allowedValues']
-                        notAllowedValues = content['notAllowedValues']
-                        allPossibleValues = content['allPossibleValues']
-                        dictNextFeaturesInformation[feature] = {'actionable': actionable,
-                                                                'allowedValues': allowedValues, 
-                                                                'notAllowedValues': notAllowedValues,
-                                                                'allPossibleValues': allPossibleValues,
-                                                                'value': currentValue}
-            
-            self.__nextIteration = IterationController(original=self, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
-            iterationName = self.addNewIterationTab(self.__nextIteration.view)
-            dictNextFeaturesInformation['iterationName'] = iterationName
-            self.__nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
-            self.__nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeatureToPlot)
+            self.__generateCounterfactualAndNextIteration()
 
         self.restorCursor()
 

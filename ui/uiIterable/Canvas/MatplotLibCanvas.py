@@ -185,7 +185,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
 
             allFeaturesToPlot = selectedFeatures.copy()
             allFeaturesToPlot.insert(0, 'prob1')
-
+            
             for i, f in enumerate(allFeaturesToPlot):
                 if f == 'prob1':
                     pass
@@ -208,7 +208,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             if returnedInfo is None:
                 return
             xDraggable, yDraggable, ranges, decimals, xMaxRange, actionables = returnedInfo
-
+            
             # creating a polygon object
             poly = Polygon(np.column_stack([xDraggable, yDraggable]), closed=False, fill=False, animated=True)
 
@@ -217,7 +217,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.polygonInteractable = PolygonInteractor(self.axes, poly, ranges, decimals, actionables, polygonColor)
             self.polygonInteractable.updatedPoint.connect(self.__onUpdatedCurrentPoint)
             self.polygonInteractable.currentIndex.connect(self.__onLastFeatureClicked)
-
+            
             # creating the line to the original point
             returnedOriginalInfo = self.infToPlot(allFeaturesToPlot, originalPoint)
             if returnedOriginalInfo is None:
@@ -225,7 +225,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             xOriginal, yOriginal, _, _, _, _ = returnedOriginalInfo
             lineOriginal = Line2D(xOriginal, yOriginal, color=originalColor, animated=False)
             self.axes.add_line(lineOriginal)
-
+            
             # creating the line to the last scenario point
             if lastScenarioPoint is not None:
                 returnedLastScenarioInfo = self.infToPlot(allFeaturesToPlot, lastScenarioPoint)
@@ -242,7 +242,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             xCounterfactual, yCounterfactual, _, _, _, _ = returnedCounterfactualInfo
             lineCounterfactual = Line2D(xCounterfactual, yCounterfactual, color=counterfactualColor, animated=False)
             self.axes.add_line(lineCounterfactual)
-
+            
             # probability axis
             xs = 0
             ys = float(currentPoint.iloc[0]['prob1'])*2

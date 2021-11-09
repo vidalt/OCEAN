@@ -155,9 +155,12 @@ class IterationController():
     def setSuggestedFeaturesToPlot(self, suggestedFeatures):
         self.__suggestedFeaturesToPlot = suggestedFeatures
 
-        self.__generateCounterfactual()
-        
-        self.view.selectFeatures(suggestedFeatures)
+        self.view.selectFeatures(self.__suggestedFeaturesToPlot)
+
+        self.__updateGraph(self.__suggestedFeaturesToPlot)
+
+    def setCounterfactual(self, countefactual):
+        self.counterfactualToPlot = countefactual
 
     # this function sets the actionability to the components
     def __setActionable(self, features):
@@ -326,136 +329,119 @@ class IterationController():
         self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
         self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
         
-    def getCounterfactualExplanation(self, counterfactual):
-        self.counterfactualToPlot = counterfactual
-        self.__updateGraph(self.__suggestedFeaturesToPlot)
-
-    # this function generates the counterfactual given the current point
-    def __generateCounterfactual(self):
-        # running the counterfactual generation in another thread
-        self.thread = QThread()
-        self.worker = CounterfactualInferfaceWorkerIterable(self)
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.worker.counterfactualDataframe.connect(self.getCounterfactualExplanation)
-        self.worker.finished.connect(self.restorCursor)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.start()
-    
     # this function updates the graph with the original, current, last, and the counterfactual points
     def __updateGraph(self, suggestedFeatures=None):
         self.waitCursor()
         
-        selectedFeatures = None
-        if suggestedFeatures is not None:
-            selectedFeatures = suggestedFeatures
-        else:
-            selectedFeatures = self.view.getSelectedFeatures()
+        if self.counterfactualToPlot is not None:
+            selectedFeatures = None
+            if suggestedFeatures is not None:
+                selectedFeatures = suggestedFeatures
+            else:
+                selectedFeatures = self.view.getSelectedFeatures()
+                
+            # setting actionability
+            # self.__setActionable(selectedFeatures)
 
-        # setting actionability
-        # self.__setActionable(selectedFeatures)
+            if len(selectedFeatures) != 0:
+                self.__suggestedFeaturesToPlot = selectedFeatures
 
-        if len(selectedFeatures) != 0:
-            self.__suggestedFeaturesToPlot = selectedFeatures
+                # getting the current datapoint
+                auxiliarDataPoint = []
+                for feature in self.model.features:
+                    if feature != 'Class':
+                        content = self.dictControllersSelectedPoint[feature].getContent()
+                        auxiliarDataPoint.append(content['value'])
+                        
+                self.chosenDataPoint = np.array(auxiliarDataPoint)
 
-            # getting the current datapoint
-            auxiliarDataPoint = []
-            for feature in self.model.features:
-                if feature != 'Class':
-                    content = self.dictControllersSelectedPoint[feature].getContent()
-                    auxiliarDataPoint.append(content['value'])
+                # transforming the datapoint to predict its class
+                self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
+            
+                # predicting the datapoint class and showing its value
+                self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
+                self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
                     
-            self.chosenDataPoint = np.array(auxiliarDataPoint)
+                # saving the updated current point values and class
+                self.updatedCurrentPoint = self.chosenDataPoint.copy()
+                self.updatedCurrentClass = self.predictedOriginalClass[0]
 
-            # transforming the datapoint to predict its class
-            self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
-        
-            # predicting the datapoint class and showing its value
-            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
-            self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
-
-            # saving the updated current point values and class
-            self.updatedCurrentPoint = self.chosenDataPoint.copy()
-            self.updatedCurrentClass = self.predictedOriginalClass[0]
-
-            # current datapoint
-            currentDataPoint = self.chosenDataPoint.copy()
-            currentDataPoint = np.append(currentDataPoint, self.predictedOriginalClass)
-            currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
-            # adding the prediction percentage
-            currentDataframe['prob1'] = self.predictedOriginalClassPercentage[0][1]
-
-            # getting the initial datapoint, keeping a historic
-            parentDataPoint = self.original.chosenDataPoint.copy()
-            parentDataPoint = np.append(parentDataPoint, self.original.predictedOriginalClass)
-            # transforming the parent datapoint to predict its class
-            transformedParentDataPoint = self.model.transformDataPoint(parentDataPoint[:-1])
-            # predicting the parent datapoint class probabilities
-            # predictedParentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedParentDataPoint])
-            predictedParentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedParentDataPoint])
-            # building the parent dataframe
-            parentDataframe = pd.DataFrame(data=[parentDataPoint], columns=self.model.features)
-            # adding the prediction percentage
-            parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
-
-            # getting the last scenario datapoint
-            lastScenarioDataframe = None
-            if hasattr(self.parent, 'updatedCurrentPoint'):
-                # getting the last scenario datapoint, keeping a historic
-                lastScenarioDataPoint = self.parent.updatedCurrentPoint.copy()
-                # transforming the parent datapoint to predict its class
-                transformedLastScenarioDataPoint = self.model.transformDataPoint(lastScenarioDataPoint)
-                # predicting the parent datapoint class and probabilities
-                predictedLastScenarioClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedLastScenarioDataPoint])
-                predictedLastScenarioClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedLastScenarioDataPoint])
-                # adding class
-                lastScenarioDataPoint = np.append(lastScenarioDataPoint, predictedLastScenarioClass[0])
-                # building the parent dataframe
-                lastScenarioDataframe = pd.DataFrame(data=[lastScenarioDataPoint], columns=self.model.features)
+                # current datapoint
+                currentDataPoint = self.chosenDataPoint.copy()
+                currentDataPoint = np.append(currentDataPoint, self.predictedOriginalClass)
+                currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
                 # adding the prediction percentage
-                lastScenarioDataframe['prob1'] = predictedLastScenarioClassPercentage[0][1]
+                currentDataframe['prob1'] = self.predictedOriginalClassPercentage[0][1]
 
-            lastScenarioName = None
-            if hasattr(self.parent, 'iterationName'):
-                lastScenarioName = self.parent.iterationName
+                # getting the initial datapoint, keeping a historic
+                parentDataPoint = self.original.chosenDataPoint.copy()
+                parentDataPoint = np.append(parentDataPoint, self.original.predictedOriginalClass)
+                # transforming the parent datapoint to predict its class
+                transformedParentDataPoint = self.model.transformDataPoint(parentDataPoint[:-1])
+                # predicting the parent datapoint class probabilities
+                # predictedParentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedParentDataPoint])
+                predictedParentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedParentDataPoint])
+                # building the parent dataframe
+                parentDataframe = pd.DataFrame(data=[parentDataPoint], columns=self.model.features)
+                # adding the prediction percentage
+                parentDataframe['prob1'] = predictedParentClassPercentage[0][1]
 
-            # adding the counterfactual
-            counterfactualToPlotDataframe = pd.DataFrame(data=[self.counterfactualToPlot], columns=self.model.features)
-            transformedCounterfactualDataPoint = self.model.transformDataPoint(self.counterfactualToPlot[:-1])
-            predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCounterfactualDataPoint])
-            counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
+                # getting the last scenario datapoint
+                lastScenarioDataframe = None
+                if hasattr(self.parent, 'updatedCurrentPoint'):
+                    # getting the last scenario datapoint, keeping a historic
+                    lastScenarioDataPoint = self.parent.updatedCurrentPoint.copy()
+                    # transforming the parent datapoint to predict its class
+                    transformedLastScenarioDataPoint = self.model.transformDataPoint(lastScenarioDataPoint)
+                    # predicting the parent datapoint class and probabilities
+                    predictedLastScenarioClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                    predictedLastScenarioClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                    # adding class
+                    lastScenarioDataPoint = np.append(lastScenarioDataPoint, predictedLastScenarioClass[0])
+                    # building the parent dataframe
+                    lastScenarioDataframe = pd.DataFrame(data=[lastScenarioDataPoint], columns=self.model.features)
+                    # adding the prediction percentage
+                    lastScenarioDataframe['prob1'] = predictedLastScenarioClassPercentage[0][1]
 
-            # get current point allowance
-            currentDataframeAllowance = self.getCurrentDataframeAllowance(selectedFeatures, currentDataframe)
+                lastScenarioName = None
+                if hasattr(self.parent, 'iterationName'):
+                    lastScenarioName = self.parent.iterationName
 
-            # parameters to update graph
-            parameters = {'controller':self, 
-                          'currentPoint':currentDataframe, 
-                          'currentDataframeAllowance':currentDataframeAllowance,
-                          'originalPoint':parentDataframe, 
-                          'lastScenarioPoint':lastScenarioDataframe, 
-                          'lastScenarioName':lastScenarioName, 
-                          'counterfactualPoint':counterfactualToPlotDataframe,
-                          'selectedFeatures':selectedFeatures}
-            self.__canvas.updateGraph(parameters)
+                # adding the counterfactual
+                counterfactualToPlotDataframe = pd.DataFrame(data=[self.counterfactualToPlot], columns=self.model.features)
+                transformedCounterfactualDataPoint = self.model.transformDataPoint(self.counterfactualToPlot[:-1])
+                predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCounterfactualDataPoint])
+                counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
 
-        self.view.hideOutdatedGraph()
+                # get current point allowance
+                currentDataframeAllowance = self.getCurrentDataframeAllowance(selectedFeatures, currentDataframe)
+
+                # parameters to update graph
+                parameters = {'controller':self, 
+                            'currentPoint':currentDataframe, 
+                            'currentDataframeAllowance':currentDataframeAllowance,
+                            'originalPoint':parentDataframe, 
+                            'lastScenarioPoint':lastScenarioDataframe, 
+                            'lastScenarioName':lastScenarioName, 
+                            'counterfactualPoint':counterfactualToPlotDataframe,
+                            'selectedFeatures':selectedFeatures}
+                self.__canvas.updateGraph(parameters)
+                
+            self.view.hideOutdatedGraph()
         self.restorCursor()
 
-    def __handlerNextIteration(self):
-        self.waitCursor()
-
+    def getCounterfactualExplanation(self, counterfactual):
+        self.view.enabledNextIteration(True)
+        
         dictNextFeaturesInformation = {}
         for i, feature in enumerate(self.model.features):
             if feature != 'Class':
-                self.dictControllersSelectedPoint[feature].setActionable(True)
                 featureType = self.model.featuresInformations[feature]['featureType']
 
-                currentValue = self.updatedCurrentPoint[i]
                 actionable = self.dictControllersSelectedPoint[feature].getActionable()
                 content = self.dictControllersSelectedPoint[feature].getContent()
+                # currentValue = content['value']
+                currentValue = self.updatedCurrentPoint[i]
 
                 if featureType is FeatureType.Binary:
                     value0 = content['value0']
@@ -484,12 +470,38 @@ class IterationController():
                                                             'notAllowedValues': notAllowedValues,
                                                             'allPossibleValues': allPossibleValues,
                                                             'value': currentValue}
-
+        
         nextIteration = IterationController(original=self.original, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
         iterationName = self.original.view.addNewIterationTab(nextIteration.view)
         dictNextFeaturesInformation['iterationName'] = iterationName
         nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
+        nextIteration.setCounterfactual(counterfactual)
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
+
+    def handlerCounterfactualError(self):
+        QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
+        self.view.enabledNextIteration(True)
+
+    # this function generates the counterfactual given the current point
+    def __generateCounterfactualAndNextIteration(self):
+        # running the counterfactual generation in another thread
+        self.thread = QThread()
+        self.worker = CounterfactualInferfaceWorkerIterable(self)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.counterfactualDataframe.connect(self.getCounterfactualExplanation)
+        self.worker.counterfactualError.connect(self.handlerCounterfactualError)
+        self.worker.finished.connect(self.restorCursor)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+
+    def __handlerNextIteration(self):
+        self.waitCursor()
+        self.view.enabledNextIteration(False)
+
+        self.__generateCounterfactualAndNextIteration()
 
         self.restorCursor()
 
