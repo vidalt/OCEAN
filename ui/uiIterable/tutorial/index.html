@@ -57,7 +57,13 @@
                 <img src="selectedPoint.png" alt="selectedPoint" class="img-fluid" alt="Responsive image" width="1000">
             </div>
 
-            <p class= "text-justify">In the new scenario ("Scenario1"), we have a parallel coordinate chart, where each axis corresponds to a feature of the dataset except for the first axis, which corresponds to the class of each point, one referring to the chosen point in "Scenario0", another referring to the current point (since there has been no change in the current point values, the current point is equal to the point of "Scenario0") and the last one referring to a suggested counterfactual. Among these three, only the current point can be edited by clicking on the dot over the axis we want to change and then pulling it up or down. This graph starts with 4 of the most important features set by default, but it is possible to add more or remove them from the graph using the combobox under "Select Features To Plot." We use the "Update Graph" option to update the graph according to the selected features when selecting the desired features.</p>
+            <p class= "text-justify">If the constraints are too restrictive, the OCEAN can not find a counterfactual; in this case, the OceanUI will show a message informing that.</p>
+
+            <div class="text-center">
+                <img src="counterfactualError.png" alt="counterfactualError" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
+
+            <p class= "text-justify">Otherwise the new scenario will be created. In this new scenario ("Scenario1"), we have a parallel coordinate chart, where each axis corresponds to a feature of the dataset except for the first axis, which corresponds to the class of each point, one referring to the chosen point in "Scenario0", another referring to the current point (since there has been no change in the current point values, the current point is equal to the point of "Scenario0") and the last one referring to a suggested counterfactual. Among these three, only the current point can be edited by clicking on the dot over the axis we want to change and then pulling it up or down. This graph starts with 4 of the most important features set by default, but it is possible to add more or remove them from the graph using the combobox under "Select Features To Plot." We use the "Update Graph" option to update the graph according to the selected features when selecting the desired features.</p>
 
             <div class="text-center">
                 <img src="scenario1Initial.png" alt="scenario1Initial" class="img-fluid" alt="Responsive image" width="1000">
@@ -67,6 +73,12 @@
 
             <div class="text-center">
                 <img src="scenario1Changed.png" alt="scenario1Changed" class="img-fluid" alt="Responsive image" width="1000">
+            </div>
+
+            <p class="text-justify">After that, if the current point is placed in a value outside the allowed values, the corresponding axis will be changed to red to highlight this misunderstood. This behavior happens in all components if the value contradicts the respective constraints.</p>
+
+            <div class="text-center">
+                <img src="scenario1Contradictory.png" alt="scenario1Contradictory" class="img-fluid" alt="Responsive image" width="1000">
             </div>
 
             <p class="text-justify">Finished studying "Scenario1", we use the option "Next" to create a new scenario. In this scenario, we can see the points referring to "Scenario0", the current, and the counterfactual, and we also have a point referring to the previous scenario to follow the "walk" to our counterfactual. Having changed some values again, we see that the current point has changed its color to indicate that we have reached the desired class. That way, we can then finish the search for the custom counterfactual by clicking on the option "Finish." </p>

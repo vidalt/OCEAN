@@ -6,9 +6,9 @@ from enum import Enum
 class CounterfactualEngineEnums:
 
     class RandomForestClassifierParameters(Enum):
-        MAX_LEAF_NODES = 32
+        MAX_LEAF_NODES = 50
         RANDOM_STATE = 1
-        N_ESTIMATORS = 20
+        N_ESTIMATORS = 100
 
     class IsolationForestParameters(Enum):
         RANDOM_STATE = 1 
