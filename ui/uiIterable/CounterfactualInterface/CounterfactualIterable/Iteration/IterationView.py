@@ -19,7 +19,6 @@ class IterationView(QWidget, Ui_Iteration):
         super(IterationView, self).__init__()
         self.setupUi(self)
 
-        self.pushButtonUpdateGraph.clicked.connect(lambda: self.selectedFeatures.emit())
         self.pushButtonNext.clicked.connect(lambda: self.nextIteration.emit())
         self.pushButtonFinish.clicked.connect(lambda: self.finishIteration.emit())
 
@@ -76,12 +75,6 @@ class IterationView(QWidget, Ui_Iteration):
 
     def __onItemsChanged(self):
         self.outdatedGraph.emit()
-
-    def showOutdatedGraph(self):
-        self.pushButtonOutdatedGraph.show()
-
-    def hideOutdatedGraph(self):
-        self.pushButtonOutdatedGraph.hide()
 
     def enabledNextIteration(self, enabled):
         self.pushButtonNext.setEnabled(enabled)

@@ -80,7 +80,6 @@ class IterationController():
         self.view.initializeView()
 
     def __onOutdatedGraph(self):
-        self.view.showOutdatedGraph()
         self.__updateGraph()
 
     # this function sets the previous values to the current view
@@ -150,7 +149,6 @@ class IterationController():
 
         self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
-        self.view.hideOutdatedGraph()
 
     # this function draw the suggested feature
     def setSuggestedFeaturesToPlot(self, suggestedFeatures):
@@ -293,8 +291,6 @@ class IterationController():
                           'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
-            self.view.hideOutdatedGraph()
-            
         self.restorCursor()
 
     # listen the last feature clicked and draw the distribution graph, and show the feature informations
@@ -430,7 +426,6 @@ class IterationController():
                             'selectedFeatures':selectedFeatures}
                 self.__canvas.updateGraph(parameters)
                 
-            self.view.hideOutdatedGraph()
         self.restorCursor()
 
     def getCounterfactualExplanation(self, counterfactual):
