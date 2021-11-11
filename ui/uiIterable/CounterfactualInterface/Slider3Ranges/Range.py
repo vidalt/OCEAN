@@ -123,7 +123,6 @@ class Range(QLabel):
         if self.__isPressed:
             posX =  self.mapToParent(event.pos()).x() 
             self.__updatePos(posX)
-            self.outdatedGraph.emit()
 
     @pyqtSlot(int)
     def setValue(self, newValue):
@@ -174,6 +173,7 @@ class Range(QLabel):
 
     def mouseReleaseEvent(self, event):
         self.__isPressed = False  
+        self.outdatedGraph.emit()
 
     def __updateValueFromPosition(self, posX):  
         assert posX is not None

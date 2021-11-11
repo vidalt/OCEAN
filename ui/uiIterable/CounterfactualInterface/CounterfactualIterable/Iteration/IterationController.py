@@ -73,7 +73,7 @@ class IterationController():
         self.view.selectedFeatures.connect(lambda: self.__updateGraph())
         self.view.nextIteration.connect(lambda: self.__handlerNextIteration())
         self.view.finishIteration.connect(lambda: self.__handlerFinishIteration())
-
+        
 
     # this function takes the dataframe names and send them to interface
     def __initializeView(self):
@@ -81,6 +81,7 @@ class IterationController():
 
     def __onOutdatedGraph(self):
         self.view.showOutdatedGraph()
+        self.__updateGraph()
 
     # this function sets the previous values to the current view
     def setFeaturesAndValues(self, dictNextFeaturesInformation):
@@ -226,7 +227,7 @@ class IterationController():
             # updating the values
             for i, f in enumerate(selectedFeatures):
                 currentDataframe[f] = updatedPoint[i]
-
+                
             transformedCurrent = self.model.transformDataPoint(currentDataframe.to_numpy()[0][:-1])
             predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedCurrent])
             predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCurrent])
@@ -292,7 +293,8 @@ class IterationController():
                           'selectedFeatures':selectedFeatures}
             self.__canvas.updateGraph(parameters)
 
-        self.view.hideOutdatedGraph()
+            self.view.hideOutdatedGraph()
+            
         self.restorCursor()
 
     # listen the last feature clicked and draw the distribution graph, and show the feature informations
@@ -363,11 +365,12 @@ class IterationController():
                 self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [self.transformedChosenDataPoint])
                     
                 # saving the updated current point values and class
-                self.updatedCurrentPoint = self.chosenDataPoint.copy()
-                self.updatedCurrentClass = self.predictedOriginalClass[0]
+                if self.updatedCurrentPoint is None:
+                    self.updatedCurrentPoint = self.chosenDataPoint.copy()
+                    self.updatedCurrentClass = self.predictedOriginalClass[0]
 
                 # current datapoint
-                currentDataPoint = self.chosenDataPoint.copy()
+                currentDataPoint = self.updatedCurrentPoint.copy()
                 currentDataPoint = np.append(currentDataPoint, self.predictedOriginalClass)
                 currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
                 # adding the prediction percentage
@@ -471,12 +474,14 @@ class IterationController():
                                                             'allPossibleValues': allPossibleValues,
                                                             'value': currentValue}
         
+        self.view.blockSignals(True)
         nextIteration = IterationController(original=self.original, parent=self, model=self.model, randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
         iterationName = self.original.view.addNewIterationTab(nextIteration.view)
         dictNextFeaturesInformation['iterationName'] = iterationName
         nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
         nextIteration.setCounterfactual(counterfactual)
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
+        self.view.blockSignals(False)
 
     def handlerCounterfactualError(self):
         QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
@@ -530,6 +535,6 @@ class IterationController():
     def restorCursor(self):
         # updating cursor
         QApplication.restoreOverrideCursor()
-
+        
     def __errorPlotHandler(self, featureError):
         QMessageBox.information(self.view, 'Invalid feature value', 'The graph could not be updated, because some constraint is contradictory at feature '+featureError, QMessageBox.Ok)
