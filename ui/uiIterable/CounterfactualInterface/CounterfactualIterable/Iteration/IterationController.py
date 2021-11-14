@@ -74,6 +74,8 @@ class IterationController():
         self.view.nextIteration.connect(lambda: self.__handlerNextIteration())
         self.view.finishIteration.connect(lambda: self.__handlerFinishIteration())
         
+        self.__runningCounterfactual = False
+        
 
     # this function takes the dataframe names and send them to interface
     def __initializeView(self):
@@ -202,6 +204,9 @@ class IterationController():
                     allowedDict[feature] = False
 
         # enable/disable nextIteration
+        if self.__runningCounterfactual:
+            allowed = False
+            
         self.view.enabledNextIteration(allowed)
 
         return allowedDict
@@ -429,6 +434,8 @@ class IterationController():
         self.restorCursor()
 
     def getCounterfactualExplanation(self, counterfactual):
+        self.__runningCounterfactual = False
+        
         self.view.enabledNextIteration(True)
         
         dictNextFeaturesInformation = {}
@@ -475,15 +482,33 @@ class IterationController():
         dictNextFeaturesInformation['iterationName'] = iterationName
         nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
         nextIteration.setCounterfactual(counterfactual)
+        
+        suggestedFeatures = []
+        for ind, feature in enumerate(self.model.features):
+            if feature != 'Class':
+                featureType = self.model.featuresInformations[feature]['featureType']
+                
+                if featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                    if float(self.chosenDataPoint[ind]) != float(counterfactual[ind]):
+                        suggestedFeatures.append(feature)
+                
+                else: 
+                    if str(self.chosenDataPoint[ind]) != str(counterfactual[ind]):
+                        suggestedFeatures.append(feature)
+                        
+        self.__suggestedFeaturesToPlot = suggestedFeatures
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
         self.view.blockSignals(False)
 
     def handlerCounterfactualError(self):
+        self.__runningCounterfactual = False
+        
         QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
         self.view.enabledNextIteration(True)
 
     # this function generates the counterfactual given the current point
     def __generateCounterfactualAndNextIteration(self):
+        self.__runningCounterfactual = True
         # running the counterfactual generation in another thread
         self.thread = QThread()
         self.worker = CounterfactualInferfaceWorkerIterable(self)

@@ -103,19 +103,19 @@ class CounterfactualInterfaceControllerIterable:
                 self.__canvas = self.view.getCanvas()
                 self.__canvas.updateFeatureImportanceGraph(parameters)
 
-                featureImportance = self.model.invertTransformedFeatureImportance(importance)
-                tempSuggestedFeatureToPlot = []
-                for i in range(4):
-                    index = featureImportance.index(max(featureImportance))
-                    tempSuggestedFeatureToPlot.append(self.model.features[index])
-                    featureImportance[index] = -1
+                # featureImportance = self.model.invertTransformedFeatureImportance(importance)
+                # tempSuggestedFeatureToPlot = []
+                # for i in range(4):
+                #     index = featureImportance.index(max(featureImportance))
+                #     tempSuggestedFeatureToPlot.append(self.model.features[index])
+                #     featureImportance[index] = -1
 
-                suggestedFeatureToPlot = []
-                for feature in self.model.features:
-                    if feature in tempSuggestedFeatureToPlot:
-                        suggestedFeatureToPlot.append(feature)
+                # suggestedFeatureToPlot = []
+                # for feature in self.model.features:
+                #     if feature in tempSuggestedFeatureToPlot:
+                #         suggestedFeatureToPlot.append(feature)
 
-                self.__suggestedFeaturesToPlot = suggestedFeatureToPlot
+                # self.__suggestedFeaturesToPlot = suggestedFeatureToPlot
 
             # showing the features components and informations
             for feature in self.model.features:
@@ -259,6 +259,26 @@ class CounterfactualInterfaceControllerIterable:
         dictNextFeaturesInformation['iterationName'] = iterationName
         nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
         nextIteration.setCounterfactual(counterfactual)
+        
+        # print('#'*75)
+        # print(len(self.chosenDataPoint), '---', self.chosenDataPoint)
+        # print(len(counterfactual), '---', counterfactual)
+        # print('#'*75)
+
+        suggestedFeatures = []
+        for ind, feature in enumerate(self.model.features):
+            if feature != 'Class':
+                featureType = self.model.featuresInformations[feature]['featureType']
+                
+                if featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                    if float(self.chosenDataPoint[ind]) != float(counterfactual[ind]):
+                        suggestedFeatures.append(feature)
+                
+                else: 
+                    if str(self.chosenDataPoint[ind]) != str(counterfactual[ind]):
+                        suggestedFeatures.append(feature)
+                    
+        self.__suggestedFeaturesToPlot = suggestedFeatures
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
 
     def handlerCounterfactualError(self):

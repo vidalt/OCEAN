@@ -44,7 +44,7 @@ class CounterfactualInferfaceWorkerIterable(QObject):
             objectiveNorm=0, 
             mutuallyExclusivePlanesCutsActivated=True, 
             strictCounterFactual=True, 
-            verbose=False,
+            verbose=True,
             binaryDecisionVariables=BinaryDecisionVariables.PathFlow_y,
             featuresActionnability=self.__controller.model.transformedFeaturesActionability,
             featuresType=self.__controller.model.transformedFeaturesType, 
@@ -52,14 +52,7 @@ class CounterfactualInferfaceWorkerIterable(QObject):
 
         randomForestMilp.buildModel()
         
-        ###########################################################################################
-        # IDEIA: INCLUIR RESTRIÇÕES DINAMICAMENTE
-        # I0 -> SEM RESTRIÇÕES E VERIFICA SE O CONTRAFACTUAL FERE ALGUMA RESTRIÇÃO, SE FERIR
-        # I1 -> INCLUI APENAS AS RESTRIÇÕES QUE FORAM FERIDAS E TENTA DE NOVO
-        # Ii -> REPETE O PROCESSO DE INCLUSÃO PARCIAL ATÉ QUE NÃO FIRA NENHUMA RESTRIÇÃO
-        ###########################################################################################
-
-        # # adding the user constraints over the optimization model
+        # adding the user constraints over the optimization model
         # constraintIndex = 0
         # for feature in self.__controller.model.features:
         #     if feature != 'Class':
@@ -75,8 +68,8 @@ class CounterfactualInferfaceWorkerIterable(QObject):
 
         #         elif self.__controller.model.featuresType[feature] is FeatureType.Discrete or self.__controller.model.featuresType[feature] is FeatureType.Numeric:
         #             content = self.__controller.dictControllersSelectedPoint[feature].getContent()
-        #             minimumValue = content['minimumValue']
-        #             maximumValue = content['maximumValue']
+        #             minimumValue = float(content['minimumValue'])
+        #             maximumValue = float(content['maximumValue'])
 
         #             randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] >= minimumValue, feature+' minimum constraint')
         #             randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] <= maximumValue, feature+' maximum constraint')
@@ -92,27 +85,77 @@ class CounterfactualInferfaceWorkerIterable(QObject):
         #                     randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 0, feature+'_'+value+' not allowed')
 
         #                 constraintIndex += 1
+        
+        contradictoryFeatures = []
+        # while True:
+        for i in range(10):
+            randomForestMilp.solveModel()
+            counterfactualResult = randomForestMilp.x_sol       
 
-        randomForestMilp.solveModel()
-        counterfactualResult = randomForestMilp.x_sol
+            # getting the counterfactual to the current datapoint
+            counterfactualResult = randomForestMilp.x_sol
 
-        # getting the counterfactual to the current datapoint
-        counterfactualResult = randomForestMilp.x_sol
+            if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
+                print('!'*75)
+                print('ERROR: Model is infeasible')
+                print('!'*75)
+                self.counterfactualError.emit()
+                self.finished.emit()
+                break
+                
+            elif counterfactualResult is not None:
+                counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
 
-        if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
+                result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
+                result = np.append(result, counterfactualResultClass[0])
+                
+                constraintIndex = 0
+                contradictoryFeatures = []
+                for index, feature in enumerate(self.__controller.model.features):
+                    if feature != 'Class':
+                        if self.__controller.model.featuresType[feature] is FeatureType.Binary:
+                            constraintIndex += 1
+
+                        elif self.__controller.model.featuresType[feature] is FeatureType.Discrete or self.__controller.model.featuresType[feature] is FeatureType.Numeric:
+                            content = self.__controller.dictControllersSelectedPoint[feature].getContent()
+                            minimumValue = float(content['minimumValue'])
+                            maximumValue = float(content['maximumValue'])
+                            
+                            if float(result[index]) < minimumValue:
+                                contradictoryFeatures.append(feature)
+                                
+                                randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] >= minimumValue, feature+' minimum constraint')
+                                
+                            if float(result[index]) > maximumValue:
+                                contradictoryFeatures.append(feature)
+                                
+                                randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] <= maximumValue, feature+' maximum constraint')
+
+                            constraintIndex += 1
+
+                        elif self.__controller.model.featuresType[feature] is FeatureType.Categorical:
+                            content = self.__controller.dictControllersSelectedPoint[feature].getContent()
+                            notAllowedValues = content['notAllowedValues']
+                            
+                            if result[index] in notAllowedValues:
+                                contradictoryFeatures.append(feature)
+
+                            for value in self.__controller.model.featuresInformations[feature]['possibleValues']:
+                                if value == result[index]:
+                                    randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 0, feature+'_'+value+' not allowed')
+                                    
+                                constraintIndex += 1
+                                
+                if len(contradictoryFeatures) == 0:
+                    # sending the counterfactual
+                    self.counterfactualDataframe.emit(result)
+                    self.finished.emit()
+                    break
+
+        if len(contradictoryFeatures) > 0:
             print('!'*75)
-            print('ERROR: Model is infeasible')
+            print('ERROR: It was not possible to find the counterfactual with those constraints')
             print('!'*75)
             self.counterfactualError.emit()
+            self.finished.emit()
             
-        elif counterfactualResult is not None:
-            counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
-
-            result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
-            result = np.append(result, counterfactualResultClass[0])
-            
-            # sending the counterfactual
-            self.counterfactualDataframe.emit(result)
-
-        # sending the objective function values        
-        self.finished.emit()
