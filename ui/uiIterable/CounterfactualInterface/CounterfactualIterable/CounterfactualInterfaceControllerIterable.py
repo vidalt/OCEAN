@@ -280,10 +280,12 @@ class CounterfactualInterfaceControllerIterable:
                     
         self.__suggestedFeaturesToPlot = suggestedFeatures
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
+        self.restorCursor()
 
     def handlerCounterfactualError(self):
         QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
         self.view.enableNext(True)
+        self.restorCursor()
 
     # this function generates the counterfactual given the current point
     def __generateCounterfactualAndNextIteration(self):
@@ -306,8 +308,6 @@ class CounterfactualInterfaceControllerIterable:
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             self.__generateCounterfactualAndNextIteration()
-
-        self.restorCursor()
 
     # this function is used to change the default cursor to wait cursor
     def waitCursor(self):

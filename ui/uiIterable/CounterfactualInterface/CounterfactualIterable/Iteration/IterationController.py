@@ -499,12 +499,14 @@ class IterationController():
         self.__suggestedFeaturesToPlot = suggestedFeatures
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
         self.view.blockSignals(False)
+        self.restorCursor()
 
     def handlerCounterfactualError(self):
         self.__runningCounterfactual = False
         
         QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
         self.view.enabledNextIteration(True)
+        self.restorCursor()
 
     # this function generates the counterfactual given the current point
     def __generateCounterfactualAndNextIteration(self):
@@ -527,8 +529,6 @@ class IterationController():
         self.view.enabledNextIteration(False)
 
         self.__generateCounterfactualAndNextIteration()
-
-        self.restorCursor()
 
     def __handlerFinishIteration(self):
         self.waitCursor()

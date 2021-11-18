@@ -44,7 +44,7 @@
          </size>
         </property>
         <property name="text">
-         <string>Select Features To Plot: select the desired features using the multiselection combobox below and use the button &quot;Update Graph&quot; to update the current graph</string>
+         <string>Select Features To Plot: select the desired features using the multiselection combobox below</string>
         </property>
        </widget>
       </item>

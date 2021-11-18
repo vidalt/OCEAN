@@ -131,7 +131,7 @@ class Ui_Iteration(object):
     def retranslateUi(self, Iteration):
         _translate = QtCore.QCoreApplication.translate
         Iteration.setWindowTitle(_translate("Iteration", "Form"))
-        self.labelSelectFeaturesToPlot.setText(_translate("Iteration", "Select Features To Plot: select the desired features using the multiselection combobox below and use the button \"Update Graph\" to update the current graph"))
+        self.labelSelectFeaturesToPlot.setText(_translate("Iteration", "Select Features To Plot: select the desired features using the multiselection combobox below"))
         self.labelFeatureInformations.setText(_translate("Iteration", "Feature Informations: shows the clicked feature informations \n"
 "and allows to update its constraints"))
         self.labelFeatureDistribution.setText(_translate("Iteration", "Feature Distribution: shows the clicked feature distribution"))
