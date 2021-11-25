@@ -17,6 +17,7 @@ class CounterfactualInferfaceWorkerIterable(QObject):
 
     finished = pyqtSignal()
     counterfactualDataframe = pyqtSignal(object)
+    counterfactualSteps = pyqtSignal(str)
     counterfactualError = pyqtSignal()
 
     def __init__(self, controller):
@@ -44,7 +45,7 @@ class CounterfactualInferfaceWorkerIterable(QObject):
             objectiveNorm=0, 
             mutuallyExclusivePlanesCutsActivated=True, 
             strictCounterFactual=True, 
-            verbose=True,
+            verbose=False,
             binaryDecisionVariables=BinaryDecisionVariables.PathFlow_y,
             featuresActionnability=self.__controller.model.transformedFeaturesActionability,
             featuresType=self.__controller.model.transformedFeaturesType, 
@@ -89,6 +90,8 @@ class CounterfactualInferfaceWorkerIterable(QObject):
         contradictoryFeatures = []
         # while True:
         for i in range(10):
+            self.counterfactualSteps.emit('Counterfactual Iteration number '+str(i+1)+' out of 10')
+            
             randomForestMilp.solveModel()
             counterfactualResult = randomForestMilp.x_sol       
 

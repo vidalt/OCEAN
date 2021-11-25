@@ -133,7 +133,10 @@ class MatplotLibCanvas(FigureCanvas, QObject):
                     maximumValue = math.ceil(content['maximumValue'])
                     ys.append(float(value)-minimumValue)
                 else:
-                    ys.append(uniqueValuesFeature.index(value))
+                    if value == '-': # this happens when the value doesn't matter
+                        ys.append(0)
+                    else:
+                        ys.append(uniqueValuesFeature.index(value))
 
                 # get x max range
                 if len(uniqueValuesFeature) > xMaxRange:
@@ -262,12 +265,12 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             if lastScenarioPoint is not None:
                 self.axes.legend([lineOriginal, lineLastScenario, self.polygonInteractable.line, lineCounterfactual], 
                                  ['Scenario0', lastScenarioName, 'Current editable', 'Counterfactual', 'Not editable axis'], 
-                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=4)
+                                 loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=4)
             
             else:
                 self.axes.legend([lineOriginal, self.polygonInteractable.line, lineCounterfactual], 
                                  ['Scenario0', 'Current editable', 'Counterfactual', 'Not editable axis'], 
-                                 loc='upper center', bbox_to_anchor=(0.5, -0.25), fancybox=True, shadow=True, ncol=3)
+                                 loc='lower center', bbox_to_anchor=(0.5, 1), fancybox=True, shadow=True, ncol=3)
 
             # boundary
             self.axes.set_xlim((-1, len(allFeaturesToPlot)))
@@ -283,7 +286,7 @@ class MatplotLibCanvas(FigureCanvas, QObject):
             self.axes.set_yticklabels([])
 
             # set title
-            self.axes.set_title('Drag the dots to change the point values')
+            # self.axes.set_title('Drag the dots to change the point values')
             
             # draw the figure
             self.draw()

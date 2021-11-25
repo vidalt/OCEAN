@@ -55,6 +55,8 @@ class IterationController():
         self.predictedOriginalClassPercentage = None
 
         self.counterfactualToPlot = None
+        
+        self.__counterfactualStep = None
 
         self.__canvas = self.view.getCanvas()
         self.__canvas.updatedPoint.connect(self.__onUpdatedCurrentPoint)
@@ -500,6 +502,26 @@ class IterationController():
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
         self.view.blockSignals(False)
         self.restorCursor()
+        
+    def handlerCounterfactualSteps(self, step=None):
+        if step is None and self.__counterfactualStep is not None:
+            self.__counterfactualStep.done(1)
+            self.__counterfactualStep = None
+            return
+        
+        if self.__counterfactualStep is None:
+            self.__counterfactualStep = QMessageBox(self.view)
+            # self.__counterfactualStep.setWindowFlags(self.__counterfactualStep.windowFlags() | Qt.FramelessWindowHint)
+            self.__counterfactualStep.setWindowTitle('Counterfactual information')
+            self.__counterfactualStep.setStandardButtons(QMessageBox.Ok)
+            self.__counterfactualStep.setText(step)
+            result = self.__counterfactualStep.exec()
+            
+            if result == QMessageBox.Ok:
+                self.__counterfactualStep = None
+                
+        else: 
+            self.__counterfactualStep.setText(step)
 
     def handlerCounterfactualError(self):
         self.__runningCounterfactual = False
@@ -519,8 +541,10 @@ class IterationController():
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker.counterfactualDataframe.connect(self.getCounterfactualExplanation)
+        self.worker.counterfactualSteps.connect(self.handlerCounterfactualSteps)
         self.worker.counterfactualError.connect(self.handlerCounterfactualError)
         self.worker.finished.connect(self.restorCursor)
+        self.worker.finished.connect(self.handlerCounterfactualSteps)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 

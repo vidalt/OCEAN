@@ -53,6 +53,8 @@ class CounterfactualInterfaceControllerIterable:
         self.transformedSamplesClasses = None
 
         self.__suggestedFeaturesToPlot = None
+        
+        self.__counterfactualStep = None
 
 
     # this function takes the dataframe names and send them to interface
@@ -166,10 +168,10 @@ class CounterfactualInterfaceControllerIterable:
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             randomDataPoint = self.model.getRandomPoint(self.randomForestClassifier)
-            # randomDataPoint = ['GP', 'M', '17', 'U', 'LE3', 'T', '4', '4', 'teacher', 
-            #                    'health', 'reputation', 'mother', '1', '2', '0', 'no', 
-            #                    'yes', 'yes', 'no', 'yes', 'yes', 'yes', 'no', '3', '3', 
-            #                    '3', '1', '2', '2', '0']
+            randomDataPoint = ['GP', 'M', '17', 'U', 'LE3', 'T', '4', '4', 'teacher', 
+                               'health', 'reputation', 'mother', '1', '2', '0', 'no', 
+                               'yes', 'yes', 'no', 'yes', 'yes', 'yes', 'no', '3', '3', 
+                               '3', '1', '2', '2', '0']
 
             # showing the values in their respective component
             for index, feature in enumerate(self.model.features):
@@ -281,6 +283,26 @@ class CounterfactualInterfaceControllerIterable:
         self.__suggestedFeaturesToPlot = suggestedFeatures
         nextIteration.setSuggestedFeaturesToPlot(self.__suggestedFeaturesToPlot)
         self.restorCursor()
+        
+    def handlerCounterfactualSteps(self, step=None):
+        if step is None and self.__counterfactualStep is not None:
+            self.__counterfactualStep.done(1)
+            self.__counterfactualStep = None
+            return
+        
+        if self.__counterfactualStep is None:
+            self.__counterfactualStep = QMessageBox(self.view)
+            # self.__counterfactualStep.setWindowFlags(self.__counterfactualStep.windowFlags() | Qt.FramelessWindowHint)
+            self.__counterfactualStep.setWindowTitle('Counterfactual information')
+            self.__counterfactualStep.setStandardButtons(QMessageBox.Ok)
+            self.__counterfactualStep.setText(step)
+            result = self.__counterfactualStep.exec()
+            
+            if result == QMessageBox.Ok:
+                self.__counterfactualStep = None
+                
+        else: 
+            self.__counterfactualStep.setText(step)
 
     def handlerCounterfactualError(self):
         QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
@@ -297,8 +319,10 @@ class CounterfactualInterfaceControllerIterable:
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker.counterfactualDataframe.connect(self.getCounterfactualExplanation)
+        self.worker.counterfactualSteps.connect(self.handlerCounterfactualSteps)
         self.worker.counterfactualError.connect(self.handlerCounterfactualError)
         self.worker.finished.connect(self.restorCursor)
+        self.worker.finished.connect(self.handlerCounterfactualSteps)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 

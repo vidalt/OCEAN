@@ -98,7 +98,44 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="MatplotLibCanvas" name="widgetCanvas" native="true"/>
+          <widget class="QWidget" name="widgetContainerCanvas" native="true">
+           <layout class="QVBoxLayout" name="verticalLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="labelCanvasTitle">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>26</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>26</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Drag the dots to change the point values: click on the dot over the axis that want to change and then pull it up or down</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="MatplotLibCanvas" name="widgetCanvas" native="true"/>
+            </item>
+           </layout>
+          </widget>
          </item>
          <item>
           <widget class="QWidget" name="widgetContainerFeatureInformations" native="true">
@@ -140,7 +177,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLabel" name="labelFeatureInformations">
+             <widget class="QLabel" name="labelFeatureInformation">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -154,7 +191,7 @@
                </size>
               </property>
               <property name="text">
-               <string>Feature Informations: shows the clicked feature informations 
+               <string>Feature Information: shows the clicked feature information 
 and allows to update its constraints</string>
               </property>
              </widget>
