@@ -507,9 +507,8 @@ class IterationController():
         if step is None and self.__counterfactualStep is not None:
             self.__counterfactualStep.done(1)
             self.__counterfactualStep = None
-            return
         
-        if self.__counterfactualStep is None:
+        elif self.__counterfactualStep is None:
             self.__counterfactualStep = QMessageBox(self.view)
             # self.__counterfactualStep.setWindowFlags(self.__counterfactualStep.windowFlags() | Qt.FramelessWindowHint)
             self.__counterfactualStep.setWindowTitle('Counterfactual information')
@@ -526,6 +525,10 @@ class IterationController():
     def handlerCounterfactualError(self):
         self.__runningCounterfactual = False
         
+        if self.__counterfactualStep is not None:
+            self.__counterfactualStep.done(1)
+            self.__counterfactualStep = None
+        
         QMessageBox.information(self.view, 'Counterfactual error', 'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
         self.view.enabledNextIteration(True)
         self.restorCursor()
@@ -534,17 +537,17 @@ class IterationController():
     def __generateCounterfactualAndNextIteration(self):
         self.__runningCounterfactual = True
         # running the counterfactual generation in another thread
-        self.thread = QThread()
+        self.thread = QThread(self.view)
         self.worker = CounterfactualInferfaceWorkerIterable(self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
+        # self.worker.finished.connect(self.worker.deleteLater)
         self.worker.counterfactualDataframe.connect(self.getCounterfactualExplanation)
         self.worker.counterfactualSteps.connect(self.handlerCounterfactualSteps)
         self.worker.counterfactualError.connect(self.handlerCounterfactualError)
         self.worker.finished.connect(self.restorCursor)
-        self.worker.finished.connect(self.handlerCounterfactualSteps)
+        # self.worker.finished.connect(self.handlerCounterfactualSteps)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 

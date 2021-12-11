@@ -88,6 +88,7 @@ class CounterfactualInferfaceWorkerIterable(QObject):
         #                 constraintIndex += 1
         
         contradictoryFeatures = []
+        counterfactualFound = False
         # while True:
         for i in range(10):
             self.counterfactualSteps.emit('Counterfactual Iteration number '+str(i+1)+' out of 10')
@@ -99,14 +100,16 @@ class CounterfactualInferfaceWorkerIterable(QObject):
             counterfactualResult = randomForestMilp.x_sol
 
             if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
+                counterfactualFound = False
                 print('!'*75)
                 print('ERROR: Model is infeasible')
                 print('!'*75)
                 self.counterfactualError.emit()
-                self.finished.emit()
+                # self.finished.emit()
                 break
                 
             elif counterfactualResult is not None:
+                counterfactualFound = True
                 counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
 
                 result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
@@ -152,13 +155,15 @@ class CounterfactualInferfaceWorkerIterable(QObject):
                 if len(contradictoryFeatures) == 0:
                     # sending the counterfactual
                     self.counterfactualDataframe.emit(result)
-                    self.finished.emit()
+                    # self.finished.emit()
                     break
 
-        if len(contradictoryFeatures) > 0:
+        if len(contradictoryFeatures) > 0 and counterfactualFound:
             print('!'*75)
             print('ERROR: It was not possible to find the counterfactual with those constraints')
             print('!'*75)
             self.counterfactualError.emit()
-            self.finished.emit()
+            # self.finished.emit()
+        
+        self.finished.emit()
             
