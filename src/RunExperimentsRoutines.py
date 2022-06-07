@@ -11,7 +11,7 @@ from src.CuiRandomForestCounterFactual import *
 
 def writeLegend(numericalResultsFileName):
     write = open(numericalResultsFileName, "a")
-    #Instance
+    # Instance
     write.write("trainingSetFile")
     write.write(","+"rf_max_depth")
     write.write(','+"rf_n_estimators")

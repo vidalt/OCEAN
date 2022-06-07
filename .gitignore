@@ -9,3 +9,5 @@ dist/*
 .qt_for_python/*
 rf.lp
 uiEnv/*
+# Ignore the counterfactual datasets
+datasets/counterfactuals/*.csv
