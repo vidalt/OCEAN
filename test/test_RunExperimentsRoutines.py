@@ -3,7 +3,7 @@ import unittest
 from src.RunExperimentsRoutines import trainModelAndSolveCounterFactuals
 
 
-class test_RunExperimentsRoutines(unittest.TestCase):
-    def test_emptyCallOftrainModelAndSolveCounterFactualsHasTypeError(self):
+class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
+    def test_emptyCallHasTypeError(self):
         """ trainModelAndSolveCounterFactuals requires two arguments """
         self.assertRaises(TypeError, trainModelAndSolveCounterFactuals)
