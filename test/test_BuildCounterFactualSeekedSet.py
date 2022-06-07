@@ -35,6 +35,10 @@ class test_BuildCounterFactualSeekedSet(unittest.TestCase):
         # Test that the One-Hot counterfactual dataset has been created
         self.assertTrue(self.counterfactualOneHotDatasetFile.exists())
 
+    def test_noFolderCreatedInTestFolder(self):
+        pathToCounterfactualFolderInTestFolder = self.THIS_DIR / 'counterfactuals'
+        self.assertFalse(pathToCounterfactualFolderInTestFolder.exists())
+
     def test_counterfactualDataset(self):
         """ Test size of the counterfactual dataset built."""
         # Dataset
