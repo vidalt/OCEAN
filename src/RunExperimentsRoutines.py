@@ -3,10 +3,11 @@ import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 
-from dataProcessing import *
-from DecisionTreeCounterFactual import *
-from RandomForestCounterFactual import *
-from CuiRandomForestCounterFactual import *
+from src.dataProcessing import *
+from src.DecisionTreeCounterFactual import *
+from src.RandomForestCounterFactual import *
+from src.CuiRandomForestCounterFactual import *
+
 
 def writeLegend(numericalResultsFileName):
     write = open(numericalResultsFileName, "a")
@@ -45,16 +46,17 @@ def writeLegend(numericalResultsFileName):
     write.write("\n")
     write.close()
 
+
 def trainModelAndSolveCounterFactuals(
-    trainingSetFile, 
+    trainingSetFile,
     counterfactualsFile,
     rf_max_depth=7,
     rf_n_estimators=100,
     ilfActivated=True,
     ilf_max_samples=128,
     ilf_n_estimators=100,
-    random_state = 0,
-    useCui = False,
+    random_state=0,
+    useCui=False,
     constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
     actionnabilityActivated=True,
     objectiveNorm=1,
@@ -68,56 +70,62 @@ def trainModelAndSolveCounterFactuals(
 ):
     if writeColNames:
         writeLegend(numericalResultsFileName)
-    
+
     reader = DatasetReader(trainingSetFile)
     # Train random forest
-    clf = RandomForestClassifier(max_depth=rf_max_depth, random_state=random_state,n_estimators=rf_n_estimators)# 
+    clf = RandomForestClassifier(
+        max_depth=rf_max_depth, random_state=random_state, n_estimators=rf_n_estimators)
     clf.fit(reader.X_train, reader.y_train)
 
     train_score = clf.score(reader.X_train, reader.y_train)
-    test_score = clf.score(reader.X_test,reader.y_test)
+    test_score = clf.score(reader.X_test, reader.y_test)
 
-    print("Random forest with", clf.n_estimators, "estimators with max depth", clf.max_depth, "and max leaf nodes", clf.max_leaf_nodes)
+    print("Random forest with", clf.n_estimators, "estimators with max depth",
+          clf.max_depth, "and max leaf nodes", clf.max_leaf_nodes)
     nodes = [est.tree_.node_count for est in clf.estimators_]
     print(sum(nodes)/len(nodes), "nodes on average")
 
-    ilf = IsolationForest(random_state=random_state, max_samples=ilf_max_samples, n_estimators=ilf_n_estimators, contamination=0.1)
+    ilf = IsolationForest(random_state=random_state, max_samples=ilf_max_samples,
+                          n_estimators=ilf_n_estimators, contamination=0.1)
     ilf.fit(reader.XwithGoodPoint)
-    print("Isolation forest with", ilf.n_estimators, "estimatorswith max samples", ilf.max_samples)
+    print("Isolation forest with", ilf.n_estimators,
+          "estimatorswith max samples", ilf.max_samples)
     nodes = [est.tree_.node_count for est in ilf.estimators_]
     print(sum(nodes)/len(nodes), "nodes on average")
-    
+
     ilfForMilp = None
     if ilfActivated:
         assert not useCui
         ilfForMilp = ilf
-    
+
     counterfactualsData = pd.read_csv(counterfactualsFile)
     count = 1
     for index in counterfactualsData.index:
         if nbCounterFactualsComputed != 'all' and type(nbCounterFactualsComputed) == int and count == nbCounterFactualsComputed + 1:
             break
-        print("Start launching", count, "out of", len(counterfactualsData.index))
+        print("Start launching", count, "out of",
+              len(counterfactualsData.index))
         count += 1
-        x0 = [counterfactualsData.iloc[index, counterfactualsData.columns != 'DesiredOutcome']]
+        x0 = [counterfactualsData.iloc[index,
+                                       counterfactualsData.columns != 'DesiredOutcome']]
         y0_desired = counterfactualsData['DesiredOutcome'][index]
 
         featuresActionnability = False
         if actionnabilityActivated:
-            featuresActionnability=reader.featuresActionnability
+            featuresActionnability = reader.featuresActionnability
 
         cuiMilp = None
         randomForestMilp = None
         if useCui:
             cuiMilp = CuiRandomForestCounterFactualMilp(clf, x0, y0_desired,
-                isolationForest=ilfForMilp,
-                objectiveNorm=objectiveNorm, 
-                verbose=False,
-                featuresType = reader.featuresType, 
-                featuresPossibleValues = reader.featuresPossibleValues,
-                strictCounterFactual=strictCounterFactual,
-                featuresActionnability = featuresActionnability
-            )
+                                                        isolationForest=ilfForMilp,
+                                                        objectiveNorm=objectiveNorm,
+                                                        verbose=False,
+                                                        featuresType=reader.featuresType,
+                                                        featuresPossibleValues=reader.featuresPossibleValues,
+                                                        strictCounterFactual=strictCounterFactual,
+                                                        featuresActionnability=featuresActionnability
+                                                        )
             cuiMilp.buildModel()
             cuiMilp.solveModel()
         else:
@@ -126,15 +134,15 @@ def trainModelAndSolveCounterFactuals(
                 clf,
                 x0,
                 y0_desired,
-                isolationForest=ilfForMilp, 
+                isolationForest=ilfForMilp,
                 constraintsType=constraintsType,
-                objectiveNorm=objectiveNorm, 
-                mutuallyExclusivePlanesCutsActivated=mutuallyExclusivePlanesCutsActivated, 
-                strictCounterFactual=strictCounterFactual, 
+                objectiveNorm=objectiveNorm,
+                mutuallyExclusivePlanesCutsActivated=mutuallyExclusivePlanesCutsActivated,
+                strictCounterFactual=strictCounterFactual,
                 verbose=False,
                 binaryDecisionVariables=binaryDecisionVariables,
                 featuresActionnability=featuresActionnability,
-                featuresType=reader.featuresType, 
+                featuresType=reader.featuresType,
                 featuresPossibleValues=reader.featuresPossibleValues,
                 randomCostsActivated=randomCostsActivated
             )
@@ -169,7 +177,8 @@ def trainModelAndSolveCounterFactuals(
             write.write(","+str(cuiMilp.model.status))
             write.write(","+str(cuiMilp.model.Runtime))
             write.write(","+str(cuiMilp.objValue))
-            write.write(","+str(cuiMilp.outputDesired != clf.predict(cuiMilp.x_sol)[0]))
+            write.write(","+str(cuiMilp.outputDesired
+                        != clf.predict(cuiMilp.x_sol)[0]))
             write.write(','+str("cuiUndefined"))
             write.write(','+str("cuiUndefined"))
             write.write(","+str(ilf.predict(cuiMilp.x_sol)[0]))
@@ -180,7 +189,8 @@ def trainModelAndSolveCounterFactuals(
             write.write(","+str(randomForestMilp.model.status))
             write.write(","+str(randomForestMilp.runTime))
             write.write(","+str(randomForestMilp.objValue))
-            write.write(","+str(randomForestMilp.outputDesired != clf.predict(randomForestMilp.x_sol)[0]))
+            write.write(","+str(randomForestMilp.outputDesired
+                        != clf.predict(randomForestMilp.x_sol)[0]))
             write.write(','+str(randomForestMilp.maxSkLearnError))
             write.write(','+str(randomForestMilp.maxMyMilpError))
             write.write(","+str(ilf.predict(randomForestMilp.x_sol)[0]))
@@ -190,6 +200,7 @@ def trainModelAndSolveCounterFactuals(
         # Finish
         write.write("\n")
         write.close()
+
 
 def runNumericalExperiments(
     datasetsWithCounterfactualsDict,
@@ -209,8 +220,8 @@ def runNumericalExperiments(
     randomCostsActivated=False,
     numericalResultsFileName="NumericalResults.csv"
 ):
-    writeLegend(numericalResultsFileName) 
-    
+    writeLegend(numericalResultsFileName)
+
     count = 0
     for trainingSetFile in datasetsWithCounterfactualsDict:
         counterfactualsFile = datasetsWithCounterfactualsDict[trainingSetFile]
@@ -245,35 +256,52 @@ def runNumericalExperiments(
                                             for objectiveNorm in objectiveNormList:
                                                 for mutuallyExclusivePlanesCutsActivated in mutuallyExclusivePlanesCutsActivatedList:
                                                     for strictCounterFactual in strictCounterFactualList:
-                                                        for binaryDecisionVariables in binaryDecisionVariablesList:                                                          
-                                                            print("\n\nLaunch Numerical experiments sequence", count ,"out of", total)
-                                                            print("trainingSetFile",trainingSetFile,)
-                                                            print("counterfactualsFile",counterfactualsFile)
-                                                            print("rf_max_depth",rf_max_depth)
-                                                            print("rf_n_estimators",rf_n_estimators)
-                                                            print("ilfActivated",ilfActivated)
-                                                            print("ilf_max_samples",ilf_max_samples)
-                                                            print("ilf_n_estimators",ilf_n_estimators)
-                                                            print("random_state ", random_state)
-                                                            print("useCui ", useCui)
-                                                            print("constraintsType",constraintsType)
-                                                            print("actionnabilityActivated",actionnabilityActivated)
-                                                            print("objectiveNorm",objectiveNorm)
-                                                            print("mutuallyExclusivePlanesCutsActivated",mutuallyExclusivePlanesCutsActivated)
-                                                            print("strictCounterFactual",strictCounterFactual)
-                                                            print("binaryDecisionVariables",binaryDecisionVariables)
-                                                            print("numericalResultsFileName",numericalResultsFileName)
+                                                        for binaryDecisionVariables in binaryDecisionVariablesList:
+                                                            print(
+                                                                "\n\nLaunch Numerical experiments sequence", count, "out of", total)
+                                                            print(
+                                                                "trainingSetFile", trainingSetFile,)
+                                                            print(
+                                                                "counterfactualsFile", counterfactualsFile)
+                                                            print(
+                                                                "rf_max_depth", rf_max_depth)
+                                                            print(
+                                                                "rf_n_estimators", rf_n_estimators)
+                                                            print(
+                                                                "ilfActivated", ilfActivated)
+                                                            print(
+                                                                "ilf_max_samples", ilf_max_samples)
+                                                            print(
+                                                                "ilf_n_estimators", ilf_n_estimators)
+                                                            print(
+                                                                "random_state ", random_state)
+                                                            print(
+                                                                "useCui ", useCui)
+                                                            print(
+                                                                "constraintsType", constraintsType)
+                                                            print(
+                                                                "actionnabilityActivated", actionnabilityActivated)
+                                                            print(
+                                                                "objectiveNorm", objectiveNorm)
+                                                            print(
+                                                                "mutuallyExclusivePlanesCutsActivated", mutuallyExclusivePlanesCutsActivated)
+                                                            print(
+                                                                "strictCounterFactual", strictCounterFactual)
+                                                            print(
+                                                                "binaryDecisionVariables", binaryDecisionVariables)
+                                                            print(
+                                                                "numericalResultsFileName", numericalResultsFileName)
                                                             count += 1
                                                             trainModelAndSolveCounterFactuals(
-                                                                trainingSetFile, 
+                                                                trainingSetFile,
                                                                 counterfactualsFile,
                                                                 rf_max_depth=rf_max_depth,
                                                                 rf_n_estimators=rf_n_estimators,
                                                                 ilfActivated=ilfActivated,
                                                                 ilf_max_samples=ilf_max_samples,
                                                                 ilf_n_estimators=ilf_n_estimators,
-                                                                random_state = random_state,
-                                                                useCui = useCui,
+                                                                random_state=random_state,
+                                                                useCui=useCui,
                                                                 constraintsType=constraintsType,
                                                                 actionnabilityActivated=actionnabilityActivated,
                                                                 objectiveNorm=objectiveNorm,
@@ -285,24 +313,23 @@ def runNumericalExperiments(
                                                             )
 
 
-
 miniDatasetsWithCounterfactualsDict = {
-    "./datasets/test.csv":"./datasets/counterfactuals/OneHot_test.csv"
+    "./datasets/test.csv": "./datasets/counterfactuals/OneHot_test.csv"
 }
 
 ourDatasetsWithCounterfactualsDict = {
-    './datasets/Adult_processedMACE.csv':'./datasets/counterfactuals/OneHot_Adult_processedMACE.csv',
-    './datasets/COMPAS-ProPublica_processedMACE.csv':'./datasets/counterfactuals/OneHot_COMPAS-ProPublica_processedMACE.csv',
-    './datasets/German-Credit.csv':'./datasets/counterfactuals/OneHot_German-Credit.csv',
-    './datasets/Phishing.csv':'./datasets/counterfactuals/OneHot_Phishing.csv',
-    './datasets/Spambase.csv':'./datasets/counterfactuals/OneHot_Spambase.csv',
-    './datasets/Students-Performance-MAT.csv':'./datasets/counterfactuals/OneHot_Students-Performance-MAT.csv',
-    './datasets/Credit-Card-Default_processedMACE.csv':'./datasets/counterfactuals/OneHot_Credit-Card-Default_processedMACE.csv',
-    './datasets/OnlineNewsPopularity.csv':'./datasets/counterfactuals/OneHot_OnlineNewsPopularity.csv',
+    './datasets/Adult_processedMACE.csv': './datasets/counterfactuals/OneHot_Adult_processedMACE.csv',
+    './datasets/COMPAS-ProPublica_processedMACE.csv': './datasets/counterfactuals/OneHot_COMPAS-ProPublica_processedMACE.csv',
+    './datasets/German-Credit.csv': './datasets/counterfactuals/OneHot_German-Credit.csv',
+    './datasets/Phishing.csv': './datasets/counterfactuals/OneHot_Phishing.csv',
+    './datasets/Spambase.csv': './datasets/counterfactuals/OneHot_Spambase.csv',
+    './datasets/Students-Performance-MAT.csv': './datasets/counterfactuals/OneHot_Students-Performance-MAT.csv',
+    './datasets/Credit-Card-Default_processedMACE.csv': './datasets/counterfactuals/OneHot_Credit-Card-Default_processedMACE.csv',
+    './datasets/OnlineNewsPopularity.csv': './datasets/counterfactuals/OneHot_OnlineNewsPopularity.csv',
 }
 
 cuiDatasetsWithCounterfactualsDict = {
-    './datasets/Adult_processedMACE.csv':'./datasets/counterfactuals/OneHot_Adult_processedMACE.csv',
+    './datasets/Adult_processedMACE.csv': './datasets/counterfactuals/OneHot_Adult_processedMACE.csv',
     # './datasets/COMPAS-ProPublica_processedMACE.csv':'./datasets/counterfactuals/OneHot_COMPAS-ProPublica_processedMACE.csv',
     # './datasets/Credit-Card-Default_processedMACE.csv':'./datasets/counterfactuals/OneHot_Credit-Card-Default_processedMACE.csv',
     # './datasets/FICO.csv':'./datasets/counterfactuals/OneHot_FICO.csv',
