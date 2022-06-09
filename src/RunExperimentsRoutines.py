@@ -1,5 +1,6 @@
 import os
 
+from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 
@@ -149,7 +150,9 @@ def trainModelAndSolveCounterFactuals(
             randomForestMilp.buildModel()
             randomForestMilp.solveModel()
         write = open(numericalResultsFileName, "a")
-        #Instance
+        # Instance
+        if isinstance(trainingSetFile, Path):
+            trainingSetFile = trainingSetFile.name
         write.write(trainingSetFile)
         write.write(","+str(rf_max_depth))
         write.write(','+str(rf_n_estimators))
@@ -161,6 +164,8 @@ def trainModelAndSolveCounterFactuals(
         write.write(','+str(test_score))
         # write.write(',')
         # Counterfactual
+        if isinstance(counterfactualsFile, Path):
+            counterfactualsFile = counterfactualsFile.name
         write.write("," + counterfactualsFile)
         write.write("," + str(index))
         # write.write(',')

@@ -24,19 +24,8 @@ class test_BuildCounterFactualSeekedSet(unittest.TestCase):
         Simple function call to build counterfactual set
         for a single dataset.
         """
-        # With feasibility check: longer since it solves a CF problem
-        nbCf = 1
-        buildCounterFactualSeekedFile(self.datasetFile, self.desiredOutcome,
-                                      nbCf, checkFeasibility=True)
-        # Without feasibility check
         buildCounterFactualSeekedFile(self.datasetFile, self.desiredOutcome,
                                       self.nbCounterFactuals)
-
-    def test_buildCounterFactualSeekedFileWithFeasibilityCheck(self):
-        """
-        Simple function call to build counterfactual set
-        for a single dataset.
-        """
 
     def test_folderAndFilesCreated(self):
         # Test if the 'counterfactuals' folder has been created
@@ -55,11 +44,11 @@ class test_BuildCounterFactualSeekedSet(unittest.TestCase):
         # Dataset
         counterfactualsData = pd.read_csv(self.counterfactualDatasetFile)
         nbFeaturesInStudentSet = 30
-        self.assertTrue(counterfactualsData.size
-                        == self.nbCounterFactuals * (nbFeaturesInStudentSet+1))
+        self.assertEqual(counterfactualsData.size,
+                         self.nbCounterFactuals * (nbFeaturesInStudentSet+1))
         # One-hot encoded dataset
         oneHotCounterfactualsData = pd.read_csv(
             self.counterfactualOneHotDatasetFile)
         nbFeatureOneHotStudent = 43
-        self.assertTrue(oneHotCounterfactualsData.size
-                        == self.nbCounterFactuals * (nbFeatureOneHotStudent+1))
+        self.assertEqual(oneHotCounterfactualsData.size,
+                         self.nbCounterFactuals * (nbFeatureOneHotStudent+1))

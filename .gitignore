@@ -11,3 +11,5 @@ rf.lp
 uiEnv/*
 # Ignore the counterfactual datasets
 datasets/counterfactuals/*.csv
+# Ignore csv files in test folder
+test/*.csv

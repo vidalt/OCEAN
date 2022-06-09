@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 from pathlib import Path
-# Impot OCEAN functions
+# Import OCEAN functions
 from src.dataProcessing import DatasetReader
 from src.RandomForestCounterFactual import RandomForestCounterFactualMilp
 from src.CounterFactualParameters import TreeConstraintsType
