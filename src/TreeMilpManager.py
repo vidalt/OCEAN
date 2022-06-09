@@ -1,5 +1,7 @@
 import pandas as pd
 import sklearn
+import gurobipy as gp
+from gurobipy import GRB
 
 from sklearn.tree import DecisionTreeClassifier
 

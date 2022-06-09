@@ -25,7 +25,7 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
 
     def __remove_numerical_results_file(self):
         """
-        Remove existing 'test/NumericalResults.csv' file if it exists.
+        Remove file 'test/NumericalResults.csv' if it exists.
         """
         try:
             os.remove(self.resultFile)
@@ -33,7 +33,7 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
             pass
 
     def test_emptyCallHasTypeError(self):
-        """ trainModelAndSolveCounterFactuals requires two arguments """
+        """ Check trainModelAndSolveCounterFactuals requires two arguments """
         self.assertRaises(TypeError, trainModelAndSolveCounterFactuals)
 
     def test_simpleFunctionCall(self):

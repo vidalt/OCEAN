@@ -10,7 +10,8 @@ from src.CounterFactualParameters import TreeConstraintsType
 from src.CounterFactualParameters import BinaryDecisionVariables
 
 
-def checkFeasibilityOfCounterFactuals(clf, ilf, reader, indices, desiredOutcome):
+def checkFeasibilityOfCounterFactuals(clf, ilf, reader,
+                                      indices, desiredOutcome):
     allSolved = True
     count = 1
     for index in indices:
