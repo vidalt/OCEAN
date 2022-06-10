@@ -49,3 +49,9 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
         nbRows, nbCols = resultDf.shape
         self.assertEqual(nbRows+1, self.nbCf)
         self.__remove_numerical_results_file()
+
+    def test_incorrectObjNormRaisesValueError(self):
+        self.assertRaises(AssertionError, trainModelAndSolveCounterFactuals,
+                          self.datasetFile,
+                          self.counterfactualOneHotDatasetFile,
+                          rf_max_depth=4, objectiveNorm=3)
