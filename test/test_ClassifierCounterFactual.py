@@ -46,3 +46,11 @@ class test_ClassifierCounterFactualMilp(unittest.TestCase):
                          TreeConstraintsType.LinearCombinationOfPlanes)
         self.assertEqual(classCfMilp.binaryDecisionVariables,
                          BinaryDecisionVariables.LeftRight_lambda)
+
+    def test_InitializeSolutionDecisionVariables(self):
+        classCfMilp = ClassifierCounterFactualMilp(
+            self.classifier, self.X[0:5, :], self.outputDesired)
+        classCfMilp.initSolution()
+        # Test size of solution decision variables
+        self.assertEqual(len(classCfMilp.x_var_sol), 2)
+        self.assertEqual(len(classCfMilp.discreteFeaturesLevel_var), 0)

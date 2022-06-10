@@ -1,11 +1,10 @@
-import pandas as pd
-import sklearn
-import gurobipy as gp
 from gurobipy import GRB
-
-from sklearn.tree import DecisionTreeClassifier
-
-from src.CounterFactualParameters import *
+import numpy as np
+# Import OCEAN utility functions and types
+from src.CounterFactualParameters import BinaryDecisionVariables
+from src.CounterFactualParameters import TreeConstraintsType
+from src.CounterFactualParameters import FeatureType
+from src.CounterFactualParameters import eps
 
 
 class TreeInMilpManager:
@@ -13,7 +12,7 @@ class TreeInMilpManager:
 
     def __init__(self, tree, model, x_var_sol, outputDesired,
                  featuresType,
-                 constraintsType=TreeConstraintsType.ExtendedFormulation,
+                 constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
                  binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda
                  ):
         self.id = TreeInMilpManager.treeCount
