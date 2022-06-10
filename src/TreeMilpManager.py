@@ -10,11 +10,10 @@ from src.CounterFactualParameters import eps
 class TreeInMilpManager:
     treeCount = 0
 
-    def __init__(self, tree, model, x_var_sol, outputDesired,
-                 featuresType,
-                 constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
-                 binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda
-                 ):
+    def __init__(
+            self, tree, model, x_var_sol, outputDesired, featuresType,
+            constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
+            binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda):
         self.id = TreeInMilpManager.treeCount
         TreeInMilpManager.treeCount += 1
         self.model = model
@@ -84,20 +83,24 @@ class TreeInMilpManager:
                         self.x_var_nodes[f][v]
                         == self.x_var_nodes[f][self.tree.children_left[v]]
                         + self.x_var_nodes[f][self.tree.children_right[v]],
-                        "disjunction_flow_constr_f" + str(f) + "_v" + str(v)+"_t"+str(self.id))
+                        "disjunction_flow_constr_f" + str(f)
+                        + "_v" + str(v) + "_t" + str(self.id))
                     if self.tree.feature[v] == f:
                         disjunction_left_constr[v] = self.model.addConstr(
                             self.x_var_nodes[f][self.tree.children_left[v]]
                             <= (self.tree.threshold[v])
                             * self.y_var[self.tree.children_left[v]],
-                            "disjunction_left_const_v" + str(v)+"_t"+str(self.id))
+                            "disjunction_left_const_v" + str(v)
+                            + "_t" + str(self.id))
                         disjunction_right_constr[v] = self.model.addConstr(
                             self.x_var_nodes[f][self.tree.children_right[v]]
                             >= (self.tree.threshold[v] + eps)
                             * self.y_var[self.tree.children_right[v]],
-                            "disjunction_right_const_v" + str(v)+"_t"+str(self.id))
+                            "disjunction_right_const_v" + str(v)
+                            + "_t" + str(self.id))
 
-        # Linking constraints between the disjonction polytope and the decision path
+        # Linking constraints
+        # between the disjonction polytope and the decision path
         link_constr = dict()
         for f in range(self.nFeatures):
             link_constr[f] = dict()

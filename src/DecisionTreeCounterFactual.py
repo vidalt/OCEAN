@@ -1,25 +1,34 @@
-from src.TreeMilpManager import *
-from src.ClassifierCounterFactual import *
+from gurobipy import GRB
+from src.TreeMilpManager import TreeInMilpManager
+from src.ClassifierCounterFactual import ClassifierCounterFactualMilp
+from src.CounterFactualParameters import BinaryDecisionVariables
+from src.CounterFactualParameters import TreeConstraintsType
 
 
 class DecisionTreeCounterFactualMilp(ClassifierCounterFactualMilp):
     def __init__(
-        self, classifier, sample, outputDesired,
-        constraintsType=TreeConstraintsType.ExtendedFormulation, objectiveNorm=2,
-        verbose=False, featuresType=False, featuresPossibleValues=False,
-        binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda
-    ):
-        ClassifierCounterFactualMilp.__init__(self, classifier, sample, outputDesired,
-                                              constraintsType, objectiveNorm, verbose, featuresType, featuresPossibleValues,
-                                              binaryDecisionVariables
-                                              )
+            self, classifier, sample, outputDesired,
+            objectiveNorm=2, verbose=False,
+            featuresType=False, featuresPossibleValues=False,
+            constraintsType=TreeConstraintsType.ExtendedFormulation,
+            binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda):
+        ClassifierCounterFactualMilp.__init__(
+            self, classifier, sample, outputDesired,
+            constraintsType, objectiveNorm, verbose,
+            featuresType, featuresPossibleValues,
+            binaryDecisionVariables)
         self.model.modelName = "DecisionTreeCounterFactualMilp"
+        # The LinearCombinationOfPlanes is not implemented for a DT
+        assert(self.constraintsType in [
+               TreeConstraintsType.ExtendedFormulation,
+               TreeConstraintsType.BigM])
 
     def buildModel(self):
         self.initSolution()
-        self.treeManager = TreeInMilpManager(self.clf.tree_, self.model, self.x_var_sol,
-                                             self.outputDesired, self.featuresType, self.constraintsType, self.binaryDecisionVariables
-                                             )
+        self.treeManager = TreeInMilpManager(
+            self.clf.tree_, self.model, self.x_var_sol,
+            self.outputDesired, self.featuresType,
+            self.constraintsType, self.binaryDecisionVariables)
         self.treeManager.addTreeVariablesAndConstraintsToMilp()
         self.treeManager.addTreeOuputConstraints()
         self.initObjective()
