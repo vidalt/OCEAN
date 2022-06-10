@@ -1,6 +1,7 @@
 import unittest
 import os
 import pandas as pd
+from gurobipy import GurobiError
 from pathlib import Path
 # Import local functions to test
 from src.RunExperimentsRoutines import trainModelAndSolveCounterFactuals
@@ -39,9 +40,13 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
     def test_simpleFunctionCall(self):
         """ Simple call to function on a single data set. """
         self.__remove_numerical_results_file()
-        trainModelAndSolveCounterFactuals(
-            self.datasetFile, self.counterfactualOneHotDatasetFile,
-            rf_max_depth=4)
+        try:
+            trainModelAndSolveCounterFactuals(
+                self.datasetFile, self.counterfactualOneHotDatasetFile,
+                rf_max_depth=4)
+        except GurobiError:
+            print("Warning: Gurobi license not found:"
+                  " cannot run integration test that solves MILP.")
         # Check that the result file exists and is in same directory
         self.assertTrue(self.resultFile.exists())
         # Check that length of result Df is equal to nbCfs+1
