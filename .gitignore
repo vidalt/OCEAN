@@ -1,5 +1,6 @@
 .idea/*
 .vscode/*
+# Ignore all cache files
 *.pyc
 __pycache__/*
 .pytest_cache/*
@@ -13,3 +14,6 @@ uiEnv/*
 datasets/counterfactuals/*.csv
 # Ignore csv files in test folder
 test/*.csv
+# Ignore result.csv file in root folder
+NumericalResults.csv
+results/*

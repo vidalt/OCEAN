@@ -19,7 +19,7 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
     datasetName = datasetFile.name
     oneHotDataset = "OneHot_" + datasetName
     counterfactualOneHotDatasetFile = pathToCounterfactual / oneHotDataset
-    resultFile = THIS_DIR / 'NumericalResults.csv'
+    resultFile = THIS_DIR.parent / 'NumericalResults.csv'
     # Create a counterfactual seeked set
     buildCounterFactualSeekedFile(datasetFile, desiredOutcome, nbCf)
 
