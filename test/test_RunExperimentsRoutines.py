@@ -44,16 +44,20 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
             trainModelAndSolveCounterFactuals(
                 self.datasetFile, self.counterfactualOneHotDatasetFile,
                 rf_max_depth=4)
+            gurobiLicenseAvailable = True
         except GurobiError:
+            gurobiLicenseAvailable = False
             print("Warning: Gurobi license not found:"
                   " cannot run integration test that solves MILP.")
-        # Check that the result file exists and is in same directory
-        self.assertTrue(self.resultFile.exists())
-        # Check that length of result Df is equal to nbCfs+1
-        resultDf = pd.read_csv(self.resultFile)
-        nbRows, nbCols = resultDf.shape
-        self.assertEqual(nbRows+1, self.nbCf)
-        self.__remove_numerical_results_file()
+        # Check results if model could be solved
+        if gurobiLicenseAvailable:
+            # Check that the result file exists and is in same directory
+            self.assertTrue(self.resultFile.exists())
+            # Check that length of result Df is equal to nbCfs+1
+            resultDf = pd.read_csv(self.resultFile)
+            nbRows, nbCols = resultDf.shape
+            self.assertEqual(nbRows+1, self.nbCf)
+            self.__remove_numerical_results_file()
 
     def test_incorrectObjNormRaisesValueError(self):
         self.assertRaises(AssertionError, trainModelAndSolveCounterFactuals,
