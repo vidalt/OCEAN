@@ -1,23 +1,24 @@
 import gurobipy as gp
 from gurobipy import GRB
-from src.CounterFactualParameters import *
+# Import OCEAN utility functions and types
+from src.CounterFactualParameters import BinaryDecisionVariables
+from src.CounterFactualParameters import TreeConstraintsType
+from src.CounterFactualParameters import FeatureActionnability
+from src.CounterFactualParameters import FeatureType
+from src.CounterFactualParameters import eps
 
 
 class ClassifierCounterFactualMilp:
-    def __init__(
-        self,
-        classifier,
-        sample,
-        outputDesired,
-        constraintsType=TreeConstraintsType.ExtendedFormulation,
-        objectiveNorm=2,
-        verbose=False,
-        featuresType=False,
-        featuresPossibleValues=False,
-        featuresActionnability=False,
-        oneHotEncoding=False,
-        binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda
-    ):
+    def __init__(self, classifier, sample, outputDesired,
+                 constraintsType=TreeConstraintsType.ExtendedFormulation,
+                 objectiveNorm=2,
+                 verbose=False,
+                 featuresType=False,
+                 featuresPossibleValues=False,
+                 featuresActionnability=False,
+                 oneHotEncoding=False,
+                 binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda
+                 ):
         self.verbose = verbose
         self.clf = classifier
         self.x0 = sample
@@ -54,8 +55,6 @@ class ClassifierCounterFactualMilp:
             self.nFeatures) if self.featuresType[i] in [FeatureType.CategoricalNonOneHot, FeatureType.Discrete]]
         for f in self.discreteAndCategoricalNonOneHotFeatures:
             assert len(self.featuresPossibleValues[f]) > 1
-            # for v in self.featuresPossibleValues[f]:
-            #     assert type(v) in [int, float]
             self.featuresPossibleValues[f] = sorted(
                 self.featuresPossibleValues[f])
             for v in range(len(self.featuresPossibleValues[f]) - 1):
@@ -103,7 +102,6 @@ class ClassifierCounterFactualMilp:
                 for l in range(1, len(self.featuresPossibleValues[f])):
                     self.discreteFeaturesLevel_var[f][l] = self.model.addVar(
                         lb=0, ub=1, vtype=GRB.BINARY, name="level_f"+str(f)+"_l"+str(l))
-                    # self.discreteFeaturesLevel_var[f][l] = self.model.addVar(lb=0, ub=1, vtype=GRB.CONTINUOUS,name="level_f"+str(f)+"_l"+str(l))
                     if l > 1:
                         self.discreteFeaturesLevelLinearOrderConstr[f][l] = self.model.addConstr(
                             self.discreteFeaturesLevel_var[f][l] <= self.discreteFeaturesLevel_var[f][l-1],

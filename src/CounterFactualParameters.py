@@ -42,18 +42,6 @@ def getFeatureType(name):
         return None
 
 
-def getFeatureType_oldDatasetsWithoutActionnability(name):
-    if name == 'C':
-        return FeatureType.Numeric
-    elif name == 'B':
-        return FeatureType.Binary
-    elif name == 'D':
-        return FeatureType.Discrete
-    else:
-        print("Unknown feature type", name)
-        return None
-
-
 def isFeatureTypeScalable(featureType):
     if featureType == FeatureType.Categorical:
         return False
