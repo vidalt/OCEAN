@@ -43,7 +43,7 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
         try:
             trainModelAndSolveCounterFactuals(
                 self.datasetFile, self.counterfactualOneHotDatasetFile,
-                rf_max_depth=4)
+                rf_max_depth=4, rf_n_estimators=20, ilf_n_estimators=20)
             gurobiLicenseAvailable = True
         except GurobiError:
             gurobiLicenseAvailable = False
@@ -60,7 +60,7 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
             self.__remove_numerical_results_file()
 
     def test_incorrectObjNormRaisesValueError(self):
-        self.assertRaises(AssertionError, trainModelAndSolveCounterFactuals,
+        self.assertRaises(ValueError, trainModelAndSolveCounterFactuals,
                           self.datasetFile,
                           self.counterfactualOneHotDatasetFile,
                           rf_max_depth=4, objectiveNorm=3)
