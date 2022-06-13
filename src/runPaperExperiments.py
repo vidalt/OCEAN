@@ -49,6 +49,7 @@ runNumericalExperiments(
     randomCostsActivated=False, numericalResultsFileName="results/Figure1.csv")
 
 # ----------------- FIGURE 2 -----------------
+objectiveNormList = [1]
 # Compute the numerical results necessary to plot the result of OCEAN
 # for Figure 2 and store them in results/Figure2_OCEAN.csv"
 runNumericalExperiments(
@@ -56,7 +57,7 @@ runNumericalExperiments(
     rf_n_estimatorsList=[100], ilfActivatedList=[False],
     ilf_max_samplesList=[32], ilf_n_estimatorsList=[100],
     random_stateList=[1], useCuiList=[False],
-    objectiveNormList=[0, 1, 2], randomCostsActivated=False,
+    objectiveNormList=objectiveNormList, randomCostsActivated=False,
     numericalResultsFileName="results/Figure2_OCEAN.csv")
 
 # Compute the numerical results necessary to plot the result of OAE
@@ -66,10 +67,11 @@ runNumericalExperiments(
     rf_n_estimatorsList=[100], ilfActivatedList=[False],
     ilf_max_samplesList=[32], ilf_n_estimatorsList=[100],
     random_stateList=[1], useCuiList=[True],
-    objectiveNormList=[0, 1, 2], randomCostsActivated=False,
+    objectiveNormList=objectiveNormList, randomCostsActivated=False,
     numericalResultsFileName="results/Figure2_OAE.csv")
 
 # ----------------- FIGURE 3 -----------------
+objectiveNormList = [1]
 # Compute the numerical results necessary to plot the result of OCEAN
 # for Figure 3 and store them in results/Figure3_OCEAN.csv
 runNumericalExperiments(
@@ -77,7 +79,7 @@ runNumericalExperiments(
     rf_n_estimatorsList=[10, 20, 50, 100, 200, 500],
     ilfActivatedList=[False], ilf_max_samplesList=[32],
     ilf_n_estimatorsList=[100], random_stateList=[1],
-    useCuiList=[False], objectiveNormList=[0, 1, 2],
+    useCuiList=[False], objectiveNormList=objectiveNormList,
     randomCostsActivated=False,
     numericalResultsFileName="results/Figure3_OCEAN.csv")
 
@@ -93,18 +95,18 @@ runNumericalExperiments(
     rf_n_estimatorsList=[10, 20, 50, 100, 200, 500],
     ilfActivatedList=[False], ilf_max_samplesList=[32],
     ilf_n_estimatorsList=[100], random_stateList=[1],
-    useCuiList=[True], objectiveNormList=[0, 1, 2],
+    useCuiList=[True], objectiveNormList=objectiveNormList,
     randomCostsActivated=False,
     numericalResultsFileName="results/Figure3_OAE.csv")
 
-# ----------------- TABLE 3 -----------------
-# Compute plausibility results for table 3
-# and store them in results/Table3.csv"
+# ----------------- TABLE 4 -----------------
+# Compute plausibility results for table 4
+# and store them in results/Table4.csv"
 runNumericalExperiments(
     ourDatasetsWithCounterfactualsDict,
     rf_max_depthList=[5], rf_n_estimatorsList=[100],
     ilfActivatedList=[True], ilf_max_samplesList=[32],
     ilf_n_estimatorsList=[100], random_stateList=[1],
-    useCuiList=[False], objectiveNormList=[0, 1, 2],
+    useCuiList=[False], objectiveNormList=objectiveNormList,
     randomCostsActivated=False,
     numericalResultsFileName="results/Table3.csv")
