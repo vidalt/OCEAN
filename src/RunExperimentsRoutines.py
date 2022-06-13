@@ -34,7 +34,7 @@ def trainModelAndSolveCounterFactuals(
     # Train random forest
     clf = RandomForestClassifier(
         max_depth=rf_max_depth, random_state=random_state, n_estimators=rf_n_estimators)
-    clf.fit(reader.X_train, reader.y_train)
+    clf.fit(reader.X_train.values, reader.y_train.values)
     train_score = clf.score(reader.X_train, reader.y_train)
     test_score = clf.score(reader.X_test, reader.y_test)
     print("Random forest with", clf.n_estimators, "estimators with max depth",
@@ -45,7 +45,7 @@ def trainModelAndSolveCounterFactuals(
     # Train isolation forest
     ilf = IsolationForest(random_state=random_state, max_samples=ilf_max_samples,
                           n_estimators=ilf_n_estimators, contamination=0.1)
-    ilf.fit(reader.XwithGoodPoint)
+    ilf.fit(reader.XwithGoodPoint.values)
     print("Isolation forest with", ilf.n_estimators,
           "estimatorswith max samples", ilf.max_samples)
     nodes = [est.tree_.node_count for est in ilf.estimators_]
