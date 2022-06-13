@@ -32,6 +32,21 @@ class test_ClassifierCounterFactualMilp(unittest.TestCase):
         ClassifierCounterFactualMilp(
             self.classifier, sample, self.outputDesired)
 
+    def test_allNorms(self):
+        sample = self.X[0:5, :]
+        # l0 norm
+        ClassifierCounterFactualMilp(
+            self.classifier, sample, self.outputDesired,
+            objectiveNorm=0)
+        # l1 norm
+        ClassifierCounterFactualMilp(
+            self.classifier, sample, self.outputDesired,
+            objectiveNorm=1)
+        # l2 norm
+        ClassifierCounterFactualMilp(
+            self.classifier, sample, self.outputDesired,
+            objectiveNorm=2)
+
     def test_defaultParametersIsBestFormulation(self):
         """
         Several implementations have been tested, the best

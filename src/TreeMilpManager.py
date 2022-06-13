@@ -102,7 +102,8 @@ class TreeInMilpManager:
         # Linking constraints
         # between the disjonction polytope and the decision path
         link_constr = dict()
-        for f in range(self.nFeatures):
+        # for f in range(self.nFeatures):
+        for f in self.continuousFeatures:
             link_constr[f] = dict()
             for v in range(self.n_nodes):
                 link_constr[f][v] = self.model.addConstr(

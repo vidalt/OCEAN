@@ -35,6 +35,42 @@ class test_TreeMilpManager(unittest.TestCase):
                           self.classCfMilp.constraintsType,
                           self.classCfMilp.binaryDecisionVariables)
 
+    def test_addTreeVariablesAndConstraintsToMilp(self):
+        # Initialize x_var_sol
+        self.classCfMilp.initSolution()
+        # -- Default arguments: LinComb + LeftRight --
+        treeMng = TreeInMilpManager(
+            self.randomForest.estimators_[0].tree_,
+            self.classCfMilp.model, self.classCfMilp.x_var_sol,
+            self.outputDesired, self.classCfMilp.featuresType,
+            TreeConstraintsType.LinearCombinationOfPlanes,
+            BinaryDecisionVariables.LeftRight_lambda)
+        treeMng.addTreeVariablesAndConstraintsToMilp()
+        # -- Var1: Extended + LeftRight --
+        treeMng = TreeInMilpManager(
+            self.randomForest.estimators_[0].tree_,
+            self.classCfMilp.model, self.classCfMilp.x_var_sol,
+            self.outputDesired, self.classCfMilp.featuresType,
+            TreeConstraintsType.ExtendedFormulation,
+            BinaryDecisionVariables.LeftRight_lambda)
+        treeMng.addTreeVariablesAndConstraintsToMilp()
+        # -- Var2: LinComb + PathFlow --
+        treeMng = TreeInMilpManager(
+            self.randomForest.estimators_[0].tree_,
+            self.classCfMilp.model, self.classCfMilp.x_var_sol,
+            self.outputDesired, self.classCfMilp.featuresType,
+            TreeConstraintsType.LinearCombinationOfPlanes,
+            BinaryDecisionVariables.PathFlow_y)
+        treeMng.addTreeVariablesAndConstraintsToMilp()
+        # -- Var3: Extended + PathFlow --
+        treeMng = TreeInMilpManager(
+            self.randomForest.estimators_[0].tree_,
+            self.classCfMilp.model, self.classCfMilp.x_var_sol,
+            self.outputDesired, self.classCfMilp.featuresType,
+            TreeConstraintsType.ExtendedFormulation,
+            BinaryDecisionVariables.PathFlow_y)
+        treeMng.addTreeVariablesAndConstraintsToMilp()
+
     def test_FeaturesTypeIsARequiredArgument(self):
         # Initialize x_var_sol
         self.classCfMilp.initSolution()

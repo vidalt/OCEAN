@@ -323,7 +323,7 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
         self.model.addConstr(expr >= 0, "isolationForestInlierConstraint")
 
     # -- Implement objective function --
-    def __initObjective(self):
+    def __initModelObjective(self):
         useLinCombPlanes = (self.constraintsType
                             == TreeConstraintsType.LinearCombinationOfPlanes)
         if useLinCombPlanes:
@@ -333,7 +333,8 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
             ClassifierCounterFactualMilp.initObjective(self)
 
     def __initLinearCombinationOfPlanesObj(self):
-        assert self.objectiveNorm in [0, 1, 2]
+        if self.objectiveNorm not in [0, 1, 2]:
+            raise ValueError("Unknown objective norm")
         self.obj = gp.LinExpr(0.0)
         for f in self.continuousFeatures:
             self.__initLinearCombinationOfPlaneObjOfFeature(f)
@@ -549,7 +550,7 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
             self.__addIsolationForestPlausibilityConstraint()
         self.addActionnabilityConstraints()
         self.addOneHotEncodingConstraints()
-        self.initObjective()
+        self.__initModelObjective()
 
     def solveModel(self):
         self.model.write("rf.lp")
