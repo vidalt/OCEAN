@@ -185,7 +185,11 @@ class TreeInMilpManager:
                         + self.y_var[self.tree.children_right[v]],
                         "flow_" + str(v)+"_t"+str(self.id))
         else:
-            raise ValueError("Unknown binary decision variables.")
+            supportedTypes = [BinaryDecisionVariables.LeftRight_lambda,
+                              BinaryDecisionVariables.PathFlow_y]
+            raise ValueError("Unknown binary decision variables.\n",
+                             self.binaryDecisionVariables,
+                             "is not in ", supportedTypes)
 
     def addContinuousVariablesConsistencyConstraints(self):
         if self.constraintsType == TreeConstraintsType.ExtendedFormulation:

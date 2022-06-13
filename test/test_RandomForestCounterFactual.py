@@ -17,7 +17,7 @@ class test_RandomForestCounterFactualMilpOnToyData(unittest.TestCase):
     X, y = make_moons(noise=0.01, random_state=0)
     rfClassifier = RandomForestClassifier(max_depth=4)
     rfClassifier.fit(X, y)
-    initSample = np.array([0, 1]).reshape(1, -1)
+    initSample = np.array([1, 0]).reshape(1, -1)
     outputDesired = 1
 
     def test_emptyClassInstantiationRaisesTypeError(self):
@@ -89,13 +89,13 @@ class test_RandomForestCounterFactualMilpOnRealData(unittest.TestCase):
     def __solveModelAndCheckCfIsValid(self, rfCfMilp):
         try:
             rfCfMilp.solveModel()
-            gurobiLicenseAvailable = True
+            self.gurobiLicenseAvailable = True
         except GurobiError:
-            gurobiLicenseAvailable = False
+            self.gurobiLicenseAvailable = False
             print("Warning: Gurobi license not found:"
                   " cannot run integration test that solves MILP.")
             counterfactualExplanation = False
-        if gurobiLicenseAvailable:
+        if self.gurobiLicenseAvailable:
             # Check counterfactual is valid
             counterfactualExplanation = rfCfMilp.x_sol
             self.assertEqual(self.clf.predict(counterfactualExplanation),
@@ -176,7 +176,8 @@ class test_RandomForestCounterFactualMilpOnRealData(unittest.TestCase):
         cf4 = self.__getCounterfactualWithModelFormulation(
             TreeConstraintsType.ExtendedFormulation,
             BinaryDecisionVariables.PathFlow_y)
-        # Check all solutions are equal
-        self.__assertCounterfactualsEqual(cf1, cf2)
-        # self.__assertCounterfactualsEqual(cf1, cf3)
-        self.__assertCounterfactualsEqual(cf1, cf4)
+        if self.gurobiLicenseAvailable:
+            # Check all solutions are equal
+            self.__assertCounterfactualsEqual(cf1, cf2)
+            # self.__assertCounterfactualsEqual(cf1, cf3)
+            self.__assertCounterfactualsEqual(cf1, cf4)
