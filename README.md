@@ -1,4 +1,4 @@
-<img src="ocean_logo.svg" width="300">
+<img src="ocean_logo.svg" width="400">
 
 # Optimal Counterfactual Explanations in Tree Ensembles
 
