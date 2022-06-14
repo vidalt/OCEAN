@@ -5,7 +5,7 @@ from sklearn.ensemble import IsolationForest
 # Load OCEAN functions
 from src.dataProcessing import DatasetReader
 from src.RandomForestCounterFactual import RandomForestCounterFactualMilp
-from src.CuiRandomForestCounterFactual import CuiRandomForestCounterFactualMilp
+from src.benchmarks.CuiRandomForestCounterFactual import CuiRandomForestCounterFactualMilp
 from src.CounterFactualParameters import BinaryDecisionVariables
 from src.CounterFactualParameters import TreeConstraintsType
 from src.writeResults import writeLegend
