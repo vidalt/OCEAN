@@ -1,5 +1,11 @@
+import os
+
+
 def writeLegend(numericalResultsFileName):
     """ Write header of csv file if file is just created. """
+    # Check that 'results' directory exists, create it if needed
+    if not os.path.exists('results'):
+        os.makedirs('results')
     write = open(numericalResultsFileName, "a")
     # Instance
     write.write("trainingSetFile"+","+"rf_max_depth"+','+"rf_n_estimators"
