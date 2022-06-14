@@ -1,3 +1,4 @@
+![](ocean_logo.svg)
 # Description
 
 This project enables to reproduce the numerical experiments used to produce the tables and figures of the paper *Optimal Counterfactual Explanations in Tree Ensemble* by Axel Parmentier and Thibaut Vidal in the *Proceedings of the thirty-eighth International Conference on Machine Learning*, 2021, in press. 
@@ -89,7 +90,7 @@ Then, run the following commands to start the interface:
 
 The following git demonstrates the use of the interface:
 
-![](gif_v1.gif)
+![](ui_gif_v1.gif)
 
 Some automated tests can also be done. If you wish to run them, use the following commands:
 
