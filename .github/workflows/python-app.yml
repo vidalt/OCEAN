@@ -35,6 +35,3 @@ jobs:
       run: |
         # Test OCEAN functions
         pytest test/
-        # Test ui functions
-        cd ui
-        pytest
