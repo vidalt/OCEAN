@@ -1,11 +1,10 @@
 # Author: Moises Henrique Pereira
 # this class imports the UI file to be possible to access and interact with the interface components
-
 from PyQt5.QtWidgets import QWidget, QListWidgetItem, QTableWidgetItem
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor
 
-from .Ui_CounterfactualInterface import Ui_CounterfactualInterface
+from ui.interface.Ui_CounterfactualInterface import Ui_CounterfactualInterface
 
 class CounterfactualInterfaceView(QWidget, Ui_CounterfactualInterface):
 
@@ -19,7 +18,7 @@ class CounterfactualInterfaceView(QWidget, Ui_CounterfactualInterface):
         self.setupUi(self)
 
         self.comboBoxSelectDataset.currentTextChanged.connect(lambda: self.chosenDataset.emit())
-        
+
         self.pushButtonRandomPoint.clicked.connect(lambda: self.randomPoint.emit())
 
         self.pushButtonCalculateClass.clicked.connect(lambda: self.calculateClass.emit())
@@ -35,7 +34,7 @@ class CounterfactualInterfaceView(QWidget, Ui_CounterfactualInterface):
         assert isinstance(datasets, list)
         for dataset in datasets:
             assert isinstance(dataset, str)
-    
+
         if datasets is not None:
             self.comboBoxSelectDataset.clear()
             self.comboBoxSelectDataset.addItems(datasets)
@@ -88,7 +87,7 @@ class CounterfactualInterfaceView(QWidget, Ui_CounterfactualInterface):
 
         self.plainTextEditCounterfactualStatus.insertPlainText(status)
 
-    # this function is used to clean just the comparison table 
+    # this function is used to clean just the comparison table
     def __clearTableWidgetCounterfactualComparison(self):
         rowCount = self.tableWidgetCounterfactualComparison.rowCount()
         for index in reversed(range(rowCount)):

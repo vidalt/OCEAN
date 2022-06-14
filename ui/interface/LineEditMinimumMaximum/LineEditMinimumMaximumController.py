@@ -3,13 +3,13 @@
 # this component handles to get the user value
 # and to get the minimum e maximum values given a feature
 
-from .LineEditMinimumMaximumView import LineEditMinimumMaximumView
+from ui.interface.LineEditMinimumMaximum.LineEditMinimumMaximumView import LineEditMinimumMaximumView
 
 class LineEditMinimumMaximumController:
 
     def __init__(self, parent=None):
         self.__view = LineEditMinimumMaximumView(parent)
-        
+
 
     @property
     def view(self):

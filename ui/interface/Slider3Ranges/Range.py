@@ -1,33 +1,34 @@
 # Author: Moises Henrique Pereira
-# this class handles the range, range value that are shown, and where the value needs to be shown
-
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QElapsedTimer 
+# this class handles the range, range value that are shown,
+# and where the value needs to be shown
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QElapsedTimer
 from PyQt5.QtWidgets import QLabel
+# Import ui functions
+from ui.interface.Slider3Ranges.RangeValue import RangeValue
+from ui.interface.Slider3Ranges.Slider import Slider
 
-from .RangeValue import RangeValue
-from .Slider import Slider
 
 class Range(QLabel):
-               
+
     def __init__(self, parent=None):
         super(Range, self).__init__(parent)
 
-        self.__signals = RangeSignals()  
-        
+        self.__signals = RangeSignals()
+
         self.__isPressed = False
 
         self.__minX = 0
         self.__maxX = self.parent().width()-self.width()
         self.__minValue = None
         self.__maxValue = None
-   
+
         self.__rangeValue = RangeValue(self.parent())
         self.__rangeValue.Range = self
         self.__rangeValue.raise_()
         self.__rangeValue.adjustSize()
         self.__rangeValue.show()
 
-        self.__slider = None    
+        self.__slider = None
         self.__value = None
         self.__space = None
 
@@ -35,7 +36,6 @@ class Range(QLabel):
 
         self.setScaledContents(True)
         self.__updateRangeValue()
-
 
     @property
     def minValue(self):
@@ -55,11 +55,11 @@ class Range(QLabel):
 
         self.__slider = slider
 
-        self.__minX = slider.geometry().topLeft().x() 
-        self.__maxX = slider.geometry().topRight().x() 
+        self.__minX = slider.geometry().topLeft().x()
+        self.__maxX = slider.geometry().topRight().x()
 
         self.__minValue = slider.minValue
-        self.__maxValue = slider.maxValue 
+        self.__maxValue = slider.maxValue
 
     # this function is used to set the initial values
     def initializeRange(self, minValue, maxValue, value, space):
@@ -73,7 +73,8 @@ class Range(QLabel):
         self.__value = value
         self.__space = space
 
-        positionFromValue = self.__slider.getPositionFromValue(self.__minX, self.__maxX, value)
+        positionFromValue = self.__slider.getPositionFromValue(
+            self.__minX, self.__maxX, value)
         self.__updatePos(positionFromValue)
         self.__updateRangeValue()
 
@@ -87,37 +88,39 @@ class Range(QLabel):
         self.__maxValue = maxValue
         self.__value = value
 
-        positionFromValue = self.__slider.getPositionFromValue(self.__minX, self.__maxX, value)
+        positionFromValue = self.__slider.getPositionFromValue(
+            self.__minX, self.__maxX, value)
         self.__updatePos(positionFromValue)
         self.__updateRangeValue()
 
     def mousePressEvent(self, event):
         self.__clickTimer.start()
         self.__isPressed = True
-      
+
     def mouseMoveEvent(self, event):
         if self.__isPressed:
-            posX =  self.mapToParent(event.pos()).x() 
+            posX = self.mapToParent(event.pos()).x()
             self.__updatePos(posX)
 
     @pyqtSlot(int)
     def setValue(self, newValue):
         assert newValue is not None
 
-        if newValue >= self.__slider.minValue and newValue <= self.__slider.maxValue:            
-                self.__value = newValue
+        if newValue >= self.__slider.minValue and newValue <= self.__slider.maxValue:
+            self.__value = newValue
 
-                t = (newValue-self.__slider.minValue)/(self.__slider.maxValue-self.__slider.minValue) 
+            t = (newValue-self.__slider.minValue) / \
+                (self.__slider.maxValue-self.__slider.minValue)
 
-                newPos = ((1-t)*self.__minX)+(t*self.__maxX)
-            
-                self.__updateValueFromPosition(newPos)
-                self.__slider.setValue(newValue)
+            newPos = ((1-t)*self.__minX)+(t*self.__maxX)
+
+            self.__updateValueFromPosition(newPos)
+            self.__slider.setValue(newValue)
 
     def __updatePos(self, posX):
         assert posX is not None
 
-        if posX <= self.__maxX and posX >= self.__minX:  
+        if posX <= self.__maxX and posX >= self.__minX:
             value = self.__slider.getValueFromPos(posX)
             self.setValue(value)
 
@@ -129,8 +132,8 @@ class Range(QLabel):
             value = self.__slider.getValueFromPos(posX)
             self.setValue(value)
 
-    def __updateRangeValue(self):    
-        if self.__slider is not None:    
+    def __updateRangeValue(self):
+        if self.__slider is not None:
             self.__rangeValue.setText(str(self.__value))
             self.__rangeValue.adjustSize()
             self.__rangeValue.raise_()
@@ -142,15 +145,21 @@ class Range(QLabel):
                 labelPosX -= self.__rangeValue.width()/2
             labelPosY = self.__slider.pos().y()+self.__space
 
-            self.__rangeValue.setGeometry(labelPosX, labelPosY, self.__rangeValue.width(), self.__rangeValue.height())
+            self.__rangeValue.setGeometry(int(labelPosX),
+                                          labelPosY,
+                                          self.__rangeValue.width(),
+                                          self.__rangeValue.height())
 
     def mouseReleaseEvent(self, event):
-        self.__isPressed = False  
+        self.__isPressed = False
 
-    def __updateValueFromPosition(self, posX):  
+    def __updateValueFromPosition(self, posX):
         assert posX is not None
 
-        self.setGeometry(posX-self.width()/2, self.geometry().y(), self.width(), self.height()) 
+        self.setGeometry(int(posX-self.width()/2),
+                         self.geometry().y(),
+                         self.width(),
+                         self.height())
         self.__updateRangeValue()
 
         self.__signals.updateValueSignal.emit(self)
@@ -159,5 +168,5 @@ class Range(QLabel):
 class RangeSignals(QObject):
 
     startEditingSignal = pyqtSignal(Range)
-    updateValueSignal =  pyqtSignal(Range)
-    stopEditingSignal =  pyqtSignal(Range)  
+    updateValueSignal = pyqtSignal(Range)
+    stopEditingSignal = pyqtSignal(Range)

@@ -1,15 +1,16 @@
 # Author: Moises Henrique Pereira
-# this class handle the access over dataframes, files and the icml code that prepare the selected dataset
+# this class handle the access over dataframes, files
+# and the icml code that prepare the selected dataset
 # and gives the needed informations to be accessed by controller
-
-from CounterFactualParameters import FeatureType
-from CounterFactualParameters import getFeatureType, getFeatureActionnability
-from dataProcessing import DatasetReader
-
 import os
 import random as rd
 import pandas as pd
 import numpy as np
+# Load OCEAN functions
+from src.CounterFactualParameters import FeatureType
+from src.CounterFactualParameters import getFeatureType, getFeatureActionnability
+from src.dataProcessing import DatasetReader
+
 
 class CounterfactualInterfaceModel():
 
@@ -36,8 +37,8 @@ class CounterfactualInterfaceModel():
 
         self.featuresOneHotEncode = None
 
-
     # this function is called to access dataframes directory and return the name of them
+
     def getDatasetsName(self):
         _, _, datasetsName = next(os.walk(self.datasetsPath))
 
@@ -54,33 +55,35 @@ class CounterfactualInterfaceModel():
 
         self.__data = pd.read_csv(chosenDatasetPath)
         self.features = self.__data.columns
-        self.featuresType = {feature:getFeatureType(self.__data[feature][0]) for feature in self.__data.columns if feature != 'Class'}
+        self.featuresType = {feature: getFeatureType(
+            self.__data[feature][0]) for feature in self.__data.columns if feature != 'Class'}
         self.__data = self.__data.drop(0)
-        self.featuresActionability = {feature:getFeatureActionnability(self.__data[feature][1]) for feature in self.__data.columns if feature != 'Class'}
+        self.featuresActionability = {feature: getFeatureActionnability(
+            self.__data[feature][1]) for feature in self.__data.columns if feature != 'Class'}
         self.__data = self.__data.drop(1)
-        
+
         self.featuresInformations = {}
         for feature in self.features:
             if feature != 'Class':
                 if self.featuresType[feature] is FeatureType.Binary:
                     values = self.__data[feature].unique()
 
-                    self.featuresInformations[feature] = {'featureType':self.featuresType[feature], 
-                                                            'featureActionnability':self.featuresActionability[feature],
-                                                            'value0':values[0],
-                                                            'value1':values[1]}
+                    self.featuresInformations[feature] = {'featureType': self.featuresType[feature],
+                                                          'featureActionnability': self.featuresActionability[feature],
+                                                          'value0': values[0],
+                                                          'value1': values[1]}
                 elif self.featuresType[feature] is FeatureType.Discrete or self.featuresType[feature] is FeatureType.Numeric:
-                    self.featuresInformations[feature] = {'featureType':self.featuresType[feature], 
-                                                            'featureActionnability':self.featuresActionability[feature],
-                                                            'min':min(self.__data[feature].astype(float)),
-                                                            'max':max(self.__data[feature].astype(float))}
-                elif self.featuresType[feature] is FeatureType.Categorical: 
-                    self.featuresInformations[feature] = {'featureType':self.featuresType[feature], 
-                                                            'featureActionnability':self.featuresActionability[feature],
-                                                            'possibleValues':self.__data[feature].value_counts().keys().tolist()}
+                    self.featuresInformations[feature] = {'featureType': self.featuresType[feature],
+                                                          'featureActionnability': self.featuresActionability[feature],
+                                                          'min': min(self.__data[feature].astype(float)),
+                                                          'max': max(self.__data[feature].astype(float))}
+                elif self.featuresType[feature] is FeatureType.Categorical:
+                    self.featuresInformations[feature] = {'featureType': self.featuresType[feature],
+                                                          'featureActionnability': self.featuresActionability[feature],
+                                                          'possibleValues': self.__data[feature].value_counts().keys().tolist()}
 
         self.currentDatasetReader = DatasetReader(chosenDatasetPath)
-        self.__transformedData =self.currentDatasetReader.data
+        self.__transformedData = self.currentDatasetReader.data
         self.transformedFeatures = self.currentDatasetReader.data.columns
 
         self.transformedFeaturesOrdered = []
@@ -92,7 +95,8 @@ class CounterfactualInterfaceModel():
                     self.transformedFeaturesOrdered.append(feature)
                 elif self.featuresType[feature] is FeatureType.Categorical:
                     for value in self.featuresInformations[feature]['possibleValues']:
-                            self.transformedFeaturesOrdered.append(feature+'_'+value)
+                        self.transformedFeaturesOrdered.append(
+                            feature+'_'+value)
 
         self.featuresOneHotEncode = self.currentDatasetReader.oneHotEncoding
         self.transformedFeaturesType = self.currentDatasetReader.featuresType
@@ -141,7 +145,8 @@ class CounterfactualInterfaceModel():
                         transformedDataPoint.append(1)
 
                 elif self.featuresType[feature] is FeatureType.Discrete or self.featuresType[feature] is FeatureType.Numeric:
-                    transformedValue = (float(selectedDataPoint[index])-self.featuresInformations[feature]['min'])/(self.featuresInformations[feature]['max']-self.featuresInformations[feature]['min'])
+                    transformedValue = (float(selectedDataPoint[index])-self.featuresInformations[feature]['min'])/(
+                        self.featuresInformations[feature]['max']-self.featuresInformations[feature]['min'])
                     transformedDataPoint.append(transformedValue)
 
                 elif self.featuresType[feature] is FeatureType.Categorical:
@@ -167,13 +172,16 @@ class CounterfactualInterfaceModel():
             if feature != 'Class':
                 if self.featuresType[feature] is FeatureType.Binary:
                     if abs(transformedDataPoint[index]) == 0:
-                        dataPoint.append(self.featuresInformations[feature]['value0'])
+                        dataPoint.append(
+                            self.featuresInformations[feature]['value0'])
                     elif abs(transformedDataPoint[index]) == 1:
-                        dataPoint.append(self.featuresInformations[feature]['value1'])
+                        dataPoint.append(
+                            self.featuresInformations[feature]['value1'])
                     index += 1
 
                 elif self.featuresType[feature] is FeatureType.Discrete or self.featuresType[feature] is FeatureType.Numeric:
-                    value = self.featuresInformations[feature]['min']+(transformedDataPoint[index])*(self.featuresInformations[feature]['max']-self.featuresInformations[feature]['min'])
+                    value = self.featuresInformations[feature]['min']+(transformedDataPoint[index])*(
+                        self.featuresInformations[feature]['max']-self.featuresInformations[feature]['min'])
                     dataPoint.append(value)
                     index += 1
 
@@ -183,7 +191,7 @@ class CounterfactualInterfaceModel():
                     #     if transformedDataPoint[index] == 1:
                     #         dataPoint.append(value)
                     #         appended += 1
-                        
+
                     #     index += 1
 
                     # if appended == 0:
@@ -195,7 +203,7 @@ class CounterfactualInterfaceModel():
                         if transformedDataPoint[index] > maxValue:
                             maxValue = transformedDataPoint[index]
                             counterfactualValue = value
-                        
+
                         index += 1
                     dataPoint.append(counterfactualValue)
 
@@ -206,6 +214,7 @@ class CounterfactualInterfaceModel():
         assert isinstance(feature, str)
         assert value is not None
 
-        transformedValue = (float(value)-self.featuresInformations[feature]['min'])/(self.featuresInformations[feature]['max']-self.featuresInformations[feature]['min'])
+        transformedValue = (float(value)-self.featuresInformations[feature]['min'])/(
+            self.featuresInformations[feature]['max']-self.featuresInformations[feature]['min'])
 
         return transformedValue

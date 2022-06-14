@@ -1,6 +1,5 @@
 # Author: Moises Henrique Pereira
 # this class is used to agroup some values that are repeated along the code
-
 from enum import Enum
 
 class CounterfactualEngineEnums:
@@ -11,6 +10,6 @@ class CounterfactualEngineEnums:
         N_ESTIMATORS = 50
 
     class IsolationForestParameters(Enum):
-        RANDOM_STATE = 1 
+        RANDOM_STATE = 1
         MAX_SAMPLES = 50
         N_ESTIMATORS = 50

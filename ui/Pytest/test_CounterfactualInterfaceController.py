@@ -1,11 +1,9 @@
 # Author: Moises Henrique Pereira
-# this class handle the controller's functions tests  
+# this class handle the controller's functions tests
 
 import pytest
 import sys
-
 from PyQt5 import QtWidgets
-
 from ui.mainTest import StaticObjects
 
 # the function reportProgress expect a string as parameter

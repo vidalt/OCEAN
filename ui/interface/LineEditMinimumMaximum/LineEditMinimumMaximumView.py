@@ -3,10 +3,10 @@
 
 from PyQt5.QtWidgets import QWidget, QCompleter
 
-from .Ui_LineEditMinimumMaximum import Ui_LineEditMinimumMaximum
+from ui.interface.LineEditMinimumMaximum.Ui_LineEditMinimumMaximum import Ui_LineEditMinimumMaximum
 
 class LineEditMinimumMaximumView(QWidget, Ui_LineEditMinimumMaximum):
-    
+
     def __init__(self, parent=None):
         super(LineEditMinimumMaximumView, self).__init__(parent)
         self.setupUi(self)
@@ -14,13 +14,13 @@ class LineEditMinimumMaximumView(QWidget, Ui_LineEditMinimumMaximum):
         self.lineEditUserValue.textChanged.connect(lambda: self.__updateMinMaxNotActionable())
         self.checkBoxActionability.stateChanged.connect(lambda: self.__actionabilityOptionHandler())
 
-    # this function ensures that when the feature is not actionable, 
+    # this function ensures that when the feature is not actionable,
     # the value inside the min e max will be the user value
     def __updateMinMaxNotActionable(self):
         if not self.checkBoxActionability.isChecked():
             self.lineEditMinimumInputValue.setText(self.lineEditUserValue.text())
             self.lineEditMaximumInputValue.setText(self.lineEditUserValue.text())
-    
+
     # this function disables the component interactions
     def __actionabilityOptionHandler(self):
         if self.checkBoxActionability.isChecked():
@@ -48,8 +48,8 @@ class LineEditMinimumMaximumView(QWidget, Ui_LineEditMinimumMaximum):
 
     # this function returns a dictionary with the value of the widgets
     def getContent(self):
-        content = {'value':self.__getSelectedValue(), 
-                   'minimumValue':self.__getMinimumInputValue(), 
+        content = {'value':self.__getSelectedValue(),
+                   'minimumValue':self.__getMinimumInputValue(),
                    'maximumValue':self.__getMaximumInputValue()}
 
         return content

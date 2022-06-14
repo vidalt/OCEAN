@@ -1,13 +1,11 @@
 # Author: Moises Henrique Pereira
 # this class imports the UI file to be possible to access the interface components
-
 from PyQt5.QtWidgets import QWidget, QCompleter, QListWidgetItem
 from PyQt5.QtCore import Qt
-
-from .Ui_ComboboxList import Ui_ComboboxList
+from ui.interface.ComboboxList.Ui_ComboboxList import Ui_ComboboxList
 
 class ComboboxListView(QWidget, Ui_ComboboxList):
-    
+
     def __init__(self, parent=None):
         super(ComboboxListView, self).__init__(parent)
         self.setupUi(self)
@@ -20,7 +18,7 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
         self.pushButtonUncheckAll.clicked.connect(lambda: self.__uncheckAllHandler())
 
 
-    # this function ensures that when the feature is not actionable, 
+    # this function ensures that when the feature is not actionable,
     # the allowed value will be the value inside the combobox
     def __updateAllowedNotActionable(self):
         if not self.checkBoxActionability.isChecked():
@@ -30,7 +28,7 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
                         self.listWidgetAllowedValues.item(i).setCheckState(Qt.Unchecked)
                     else:
                         self.listWidgetAllowedValues.item(i).setCheckState(Qt.Checked)
-    
+
     # this function disables the component interactions
     def __actionabilityOptionHandler(self):
         if self.checkBoxActionability.isChecked():
@@ -70,7 +68,7 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
             assert isinstance(item, str)
 
         self.labelFeatureName.setText(featureName)
-        
+
         self.comboBoxValues.clear()
         self.comboBoxValues.addItems(content)
         completer = QCompleter(content)
@@ -92,8 +90,8 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
 
     # this function returns a dictionary with the value of the widgets
     def getContent(self):
-        content = {'value':self.__getSelectedValue(), 
-                   'allowedValues':self.__getAllowedValues(), 
+        content = {'value':self.__getSelectedValue(),
+                   'allowedValues':self.__getAllowedValues(),
                    'notAllowedValues':self.__getNotAllowedValues()}
 
         return content
@@ -123,5 +121,5 @@ class ComboboxListView(QWidget, Ui_ComboboxList):
             if i != 0:
                 if not self.listWidgetAllowedValues.item(i).checkState() == Qt.Checked:
                     notAllowedValues.append(self.listWidgetAllowedValues.item(i).text())
-        
+
         return notAllowedValues

@@ -1,27 +1,17 @@
 # Author: Moises Henrique Pereira
-# this class handle to instantiate the classes ensuring that the classes will behave properly considering
-# the relative import used in some files
-
-import sys
-import os
-
-# these three lines is needed to do the the correct reference
-path0 = sys.path[0]
-sys.path.insert(0,os.path.join(path0, 'src'))
-sys.path.insert(1,os.path.join(path0, 'ui'))
-
-from ui.CounterfactualInterface.CounterfactualInterfaceModel import CounterfactualInterfaceModel
-from ui.CounterfactualInterface.CounterfactualInterfaceView import CounterfactualInterfaceView
-from ui.CounterfactualInterface.CounterfactualInterfaceController import CounterfactualInterfaceController
-from ui.CounterfactualInterface.ComboboxList.ComboboxListView import ComboboxListView
-from ui.CounterfactualInterface.ComboboxList.ComboboxListController import ComboboxListController
-from ui.CounterfactualInterface.DoubleRadioButton.DoubleRadioButtonView import DoubleRadioButtonView
-from ui.CounterfactualInterface.DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
-from ui.CounterfactualInterface.LineEditMinimumMaximum.LineEditMinimumMaximumView import LineEditMinimumMaximumView
-from ui.CounterfactualInterface.LineEditMinimumMaximum.LineEditMinimumMaximumController import LineEditMinimumMaximumController
-from ui.CounterfactualInterface.Slider3Ranges.Slider3RangesController import Slider3RangesController
-from ui.CounterfactualInterface.Slider3Ranges.Slider3RangesView import Slider3RangesView
-from ui.CounterfactualInterface.Slider3Ranges.Slider import Slider
+# this class handle to instantiate the classes
+from ui.interface.CounterfactualInterfaceModel import CounterfactualInterfaceModel
+from ui.interface.CounterfactualInterfaceView import CounterfactualInterfaceView
+from ui.interface.CounterfactualInterfaceController import CounterfactualInterfaceController
+from ui.interface.ComboboxList.ComboboxListView import ComboboxListView
+from ui.interface.ComboboxList.ComboboxListController import ComboboxListController
+from ui.interface.DoubleRadioButton.DoubleRadioButtonView import DoubleRadioButtonView
+from ui.interface.DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
+from ui.interface.LineEditMinimumMaximum.LineEditMinimumMaximumView import LineEditMinimumMaximumView
+from ui.interface.LineEditMinimumMaximum.LineEditMinimumMaximumController import LineEditMinimumMaximumController
+from ui.interface.Slider3Ranges.Slider3RangesController import Slider3RangesController
+from ui.interface.Slider3Ranges.Slider3RangesView import Slider3RangesView
+from ui.interface.Slider3Ranges.Slider import Slider
 
 class StaticObjects:
 

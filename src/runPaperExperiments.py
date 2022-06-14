@@ -3,18 +3,17 @@ from src.BuildCounterFactualSeekedSet import buildCounterFactualSeekedFile
 from src.CounterFactualParameters import BinaryDecisionVariables
 
 # Define data sets, desired outcome, and path to data and cf files
-datasetsWithDesiredOutcome = {
-    './datasets/Adult_processedMACE.csv': 1,
-    './datasets/COMPAS-ProPublica_processedMACE.csv': 1,
-    './datasets/Credit-Card-Default_processedMACE.csv': 1,
-    './datasets/German-Credit.csv': 1,
-    './datasets/Phishing.csv': 1,
-    './datasets/Spambase.csv': 1,
-    './datasets/Students-Performance-MAT.csv': 1,
-    './datasets/OnlineNewsPopularity.csv': 1}
-
 dataDir = './datasets/'
 cfDir = './datasets/counterfactuals/'
+datasetsWithDesiredOutcome = {
+    dataDir+'Adult_processedMACE.csv': 1,
+    dataDir+'COMPAS-ProPublica_processedMACE.csv': 1,
+    dataDir+'Credit-Card-Default_processedMACE.csv': 1,
+    dataDir+'German-Credit.csv': 1,
+    dataDir+'Phishing.csv': 1,
+    dataDir+'Spambase.csv': 1,
+    dataDir+'Students-Performance-MAT.csv': 1,
+    dataDir+'OnlineNewsPopularity.csv': 1}
 ourDatasetsWithCounterfactualsDict = {
     dataDir+'Adult_processedMACE.csv': cfDir+'OneHot_Adult_processedMACE.csv',
     dataDir+'COMPAS-ProPublica_processedMACE.csv': cfDir+'OneHot_COMPAS-ProPublica_processedMACE.csv',
@@ -24,7 +23,6 @@ ourDatasetsWithCounterfactualsDict = {
     dataDir+'Students-Performance-MAT.csv': cfDir+'OneHot_Students-Performance-MAT.csv',
     dataDir+'Credit-Card-Default_processedMACE.csv': cfDir+'OneHot_Credit-Card-Default_processedMACE.csv',
     dataDir+'OnlineNewsPopularity.csv': cfDir+'OneHot_OnlineNewsPopularity.csv'}
-
 mediumDatasetsDict = {
     dataDir+'Adult_processedMACE.csv': cfDir+'OneHot_Adult_processedMACE.csv',
     dataDir+'Credit-Card-Default_processedMACE.csv': cfDir+'OneHot_Credit-Card-Default_processedMACE.csv'}

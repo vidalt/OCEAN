@@ -1,12 +1,9 @@
 # Author: Moises Henrique Pereira
-# this class handle the functions tests of controller of the component of the categorical features  
- 
+# this class handle the functions tests of controller
+# of the component of the categorical features  
 import pytest
-
 import sys
-
 from PyQt5 import QtWidgets
-
 from ui.mainTest import StaticObjects
 
 @pytest.mark.parametrize('featureName', [1, 2.9, False, ('t1', 't2'), None])

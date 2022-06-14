@@ -2,8 +2,8 @@
 # this class handles the auxiliar component Slyder3RangesView
 # this component handles to get the user value
 # and to get the minimum e maximum values given a feature
- 
-from .Slider3RangesView import Slider3RangesView
+
+from ui.interface.Slider3Ranges.Slider3RangesView import Slider3RangesView
 
 class Slider3RangesController:
 
