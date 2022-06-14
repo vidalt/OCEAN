@@ -24,6 +24,12 @@ Run the following commands from the project root to install the requirements. Yo
     pip install .
 ```
 
+The installation can be checked by running the test suite:
+```shell
+   python -m pytest test\
+```
+The integration tests require a working Gurobi license. If a license is not available, the tests will pass and print a warning. 
+
 ## Reproducing the paper results
 This project enables to reproduce the numerical experiments used to produce the tables and figures of the paper.
 The folder datasets contains the datasets on which the numerical experiments are performed.
