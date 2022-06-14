@@ -1,4 +1,5 @@
-![](ocean_logo.svg)
+<img src="ocean_logo.svg" width="300">
+
 # Description
 
 This project enables to reproduce the numerical experiments used to produce the tables and figures of the paper *Optimal Counterfactual Explanations in Tree Ensemble* by Axel Parmentier and Thibaut Vidal in the *Proceedings of the thirty-eighth International Conference on Machine Learning*, 2021, in press. 
