@@ -33,7 +33,7 @@ class Slider3RangesController(QWidget):
         assert isinstance(featureName, str)
         assert isinstance(minValue, int) or isinstance(minValue, float)
         assert isinstance(maxValue, int) or isinstance(maxValue, float)
-        assert minValue < maxValue
+        assert minValue <= maxValue
 
         if value == None:
             value = minValue + (maxValue-minValue)/2

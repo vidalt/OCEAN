@@ -377,7 +377,15 @@ class IterationController():
                 currentDataPoint = np.append(currentDataPoint, self.predictedOriginalClass)
                 currentDataframe = pd.DataFrame(data=[currentDataPoint], columns=self.model.features)
                 # adding the prediction percentage
-                currentDataframe['prob1'] = self.predictedOriginalClassPercentage[0][1]
+                if self.updatedCurrentPoint is None:
+                    currentDataframe['prob1'] = self.predictedOriginalClassPercentage[0][1]
+                else:
+                    transformedCurrentDataPoint = self.model.transformDataPoint(self.updatedCurrentPoint)
+                    predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [transformedCurrentDataPoint])
+                    predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(self.randomForestClassifier, [transformedCurrentDataPoint])
+                    
+                    currentDataframe['Class'] = predictedCurrentClass[0]
+                    currentDataframe['prob1'] = predictedCurrentClassPercentage[0][1]
 
                 # getting the initial datapoint, keeping a historic
                 parentDataPoint = self.original.chosenDataPoint.copy()

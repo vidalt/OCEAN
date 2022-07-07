@@ -52,10 +52,14 @@ class MatplotLibCanvasDistribution(FigureCanvas, QObject):
         if self.controller.model.featuresType[feature] is FeatureType.Categorical:
             rotation = 45
 
+        dataValues = self.controller.model.data[feature].to_numpy()
+        for i in range(len(dataValues)):
+            dataValues[i] = str(dataValues[i])
+        
         encoder = LabelEncoder()
-        encoder.fit(self.controller.model.data[feature].to_numpy())
+        encoder.fit(dataValues)
 
-        dataToBoxPlot = self.controller.model.data[feature].to_numpy()
+        dataToBoxPlot = dataValues
         dataToBoxPlotEncoded = encoder.transform(dataToBoxPlot)
 
         xTicksName = encoder.classes_

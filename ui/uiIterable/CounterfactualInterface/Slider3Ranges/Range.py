@@ -131,7 +131,10 @@ class Range(QLabel):
         if newValue >= self.__slider.minValue and newValue <= self.__slider.maxValue:            
                 self.__value = newValue
 
-                t = (newValue-self.__slider.minValue)/(self.__slider.maxValue-self.__slider.minValue) 
+                try:
+                    t = (newValue-self.__slider.minValue)/(self.__slider.maxValue-self.__slider.minValue) 
+                except:
+                    t = (newValue-self.__slider.minValue)/1 
 
                 newPos = ((1-t)*self.__minX)+(t*self.__maxX)
             

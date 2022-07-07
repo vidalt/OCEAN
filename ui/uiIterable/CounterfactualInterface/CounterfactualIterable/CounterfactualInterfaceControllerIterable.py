@@ -168,10 +168,13 @@ class CounterfactualInterfaceControllerIterable:
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             randomDataPoint = self.model.getRandomPoint(self.randomForestClassifier)
-            randomDataPoint = ['GP', 'M', '17', 'U', 'LE3', 'T', '4', '4', 'teacher', 
-                               'health', 'reputation', 'mother', '1', '2', '0', 'no', 
-                               'yes', 'yes', 'no', 'yes', 'yes', 'yes', 'no', '3', '3', 
-                               '3', '1', '2', '2', '0']
+            # randomDataPoint = ['GP', 'M', '17', 'U', 'LE3', 'T', '4', '4', 'teacher', 
+            #                    'health', 'reputation', 'mother', '1', '2', '0', 'no', 
+            #                    'yes', 'yes', 'no', 'yes', 'yes', 'yes', 'no', '3', '3', 
+            #                    '3', '1', '2', '2', '0']
+            # randomDataPoint = ['6', 'female', '2', 'free', 'moderate', 'moderate', '4', '5', 'radio/TV']
+            # randomDataPoint = ['6', 'female', '2', 'free', '2', '2', '4', '5', 'radio/TV'] # class 1
+            randomDataPoint = ['4', 'male', '2', 'own', '1', '2', '5', '5', 'business']
 
             # showing the values in their respective component
             for index, feature in enumerate(self.model.features):
@@ -297,7 +300,6 @@ class CounterfactualInterfaceControllerIterable:
             self.__counterfactualStep.setText(step)
             result = self.__counterfactualStep.exec()
             
-            print('RESULT:', result)
             if result == QMessageBox.Ok:
                 self.__counterfactualStep = None
                 

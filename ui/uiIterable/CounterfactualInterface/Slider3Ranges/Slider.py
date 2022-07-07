@@ -61,9 +61,12 @@ class Slider(QLabel):
         assert minX is not None
         assert maxX is not None
         assert value is not None
-
-        posX = minX+((maxX-minX)*((value-self.minValue)/(self.maxValue-self.minValue)))
-
+        
+        try:
+            posX = minX+((maxX-minX)*((value-self.minValue)/(self.maxValue-self.minValue)))
+        except:
+            posX = minX+((maxX-minX)*((value-self.minValue)/1))
+        
         return posX
 
     def getValueFromPos(self, pos):
@@ -90,7 +93,10 @@ class Slider(QLabel):
         if (value >= self.minValue and value <= self.maxValue):
             self.value = value
             
-            valueNorm = (self.value-self.minValue)/(self.maxValue-self.minValue)
+            try:
+                valueNorm = (self.value-self.minValue)/(self.maxValue-self.minValue)
+            except:
+                valueNorm = (self.value-self.minValue)/1
 
             if valueNorm >= 0 and valueNorm <= 1:
                 if valueNorm >= 0 and valueNorm <= 0.01:
