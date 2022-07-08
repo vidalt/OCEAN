@@ -1,93 +1,90 @@
-from TreeMilpManager import *
-from ClassifierCounterFactual import *
-from RandomAndIsolationForest import *
-from sklearn.ensemble._iforest import _average_path_length
 import random
+import gurobipy as gp
+from gurobipy import GRB
+import numpy as np
+from sklearn.ensemble._iforest import _average_path_length
+# Import OCEAN functions and classes
+from src.ClassifierCounterFactual import ClassifierCounterFactualMilp
+from src.RandomAndIsolationForest import RandomAndIsolationForest
+from src.CounterFactualParameters import BinaryDecisionVariables
+from src.CounterFactualParameters import TreeConstraintsType
+from src.CounterFactualParameters import FeatureType
+from src.CounterFactualParameters import eps
+from src.TreeMilpManager import TreeInMilpManager
+
 
 class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
-    def __init__(self, 
-        classifier, 
-        sample, 
-        outputDesired,
-        isolationForest = None,
-        constraintsType=TreeConstraintsType.ExtendedFormulation, 
-        objectiveNorm=2,
-        interTreeCutsActivated=False, 
-        mutuallyExclusivePlanesCutsActivated=False,
-        strictCounterFactual=False, 
-        verbose=False,
-        featuresType = False, 
-        featuresPossibleValues = False,
-        featuresActionnability = False,
-        oneHotEncoding = False,
-        binaryDecisionVariables = BinaryDecisionVariables.LeftRight_lambda,
-        randomCostsActivated = False
-    ):
+    def __init__(
+            self, classifier, sample, outputDesired,
+            objectiveNorm=2, isolationForest=None, verbose=False,
+            mutuallyExclusivePlanesCutsActivated=False,
+            strictCounterFactual=False,
+            featuresType=False, featuresPossibleValues=False,
+            featuresActionnability=False, oneHotEncoding=False,
+            constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
+            binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda,
+            randomCostsActivated=False):
+        # Instantiate the ClassifierMilp: implements actionability constraints
+        # and feature consistency according to featuresType
         ClassifierCounterFactualMilp.__init__(
-            self, 
-            classifier, 
-            sample, 
-            outputDesired, 
-            constraintsType, 
-            objectiveNorm, 
-            verbose,
-            featuresType,
-            featuresPossibleValues,
-            featuresActionnability,
-            oneHotEncoding,
-            binaryDecisionVariables
-        )
+            self, classifier, sample, outputDesired, constraintsType,
+            objectiveNorm, verbose, featuresType, featuresPossibleValues,
+            featuresActionnability, oneHotEncoding, binaryDecisionVariables)
+        self.model.modelName = "RandomForestCounterFactualMilp"
+        # Combine random forest and isolation forest into a completeForest
         self.isolationForest = isolationForest
-        self.completeForest = RandomAndIsolationForest(self.clf, isolationForest)
-        self.interTreeCutsActivated = interTreeCutsActivated
-        self.mutuallyExclusivePlanesCutsActivated = mutuallyExclusivePlanesCutsActivated
+        self.completeForest = RandomAndIsolationForest(self.clf,
+                                                       isolationForest)
+        # - Read and set formulation parameters -
         self.strictCounterFactual = strictCounterFactual
-        self.model.modelName="RandomForestCounterFactualMilp"
-        self.randomCostsActivated=randomCostsActivated
+        self.mutuallyExclusivePlanesCutsActivated = mutuallyExclusivePlanesCutsActivated
+        self.randomCostsActivated = randomCostsActivated
         if randomCostsActivated:
-            random.seed(0)
-            self.greaterCosts = [random.uniform(0.5,2) for i in range(self.nFeatures)]
-            self.smallerCosts = [random.uniform(0.5,2) for i in range(self.nFeatures)]
+            self.__generate_random_costs()
 
+    # ---------------------- Private methods ------------------------
+    # -- Initialize RandomForestCounterFactualMilp --
+    def __generate_random_costs(self):
+        """ Sample cost parameters for features from uniform distribution."""
+        random.seed(0)
+        self.greaterCosts = [random.uniform(0.5, 2)
+                             for i in range(self.nFeatures)]
+        self.smallerCosts = [random.uniform(0.5, 2)
+                             for i in range(self.nFeatures)]
 
-    def addMajorityVoteConstraint(self):
-        majorityVoteExpr = {cl : gp.LinExpr(0.0) for cl in self.clf.classes_ if cl != self.outputDesired}
-        for t in self.completeForest.randomForestEstimatorsIndices:
-            tm = self.treeManagers[t]
-            for v in range(tm.n_nodes):
-                if tm.is_leaves[v]:
-                    leaf_val = tm.tree.value[v][0]
-                    tot = sum(leaf_val)
-                    for output in range(len(leaf_val)):
-                        if output == self.outputDesired:
-                            for cl in majorityVoteExpr:
-                                majorityVoteExpr[cl] += tm.y_var[v] * (leaf_val[output])/(tot * self.completeForest.n_estimators)
-                        else:
-                            majorityVoteExpr[output] -= tm.y_var[v] * (leaf_val[output])/(tot * self.completeForest.n_estimators)
-        self.majorityVoteConstr = dict()
-        for cl in majorityVoteExpr:
-            if self.strictCounterFactual:
-                majorityVoteExpr[cl] -= 1e-4
-            self.majorityVoteConstr[cl] = self.model.addConstr(majorityVoteExpr[cl] >= 0, "majorityVoteConstr_cl" + str(cl))
+    # -- Build optimization model --
+    def __buildTrees(self):
+        """ Build a TreeMilpManager for each tree in the completeForest."""
+        self.treeManagers = dict()
+        for t in range(self.completeForest.n_estimators):
+            self.treeManagers[t] = TreeInMilpManager(
+                self.completeForest.estimators_[t].tree_,
+                self.model, self.x_var_sol,
+                self.outputDesired, self.featuresType,
+                self.constraintsType, self.binaryDecisionVariables)
+            self.treeManagers[t].addTreeVariablesAndConstraintsToMilp()
 
-    def addIsolationForestPlausibilityConstraint(self):
-        expr = gp.LinExpr(0.0)
-        for t in self.completeForest.isolationForestEstimatorsIndices:
-            tm = self.treeManagers[t]
-            tree = self.completeForest.estimators_[t]
-            expr -= _average_path_length([self.isolationForest.max_samples_])[0]
-            for v in range(tm.n_nodes):
-                if tm.is_leaves[v]:
-                    leafDepth = tm.node_depth[v] + _average_path_length([tree.tree_.n_node_samples[v]])[0]
-                    expr += leafDepth * tm.y_var[v]
-        self.model.addConstr(expr >= 0, "isolationForestInlierConstraint")
+    def __addInterTreeConstraints(self):
+        useLinCombPlanes = (self.constraintsType
+                            == TreeConstraintsType.LinearCombinationOfPlanes)
+        if useLinCombPlanes:
+            self.__addPlaneConsistencyConstraints()
+        self.__addDiscreteVariablesConsistencyConstraints()
+        self.__addMajorityVoteConstraint()
 
-    def addPlaneConsistencyConstraints(self):
+    def __addPlaneConsistencyConstraints(self):
+        """
+        Express the counterfactual sample flow through
+        the completeForest as a linear combination of planes.
+        """
+        # Add a plane for each continuous feature
         self.planes = dict()
         for f in self.continuousFeatures:
             self.planes[f] = dict()
-            self.planes[f][self.x0[0][f]] = []      # Add the initial value as a plane
-        
+            # Add the initial value as a plane
+            self.planes[f][self.x0[0][f]] = []
+
+        # Read the split threshold of all trees for all continuous features
         for t in range(self.completeForest.n_estimators):
             tm = self.treeManagers[t]
             for v in range(tm.n_nodes):
@@ -97,13 +94,16 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
                         thres = tm.tree.threshold[v]
                         newPlane = True
                         if self.planes[f]:
-                            nearestThres = min(self.planes[f].keys(), key=lambda k: abs(k-thres))
+                            nearestThres = min(self.planes[f].keys(),
+                                               key=lambda k: abs(k-thres))
+                            # Check that two thres are sufficiently distinct
                             if abs(thres - nearestThres) < 0.8*eps:
                                 newPlane = False
-                                self.planes[f][nearestThres].append((t,v))
+                                self.planes[f][nearestThres].append((t, v))
                         if newPlane:
-                            self.planes[f][thres] = [(t,v)]
+                            self.planes[f][thres] = [(t, v)]
 
+        # Add the constraints
         self.rightMutuallyExclusivePlanesVar = dict()
         self.rightMutuallyExclusivePlanesConstr = dict()
         self.rightPlanesDominateRightFlowConstr = dict()
@@ -116,76 +116,103 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
             self.rightPlanesOrderConstr[f] = dict()
             previousThres = 0
             linearCombination = gp.LinExpr(0.0)
-            self.rightMutuallyExclusivePlanesVar[f][previousThres] = self.model.addVar(lb=0.0,ub=1,vtype = GRB.CONTINUOUS,
-                    name="rightMutuallyExclusivePlanesVar_f" + str(f) + "_th" + str(previousThres))
+            self.rightMutuallyExclusivePlanesVar[f][previousThres] = self.model.addVar(
+                lb=0.0, ub=1, vtype=GRB.CONTINUOUS,
+                name="rightMutuallyExclusivePlanesVar_f" + str(f)
+                + "_th" + str(previousThres))
             for thres in sorted(self.planes[f]):
-                self.rightMutuallyExclusivePlanesVar[f][thres] = self.model.addVar(lb=0.0,ub=1,vtype = GRB.CONTINUOUS,
-                    name="rightMutuallyExclusivePlanesVar_f" + str(f) + "_th" + str(thres))
+                self.rightMutuallyExclusivePlanesVar[f][thres] = self.model.addVar(
+                    lb=0.0, ub=1, vtype=GRB.CONTINUOUS,
+                    name="rightMutuallyExclusivePlanesVar_f" + str(f)
+                    + "_th" + str(thres))
                 self.rightMutuallyExclusivePlanesConstr[f][thres] = []
                 self.rightPlanesDominateRightFlowConstr[f][thres] = []
 
-                for t,v in self.planes[f][thres]:
-                    tm = self.treeManagers[t]                  
-                    self.rightMutuallyExclusivePlanesConstr[f][thres].append(self.model.addConstr(
-                        tm.y_var[tm.tree.children_left[v]] + self.rightMutuallyExclusivePlanesVar[f][thres] <= 1,
-                        "rightMutuallyExclusivePlanesVar_f" + str(f) + "_t" + str(t) + "_v" + str(v)
-                    ))
-                    self.rightPlanesDominateRightFlowConstr[f][thres].append(self.model.addConstr(
-                        tm.y_var[tm.tree.children_right[v]] <= self.rightMutuallyExclusivePlanesVar[f][previousThres],
-                        "rightPlanesDominatesLeftFlowConstr_t"+str(t)+"_v"+str(v)
-                    ))
+                for t, v in self.planes[f][thres]:
+                    tm = self.treeManagers[t]
+                    self.rightMutuallyExclusivePlanesConstr[f][thres].append(
+                        self.model.addConstr(
+                            tm.y_var[tm.tree.children_left[v]]
+                            + self.rightMutuallyExclusivePlanesVar[f][thres]
+                            <= 1, "rightMutuallyExclusivePlanesVar_f"
+                            + str(f) + "_t" + str(t) + "_v" + str(v)))
+                    self.rightPlanesDominateRightFlowConstr[f][thres].append(
+                        self.model.addConstr(
+                            tm.y_var[tm.tree.children_right[v]]
+                            <= self.rightMutuallyExclusivePlanesVar[f][previousThres],
+                            "rightPlanesDominatesLeftFlowConstr_t"
+                            + str(t)+"_v"+str(v)))
                     # Avoid numerical precision errors
-                    self.rightMutuallyExclusivePlanesConstr[f][thres].append(self.model.addConstr(
-                        (thres - previousThres) * self.rightMutuallyExclusivePlanesVar[f][previousThres] <= (thres - previousThres) - min(thres - previousThres, eps) * tm.y_var[tm.tree.children_left[v]] ,
-                        # self.rightMutuallyExclusivePlanesVar[f][previousThres] <= 1 - eps * tm.y_var[tm.tree.children_left[v]] ,
-                        "rightMutuallyExclusivePlanesVar_eps_f" + str(f) + "_t" + str(t) + "_v" + str(v)
-                    ))
-                    self.rightPlanesDominateRightFlowConstr[f][thres].append(self.model.addConstr(
-                        eps * tm.y_var[tm.tree.children_right[v]] <= self.rightMutuallyExclusivePlanesVar[f][thres] * max(eps, (thres - previousThres)),
-                        # eps * tm.y_var[tm.tree.children_right[v]] <= self.rightMutuallyExclusivePlanesVar[f][thres],
-                        "rightPlanesDominatesLeftFlowConstr_eps_t"+str(t)+"_v"+str(v)
-                    ))
-                
+                    self.rightMutuallyExclusivePlanesConstr[f][thres].append(
+                        self.model.addConstr(
+                            (thres - previousThres)
+                            * self.rightMutuallyExclusivePlanesVar[f][previousThres]
+                            <= (thres - previousThres)
+                            - min(thres - previousThres, eps)
+                            * tm.y_var[tm.tree.children_left[v]],
+                            "rightMutuallyExclusivePlanesVar_eps_f"
+                            + str(f) + "_t" + str(t) + "_v" + str(v)))
+                    self.rightPlanesDominateRightFlowConstr[f][thres].append(
+                        self.model.addConstr(
+                            eps * tm.y_var[tm.tree.children_right[v]]
+                            <= self.rightMutuallyExclusivePlanesVar[f][thres]
+                            * max(eps, (thres - previousThres)),
+                            "rightPlanesDominatesLeftFlowConstr_eps_t"
+                            + str(t)+"_v"+str(v)))
+
                 self.rightPlanesOrderConstr[f][thres] = self.model.addConstr(
-                    self.rightMutuallyExclusivePlanesVar[f][previousThres] >= self.rightMutuallyExclusivePlanesVar[f][thres],
-                    "rightPlanesOrderConstr_f"+str(f)+"_th"+str(thres)
-                )
-                
-                linearCombination += self.rightMutuallyExclusivePlanesVar[f][previousThres] * (thres - previousThres)
-                
+                    self.rightMutuallyExclusivePlanesVar[f][previousThres]
+                    >= self.rightMutuallyExclusivePlanesVar[f][thres],
+                    "rightPlanesOrderConstr_f"+str(f)+"_th"+str(thres))
+
+                linearCombination += self.rightMutuallyExclusivePlanesVar[f][previousThres] * (
+                    thres - previousThres)
+
                 previousThres = thres
-            linearCombination += self.rightMutuallyExclusivePlanesVar[f][previousThres] * (1.0 - previousThres)
-            self.linearCombinationOfPlanesConstr[f] = self.model.addConstr(self.x_var_sol[f] == linearCombination,"x_as_linear_combination_of_planes_f")
+            linearCombination += self.rightMutuallyExclusivePlanesVar[f][previousThres] * (
+                1.0 - previousThres)
+            self.linearCombinationOfPlanesConstr[f] = self.model.addConstr(
+                self.x_var_sol[f] == linearCombination, "x_as_linear_combination_of_planes_f")
 
-    def addInterTreeCuts(self):
-        self.interTreeCuts=dict()
-        for s in range(self.completeForest.n_estimators):
-            self.interTreeCuts[s]=dict()
-            tms = self.treeManagers[s]
-            for t in range(s+1,self.completeForest.n_estimators):
-                self.interTreeCuts[s][t]=dict()
-                tmt = self.treeManagers[t]
-                for u in range(tms.n_nodes):
-                    if not tms.is_leaves[u] and self.featuresType[tms.tree.feature[u]] == FeatureType.Numeric :
-                        self.interTreeCuts[s][t][u] = dict()
-                        for v in range(tmt.n_nodes):
-                            if not tmt.is_leaves[v] and self.featuresType[tmt.tree.feature[v]] == FeatureType.Numeric:
-                                if tms.tree.feature[u] == tmt.tree.feature[v]:
-                                    if tms.tree.threshold[u] <= tmt.tree.threshold[v]:
-                                        self.interTreeCuts[s][t][u][v] = self.model.addConstr(
-                                            tms.y_var[tms.tree.children_left[u]] + tmt.y_var[tmt.tree.children_right[v]] <= 1 ,
-                                            "interTreeCuts_s"+str(s)+"_t"+str(t)+"_u"+str(u)+"_v"+str(v))
-                                    if tms.tree.threshold[u] >= tmt.tree.threshold[v]:
-                                        self.interTreeCuts[s][t][u][v] = self.model.addConstr(
-                                            tms.y_var[tms.tree.children_right[u]] + tmt.y_var[tmt.tree.children_left[v]] <=1 ,
-                                            "interTreeCuts_s"+str(s)+"_t"+str(t)+"_u"+str(u)+"_v"+str(v))
+    def __addDiscreteVariablesConsistencyConstraints(self):
+        self.leftDiscreteVariablesConsistencyConstraints = dict()
+        self.rightDiscreteVariablesConsistencyConstraints = dict()
+        for t in range(self.completeForest.n_estimators):
+            tm = self.treeManagers[t]
+            self.leftDiscreteVariablesConsistencyConstraints[t] = dict()
+            self.rightDiscreteVariablesConsistencyConstraints[t] = dict()
+            for v in range(tm.n_nodes):
+                if not tm.is_leaves[v]:
+                    f = tm.tree.feature[v]
+                    isFeatDiscrete = (self.featuresType[f]
+                                      == FeatureType.Discrete)
+                    isFeatCategoricalNonOneHot = (
+                        self.featuresType[f] == FeatureType.CategoricalNonOneHot)
+                    if isFeatDiscrete or isFeatCategoricalNonOneHot:
+                        thres = tm.tree.threshold[v]
+                        levels = list(self.featuresPossibleValues[f])
+                        levels.append(1.0)
+                        v_level = -1
+                        for levelIndex in range(len(levels)):
+                            if levels[levelIndex] > thres:
+                                v_level = levelIndex
+                                break
+                        self.leftDiscreteVariablesConsistencyConstraints[t][v] = self.model.addConstr(
+                            self.discreteFeaturesLevel_var[f][v_level]
+                            + tm.y_var[tm.tree.children_left[v]] <= 1,
+                            "leftDiscreteVariablesConsistencyConstraints_t"
+                            + str(t) + "_v" + str(v))
+                        self.rightDiscreteVariablesConsistencyConstraints[t][v] = self.model.addConstr(
+                            self.discreteFeaturesLevel_var[f][v_level]
+                            >= tm.y_var[tm.tree.children_right[v]],
+                            "rightDiscreteVariablesConsistencyConstraints_t"
+                            + str(t) + "_v" + str(v))
 
-
-    def addMutuallyExclusivePlanesCuts(self):
+    def __addMutuallyExclusivePlanesCuts(self):
         self.planes = dict()
         for f in range(self.nFeatures):
             self.planes[f] = dict()
-        
+
         for t in range(self.completeForest.n_estimators):
             tm = self.treeManagers[t]
             for v in range(tm.n_nodes):
@@ -195,16 +222,13 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
                         thres = tm.tree.threshold[v]
                         newPlane = True
                         if self.planes[f]:
-                            nearestThres = min(self.planes[f].keys(), key=lambda k: abs(k-thres))
+                            nearestThres = min(self.planes[f].keys(),
+                                               key=lambda k: abs(k-thres))
                             if abs(thres - nearestThres) < 0.8*eps:
                                 newPlane = False
-                                self.planes[f][nearestThres].append((t,v))
+                                self.planes[f][nearestThres].append((t, v))
                         if newPlane:
-                            self.planes[f][thres] = [(t,v)]
-
-                        # if thres not in self.planes[f]:
-                        #     self.planes[f][thres] = []
-                        # self.planes[f][thres].append((t,v))
+                            self.planes[f][thres] = [(t, v)]
 
         self.rightMutuallyExclusivePlanesVar = dict()
         self.rightMutuallyExclusivePlanesConstr = dict()
@@ -217,279 +241,216 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
             self.rightPlanesOrderConstr[f] = dict()
             previousThres = -1
             for thres in sorted(self.planes[f]):
-                self.rightMutuallyExclusivePlanesVar[f][thres] = self.model.addVar(lb=0.0,ub=1,vtype = GRB.CONTINUOUS,
-                    name="rightMutuallyExclusivePlanesVar_f" + str(f) + "_th" + str(thres))
+                self.rightMutuallyExclusivePlanesVar[f][thres] = self.model.addVar(
+                    lb=0.0, ub=1, vtype=GRB.CONTINUOUS,
+                    name="rightMutuallyExclusivePlanesVar_f" + str(f)
+                    + "_th" + str(thres))
+
                 self.rightMutuallyExclusivePlanesConstr[f][thres] = []
                 self.rightPlanesDominateRightFlowConstr[f][thres] = []
-
-                for t,v in self.planes[f][thres]:
-                    tm = self.treeManagers[t]                    
+                for t, v in self.planes[f][thres]:
+                    tm = self.treeManagers[t]
                     self.rightMutuallyExclusivePlanesConstr[f][thres].append(self.model.addConstr(
-                        tm.y_var[tm.tree.children_left[v]] + self.rightMutuallyExclusivePlanesVar[f][thres] <= 1,
-                        "rightMutuallyExclusivePlanesVar_f" + str(f) + "_t" + str(t) + "_v" + str(v)
+                        tm.y_var[tm.tree.children_left[v]]
+                        + self.rightMutuallyExclusivePlanesVar[f][thres] <= 1,
+                        "rightMutuallyExclusivePlanesVar_f"
+                        + str(f) + "_t" + str(t) + "_v" + str(v)
                     ))
                     self.rightPlanesDominateRightFlowConstr[f][thres].append(self.model.addConstr(
-                        tm.y_var[tm.tree.children_right[v]] <= self.rightMutuallyExclusivePlanesVar[f][thres],
-                        "rightPlanesDominatesLeftFlowConstr_t"+str(t)+"_v"+str(v)
+                        tm.y_var[tm.tree.children_right[v]
+                                 ] <= self.rightMutuallyExclusivePlanesVar[f][thres],
+                        "rightPlanesDominatesLeftFlowConstr_t"
+                        + str(t)+"_v"+str(v)
                     ))
-                
-                if previousThres != -1 :
+
+                if previousThres != -1:
                     self.rightPlanesOrderConstr[f][thres] = self.model.addConstr(
-                        self.rightMutuallyExclusivePlanesVar[f][previousThres] >= self.rightMutuallyExclusivePlanesVar[f][thres],
+                        self.rightMutuallyExclusivePlanesVar[f][
+                            previousThres] >= self.rightMutuallyExclusivePlanesVar[f][thres],
                         "rightPlanesOrderConstr_f"+str(f)+"_th"+str(thres)
                     )
-                
+
                 previousThres = thres
 
-    def buildTrees(self):
-        self.treeManagers = dict()
-        for t in range(self.completeForest.n_estimators):
-            self.treeManagers[t] = TreeInMilpManager(self.completeForest.estimators_[t].tree_, self.model,self.x_var_sol,
-                self.outputDesired, self.featuresType, self.constraintsType, self.binaryDecisionVariables)
-            self.treeManagers[t].addTreeVariablesAndConstraintsToMilp()
-
-    def addContinuousVariablesConsistencyConstraints(self):
-        if self.constraintsType == TreeConstraintsType.LinearCombinationOfPlanes:
-            self.addPlaneConsistencyConstraints()
-    
-    def addDiscreteVariablesConsistencyConstraints(self):
-        self.leftDiscreteVariablesConsistencyConstraints = dict()
-        self.rightDiscreteVariablesConsistencyConstraints = dict()
-        for t in range(self.completeForest.n_estimators):
+    def __addMajorityVoteConstraint(self):
+        """
+        Ensures that the random forest predicts the target class
+        for the counterfactual explanation.
+        At least 50% of the trees should vote for the target class.
+        """
+        # Measure the classification score:
+        #   the average of the tree class predictions
+        majorityVoteExpr = {cl: gp.LinExpr(
+            0.0) for cl in self.clf.classes_ if cl != self.outputDesired}
+        for t in self.completeForest.randomForestEstimatorsIndices:
             tm = self.treeManagers[t]
-            self.leftDiscreteVariablesConsistencyConstraints[t] = dict()
-            self.rightDiscreteVariablesConsistencyConstraints[t] = dict()
             for v in range(tm.n_nodes):
-                if not tm.is_leaves[v]:
-                    f = tm.tree.feature[v]
-                    if self.featuresType[f] == FeatureType.Discrete or self.featuresType[f] == FeatureType.CategoricalNonOneHot:
-                        thres = tm.tree.threshold[v]
-                        levels = list(self.featuresPossibleValues[f])
-                        levels.append(1.0)
-                        v_level = -1
-                        for l in range(len(levels)):
-                            if levels[l] > thres:
-                                v_level = l
-                                break
-                        self.leftDiscreteVariablesConsistencyConstraints[t][v] = self.model.addConstr(
-                            self.discreteFeaturesLevel_var[f][v_level] + tm.y_var[tm.tree.children_left[v]] <= 1,
-                            "leftDiscreteVariablesConsistencyConstraints_t" + str(t) + "_v" + str(v)
-                        )
-                        self.rightDiscreteVariablesConsistencyConstraints[t][v] = self.model.addConstr(
-                            self.discreteFeaturesLevel_var[f][v_level] >= tm.y_var[tm.tree.children_right[v]],
-                            "rightDiscreteVariablesConsistencyConstraints_t" + str(t) + "_v" + str(v)
-                        )
-    
-    def addInterTreeConstraints(self):
-        self.addContinuousVariablesConsistencyConstraints()
-        self.addDiscreteVariablesConsistencyConstraints()
-        self.addMajorityVoteConstraint()
+                if tm.is_leaves[v]:
+                    leaf_val = tm.tree.value[v][0]
+                    tot = sum(leaf_val)
+                    for output in range(len(leaf_val)):
+                        if output == self.outputDesired:
+                            for cl in majorityVoteExpr:
+                                majorityVoteExpr[cl] += tm.y_var[v] * (leaf_val[output])/(
+                                    tot * self.completeForest.n_estimators)
+                        else:
+                            majorityVoteExpr[output] -= tm.y_var[v] * (
+                                leaf_val[output])/(tot * self.completeForest.n_estimators)
+        # Add (strict) constraint on target score
+        self.majorityVoteConstr = dict()
+        for cl in majorityVoteExpr:
+            if self.strictCounterFactual:
+                majorityVoteExpr[cl] -= 1e-4
+            self.majorityVoteConstr[cl] = self.model.addConstr(
+                majorityVoteExpr[cl] >= 0, "majorityVoteConstr_cl" + str(cl))
 
-    def addCuts(self):
-        if self.interTreeCutsActivated:
-            self.addInterTreeCuts()
-        if self.mutuallyExclusivePlanesCutsActivated and not self.constraintsType == TreeConstraintsType.LinearCombinationOfPlanes:
-            self.addMutuallyExclusivePlanesCuts()
+    def __addIsolationForestPlausibilityConstraint(self):
+        """
+        The counterfactual should not be classified
+        as an outlier by the input trained isolationForest.
+        """
+        expr = gp.LinExpr(0.0)
+        for t in self.completeForest.isolationForestEstimatorsIndices:
+            tm = self.treeManagers[t]
+            tree = self.completeForest.estimators_[t]
+            expr -= _average_path_length(
+                [self.isolationForest.max_samples_])[0]
+            for v in range(tm.n_nodes):
+                if tm.is_leaves[v]:
+                    leafDepth = tm.node_depth[v] + _average_path_length(
+                        [tree.tree_.n_node_samples[v]])[0]
+                    expr += leafDepth * tm.y_var[v]
+        self.model.addConstr(expr >= 0, "isolationForestInlierConstraint")
 
-    # def initLinearCombinationOfPlane_L0_ObjOfFeature(self,f):
-    #     self.absoluteValueVar[f] = self.model.addVar(vtype=GRB.BINARY,name="modified_f"+str(f))
-    #     thresholds = list(self.rightMutuallyExclusivePlanesVar[f].keys())
-    #     assert 1.0 not in thresholds
-    #     thresholds.append(1.0)
-    #     # for thres in self.rightMutuallyExclusivePlanesVar[f]:
-    #     for t in range(len(self.rightMutuallyExclusivePlanesVar[f])):
-    #         thres = thresholds[t]
-    #         cellVar = self.rightMutuallyExclusivePlanesVar[f][thres]
-    #         cellLb = thres
-    #         cellUb = thresholds[t+1]
-    #         if cellUb < self.x0[0][f]:
-    #             self.model.addConstr(self.absoluteValueVar[f] >= (1-cellVar), "modified_f" + str(f) + "_t" + str(thres))
-    #         elif self.x0[0][f] < cellLb:
-    #             self.model.addConstr(self.absoluteValueVar[f] >= cellVar, "modified_f" + str(f) + "_t" + str(thres))
-    #         else:
-    #             x_val = gp.LinExpr(cellLb) + cellVar * (cellUb - cellLb)
-    #             self.absoluteValueVar[f] = self.model.addVar(vtype=GRB.BINARY,name="abs_value_f"+str(f))
-    #             self.absoluteValueLeftConstr[f] = self.model.addConstr(self.absoluteValueVar[f] >= x_val - self.x0[0][f], "absoluteValueLeftConstr_f" + str(f))
-    #             self.absoluteValueRightConstr[f] = self.model.addConstr(self.absoluteValueVar[f] >= self.x0[0][f] - x_val, "absoluteValueRightConstr_f" + str(f))
-    #     self.obj += self.absoluteValueVar[f]
+    # -- Implement objective function --
+    def __initModelObjective(self):
+        useLinCombPlanes = (self.constraintsType
+                            == TreeConstraintsType.LinearCombinationOfPlanes)
+        if useLinCombPlanes:
+            self.__initLinearCombinationOfPlanesObj()
+        else:
+            ClassifierCounterFactualMilp.initObjectiveStructures(self)
+            ClassifierCounterFactualMilp.initObjective(self)
 
-    # def initLinearCombinationOfPlane_L1_ObjOfFeature(self,f):
-    #     thresholds = list(self.rightMutuallyExclusivePlanesVar[f].keys())
-    #     assert 1.0 not in thresholds
-    #     thresholds.append(1.0)
-    #     # for thres in self.rightMutuallyExclusivePlanesVar[f]:
-    #     for t in range(len(self.rightMutuallyExclusivePlanesVar[f])):
-    #         thres = thresholds[t]
-    #         cellVar = self.rightMutuallyExclusivePlanesVar[f][thres]
-    #         cellLb = thres
-    #         cellUb = thresholds[t+1]
-    #         if cellUb < self.x0[0][f]:
-    #             self.obj += (1-cellVar) * (cellUb - cellLb)
-    #         elif self.x0[0][f] < cellLb:
-    #             self.obj += cellVar * (cellUb - cellLb)
-    #         else:
-    #             x_val = gp.LinExpr(cellLb) + cellVar * (cellUb - cellLb)
-    #             self.absoluteValueVar[f] = self.model.addVar(lb=0.0,ub=GRB.INFINITY, vtype=GRB.CONTINUOUS,name="abs_value_f"+str(f))
-    #             self.absoluteValueLeftConstr[f] = self.model.addConstr(self.absoluteValueVar[f] >= x_val - self.x0[0][f], "absoluteValueLeftConstr_f" + str(f))
-    #             self.absoluteValueRightConstr[f] = self.model.addConstr(self.absoluteValueVar[f] >= self.x0[0][f] - x_val, "absoluteValueRightConstr_f" + str(f))
-    #             self.obj += self.absoluteValueVar[f]
+    def __initLinearCombinationOfPlanesObj(self):
+        if self.objectiveNorm not in [0, 1, 2]:
+            raise ValueError("Unknown objective norm")
+        self.obj = gp.LinExpr(0.0)
+        for f in self.continuousFeatures:
+            self.__initLinearCombinationOfPlaneObjOfFeature(f)
+        for f in self.discreteFeatures:
+            self.__initDiscreteFeatureObj(f)
+        for f in self.categoricalNonOneHotFeatures:
+            self.__initDiscreteFeatureObj(f)
+        for f in self.binaryFeatures:
+            self.__initBinaryFeatureObj(f)
+        self.model.setObjective(self.obj, GRB.MINIMIZE)
 
-    # def initLinearCombinationOfPlane_L2_ObjOfFeature(self,f):
-    #     thresholds = list(self.rightMutuallyExclusivePlanesVar[f].keys())
-    #     assert 1.0 not in thresholds
-    #     thresholds.append(1.0)
-    #     # for thres in self.rightMutuallyExclusivePlanesVar[f]:
-    #     for t in range(len(self.rightMutuallyExclusivePlanesVar[f])):
-    #         thres = thresholds[t]
-    #         cellVar = self.rightMutuallyExclusivePlanesVar[f][thres]
-    #         cellLb = thres
-    #         cellUb = thresholds[t+1]
-    #         if cellUb < self.x0[0][f]:
-    #             self.obj += (1-cellVar) * (cellUb - cellLb)
-    #         elif self.x0[0][f] < cellLb:
-    #             self.obj += cellVar * (cellUb - cellLb)
-    #         else:
-    #             x_val = gp.LinExpr(cellLb) + cellVar * (cellUb - cellLb)
-    #             self.absoluteValueVar[f] = self.model.addVar(lb=0.0,ub=GRB.INFINITY, vtype=GRB.CONTINUOUS,name="abs_value_f"+str(f))
-    #             self.absoluteValueLeftConstr[f] = self.model.addConstr(self.absoluteValueVar[f] >= x_val - self.x0[0][f], "absoluteValueLeftConstr_f" + str(f))
-    #             self.absoluteValueRightConstr[f] = self.model.addConstr(self.absoluteValueVar[f] >= self.x0[0][f] - x_val, "absoluteValueRightConstr_f" + str(f))
-    #             self.obj += self.absoluteValueVar[f]        
-
-    def lossFunctionValue(self,f,xf):
+    def __lossFunctionValue(self, f, xf):
+        """
+        Returns the cost of a counterfactual change on feature f
+        according to the norm chosen (default=2)
+        and whether random costs are used.
+        """
+        # Scale differently the positive and negative
+        # changes if random costs are given
         if self.randomCostsActivated:
-            if self.featuresType[f] == FeatureType.CategoricalNonOneHot:
-                assert False
-            elif self.objectiveNorm == 0:
-                if xf > self.x0[0][f] + eps:
-                    return self.greaterCosts[f]
-                elif xf < self.x0[0][f] - eps:
-                    return self.smallerCosts[f]
-                else:
-                    return 0.0
-            elif self.objectiveNorm == 1:
-                if xf >  self.x0[0][f]:
-                    return abs(xf - self.x0[0][f]) * self.greaterCosts[f]
-                else :
-                    return abs(xf - self.x0[0][f]) * self.smallerCosts[f]
-            elif self.objectiveNorm == 2:
-                if xf >  self.x0[0][f]:
-                    return ((xf - self.x0[0][f]) ** 2) * self.greaterCosts[f]
-                else :
-                    return ((xf - self.x0[0][f]) ** 2) * self.smallerCosts[f]
+            posCostScale = self.greaterCosts[f]
+            negCostScale = self.smallerCosts[f]
+        else:
+            posCostScale = 1
+            negCostScale = 1
+        # Measure the loss according to specified norm
+        if self.featuresType[f] == FeatureType.CategoricalNonOneHot:
+            # CategoricalNonOneHot feature is a special case
+            if self.randomCostsActivated:
+                raise ValueError("Cannot have CategoricalNonOneHot"
+                                 " with random costs.")
+            if abs(xf - self.x0[0][f]) > eps:
+                loss = 1.0
             else:
-                print("unsupported norm")
-                return float("inf")
-        else:    
-            if self.featuresType[f] == FeatureType.CategoricalNonOneHot:
-                if abs(xf - self.x0[0][f]) > eps:
-                    return 1.0
-                else:
-                    return 0.0
-            elif self.objectiveNorm == 0:
-                if abs(xf - self.x0[0][f]) > eps:
-                    return 1.0
-                else:
-                    return 0.0
-            elif self.objectiveNorm == 1:
-                return abs(xf - self.x0[0][f])
-            elif self.objectiveNorm == 2:
-                return (xf - self.x0[0][f]) ** 2
+                loss = 0.0
+        elif self.objectiveNorm == 0:
+            if xf > self.x0[0][f] + eps:
+                loss = posCostScale
+            elif xf < self.x0[0][f] - eps:
+                loss = negCostScale
             else:
-                print("unsupported norm")
-                return float("inf")
+                loss = 0.0
+        elif self.objectiveNorm == 1:
+            absDiff = abs(xf - self.x0[0][f])
+            if xf > self.x0[0][f]:
+                loss = absDiff * posCostScale
+            else:
+                loss = absDiff * negCostScale
+        elif self.objectiveNorm == 2:
+            squaredDiff = ((xf - self.x0[0][f]) ** 2)
+            if xf > self.x0[0][f]:
+                loss = squaredDiff * posCostScale
+            else:
+                loss = squaredDiff * negCostScale
+        else:
+            raise ValueError("Unsupported norm")
+        return loss
 
-
-    def initLinearCombinationOfPlaneObjOfFeature(self, f):
+    def __initLinearCombinationOfPlaneObjOfFeature(self, f):
         thresholds = list(self.rightMutuallyExclusivePlanesVar[f].keys())
         assert 0.0 in thresholds
         if 1.0 not in thresholds:
             thresholds.append(1.0)
         else:
             thresholds.append(1.0 + eps)
-        self.obj += self.lossFunctionValue(f,0.0)
+        self.obj += self.__lossFunctionValue(f, 0.0)
         for t in range(len(self.rightMutuallyExclusivePlanesVar[f])):
             thres = thresholds[t]
             cellVar = self.rightMutuallyExclusivePlanesVar[f][thres]
             cellLb = thres
             cellUb = thresholds[t+1]
-            self.obj += cellVar * (self.lossFunctionValue(f,cellUb) - self.lossFunctionValue(f,cellLb))
+            self.obj += cellVar * \
+                (self.__lossFunctionValue(f, cellUb)
+                 - self.__lossFunctionValue(f, cellLb))
 
+    def __initDiscreteFeatureObj(self, f):
+        self.obj += self.__lossFunctionValue(f,
+                                             self.featuresPossibleValues[f][0])
+        for valIndex in range(1, len(self.featuresPossibleValues[f])):
+            cellLb = self.featuresPossibleValues[f][valIndex-1]
+            cellUb = self.featuresPossibleValues[f][valIndex]
+            cellVar = self.discreteFeaturesLevel_var[f][valIndex]
+            self.obj += cellVar * \
+                (self.__lossFunctionValue(f, cellUb)
+                 - self.__lossFunctionValue(f, cellLb))
 
-    # def initDiscreteFeature_L0_Obj(self, f):
-    #     self.absoluteValueVar[f] = self.model.addVar(vtype=GRB.BINARY,name="modified_f"+str(f))        
-    #     for l in range(1,len(self.featuresPossibleValues[f])):
-    #         cellUb = self.featuresPossibleValues[f][l]
-    #         cellVar = self.discreteFeaturesLevel_var[f][l]
-    #         if cellUb > self.x0[0][f]:
-    #             self.model.addConstr(self.absoluteValueVar[f] >= cellVar, "modified_f" + str(f) + "_l" + str(l))
-    #         else:
-    #             self.model.addConstr(self.absoluteValueVar[f] >= (1-cellVar), "modified_f" + str(f) + "_l" + str(l))
-    #     self.obj += self.absoluteValueVar[f]
+    def __initBinaryFeatureObj(self, f):
+        self.obj += self.__lossFunctionValue(f, 0) \
+            + self.x_var_sol[f] * (self.__lossFunctionValue(f, 1)
+                                   - self.__lossFunctionValue(f, 0))
 
-    def initDiscreteFeatureObj(self,f):
-        self.obj += self.lossFunctionValue(f,self.featuresPossibleValues[f][0])
-        for l in range(1,len(self.featuresPossibleValues[f])):
-            cellLb = self.featuresPossibleValues[f][l-1]
-            cellUb = self.featuresPossibleValues[f][l]
-            cellVar = self.discreteFeaturesLevel_var[f][l]
-            self.obj += cellVar * (self.lossFunctionValue(f,cellUb) - self.lossFunctionValue(f,cellLb))        
-
-    def initBinaryFeatureObj(self,f):
-        self.obj += self.lossFunctionValue(f,0) + self.x_var_sol[f] * (self.lossFunctionValue(f,1) - self.lossFunctionValue(f,0))
-
-    def initObjectiveStructures(self):
-        assert self.objectiveNorm in [0,1,2]
-        self.obj = gp.LinExpr(0.0)
-    
-    def initLinearCombinationOfPlanesObj(self):
-        self.initObjectiveStructures()
-        for f in self.continuousFeatures:
-            self.initLinearCombinationOfPlaneObjOfFeature(f)
-        for f in self.discreteFeatures:
-            self.initDiscreteFeatureObj(f)
-        for f in self.categoricalNonOneHotFeatures:
-            self.initDiscreteFeatureObj(f)
-        for f in self.binaryFeatures:
-            self.initBinaryFeatureObj(f)
-        self.model.setObjective(self.obj, GRB.MINIMIZE)
-    
-    def initObjective(self):
-        if self.constraintsType == TreeConstraintsType.LinearCombinationOfPlanes:
-            self.initLinearCombinationOfPlanesObj()
-        else:
-            ClassifierCounterFactualMilp.initObjectiveStructures(self)
-            ClassifierCounterFactualMilp.initObjective(self)
-    
-    def buildModel(self):
-        self.initSolution()
-        self.buildTrees()
-        self.addInterTreeConstraints()
-        self.addCuts()
-        if self.isolationForest:
-            self.addIsolationForestPlausibilityConstraint()
-        self.addActionnabilityConstraints()
-        self.addOneHotEncodingConstraints()
-        self.initObjective()
-
-    def checkPredictionResult(self):
-        badPrediction = True
-        x_sol = np.array(self.x_sol,dtype=np.float32)
-        if self.strictCounterFactual:
-            badPrediction = (self.outputDesired != self.clf.predict(self.x_sol))
-            if not badPrediction and self.verbose:
-                print("The desired counterfactual", self.outputDesired, " is the class predicted by sklearn", self.clf.predict(self.x_sol))
-        else:
-            badPrediction = (self.outputDesired not in np.argwhere(max(self.clf.predict_proba(x_sol))))
-            if not badPrediction and self.verbose:
-                print("The desired counterfactual", self.outputDesired, "is one of the argmax of the prediction proba", self.clf.predict_proba(x_sol))
-        # if self.outputDesired != self.clf.predict(self.x_sol):
+    # -- Check model status and solution --
+    def __checkIfBadPrediction(self, x_sol):
+        badPrediction = (self.outputDesired != self.clf.predict(self.x_sol))
         if badPrediction:
             print("Error, the desired class is not the predicted one.")
-        # if True:
-        # Check that the trees output are the one desired
+            if self.verbose:
+                # Print a detailed error statement
+                skLearnPrediction = self.clf.predict(self.x_sol)
+                skLearnScore = self.clf.predict_proba(x_sol)
+                if self.strictCounterFactual:
+                    print("The desired counterfactual", self.outputDesired,
+                          " is the class predicted by sklearn",
+                          skLearnPrediction)
+                else:
+                    badScore = (self.outputDesired not in np.argwhere(
+                        max(skLearnScore)))
+                    if not badScore:
+                        print("The desired counterfactual", self.outputDesired,
+                              "is one of the argmax of the prediction proba",
+                              skLearnScore)
+
+    def __checkClassificationScore(self, x_sol):
         if self.verbose:
-            print("Proba predicted by sklearn" , self.clf.predict_proba(x_sol))
-        myProba=[0 for i in self.clf.classes_]
+            print("Score predicted by sklearn", self.clf.predict_proba(x_sol))
+        myProba = [0 for i in self.clf.classes_]
         for t in range(self.clf.n_estimators):
             tm = self.treeManagers[t]
             for v in range(tm.n_nodes):
@@ -497,136 +458,125 @@ class RandomForestCounterFactualMilp(ClassifierCounterFactualMilp):
                     leaf_val = tm.tree.value[v][0]
                     tot = sum(leaf_val)
                     for output in range(len(leaf_val)):
-                        myProba[output] += tm.y_var[v].getAttr(GRB.Attr.X) * (leaf_val[output])/tot
+                        myProba[output] += tm.y_var[v].getAttr(
+                            GRB.Attr.X) * (leaf_val[output])/tot
         for p in range(len(myProba)):
             myProba[p] /= self.clf.n_estimators
-        
+
         if self.verbose:
             print("My proba: ", myProba)
             print("Desired output:", self.outputDesired)
-            print("Initial solution:\n", [self.x0[0][i] for i in range(len(self.x0[0]))], " with prediction ", self.clf.predict(self.x0))
-        
+            print("Initial solution:\n",
+                  [self.x0[0][i] for i in range(len(self.x0[0]))],
+                  " with prediction ", self.clf.predict(self.x0))
+
+    def __checkDecisionPath(self, x_sol):
+        """
+        Compare the counterfactual sample flow in sklearn
+        and in the MILP implementation: they should be identical.
+        """
         self.maxSkLearnError = 0.0
         self.maxMyMilpError = 0.0
-        # Check decision path
         myMilpErrors = False
         skLearnErrors = False
         for t in range(self.clf.n_estimators):
             estimator = self.clf.estimators_[t]
-            predictionPath = estimator.decision_path(self.x_sol)
-            predictionPathList = list([tuple(row) for row in np.transpose(predictionPath.nonzero())])
-            verticesInPath = [v for d,v in predictionPathList]
+            predictionPath = estimator.decision_path(x_sol)
+            predictionPathList = list(
+                [tuple(row) for row in np.transpose(predictionPath.nonzero())])
+            verticesInPath = [v for d, v in predictionPathList]
             tm = self.treeManagers[t]
-            solutionPathList = [u for u in range(tm.n_nodes) if tm.y_var[u].getAttr(GRB.attr.X) >= 0.1]
+            solutionPathList = [u for u in range(
+                tm.n_nodes) if tm.y_var[u].getAttr(GRB.attr.X) >= 0.1]
             if verticesInPath != solutionPathList:
-                lastCommonVertex = max(set(verticesInPath).intersection(set(solutionPathList)))
+                lastCommonVertex = max(
+                    set(verticesInPath).intersection(set(solutionPathList)))
                 f = tm.tree.feature[lastCommonVertex]
                 if self.verbose:
-                    print("Sklearn decision path ", verticesInPath, " and my MILP decision path ", solutionPathList)
+                    print("Sklearn decision path ", verticesInPath,
+                          " and my MILP decision path ", solutionPathList)
                 if self.verbose:
-                    print("Wrong decision vertex", lastCommonVertex, "Feature", f, "threshold", tm.tree.threshold[lastCommonVertex], "solution feature value x_sol[f]=", self.x_sol[0][f])
+                    print("Wrong decision vertex", lastCommonVertex,
+                          "Feature", f,
+                          "threshold", tm.tree.threshold[lastCommonVertex],
+                          "solution feature value x_sol[f]=", x_sol[0][f])
                 nextVertex = -1
-                if (self.x_sol[0][f] <= tm.tree.threshold[lastCommonVertex]):
+                if (x_sol[0][f] <= tm.tree.threshold[lastCommonVertex]):
                     if self.verbose:
-                        print("x_sol[f] <= threshold, next vertex in decision path should be:", tm.tree.children_left[lastCommonVertex])
+                        print("x_sol[f] <= threshold,"
+                              " next vertex in decision path should be:",
+                              tm.tree.children_left[lastCommonVertex])
                     nextVertex = tm.tree.children_left[lastCommonVertex]
                 else:
                     if self.verbose:
-                        print("x_sol[f] > threshold,next vertex in decision path should be:", tm.tree.children_right[lastCommonVertex])
+                        print("x_sol[f] > threshold,"
+                              " next vertex in decision path should be:",
+                              tm.tree.children_right[lastCommonVertex])
                     nextVertex = tm.tree.children_right[lastCommonVertex]
                 if nextVertex not in verticesInPath:
                     skLearnErrors = True
-                    self.maxSkLearnError = max(self.maxSkLearnError, abs(self.x_sol[0][f]-tm.tree.threshold[lastCommonVertex]))
+                    self.maxSkLearnError = max(self.maxSkLearnError, abs(
+                        x_sol[0][f]-tm.tree.threshold[lastCommonVertex]))
                     if self.verbose:
                         print("sklearn is wrong")
                 if nextVertex not in solutionPathList:
-                    print ("MY MILP IS WRONG")
-                    myMilpErrors=True
-                    self.maxMyMilpError = max(self.maxMyMilpError,abs(self.x_sol[0][f]-tm.tree.threshold[lastCommonVertex]))
+                    print("MY MILP IS WRONG")
+                    myMilpErrors = True
+                    self.maxMyMilpError = max(self.maxMyMilpError, abs(
+                        x_sol[0][f]-tm.tree.threshold[lastCommonVertex]))
         if skLearnErrors and not myMilpErrors:
             print("Only sklearn numerical precision errors")
-            # for v in range(tm.n_nodes):
-            #     if tm.y_var[v].getAttr(GRB.Attr.X) != float(v in verticesInPath):
-            #         print("In tree", t, "for vertex", v, "sklearn say path", verticesInPath, "while y_var[", v, "] = ", tm.y_var[v].getAttr(GRB.Attr.X), "and my solution path is", solutionPathList)
-            #         prev = -1
-            #         for u in verticesInPath:
-            #             if u == v and u != 0:
-            #                 f = tm.tree.feature[prev]
-            #                 print("Parent", prev, "Feature", f, "threshold", tm.tree.threshold[prev], "solution feature value x_sol[f]=", self.x_sol[0][f])
-            #                 if (self.x_sol[0][f] <= tm.tree.threshold[prev]):
-            #                     print("x_sol[f] <= threshold, next vertex in decision path should be:", tm.tree.children_left[prev], "and it is", u)
-            #                 else:
-            #                     print("x_sol[f] > threshold,next vertex in decision path should be:", tm.tree.children_right[prev], "and it is", u)
 
-            #                 for thres in self.rightMutuallyExclusivePlanesVar[f]:
-            #                     print("Thres", thres, " var ", self.rightMutuallyExclusivePlanesVar[f][thres].getAttr(GRB.Attr.X))
-            #             prev = u
-                        
-
-            # print("counter")
-            # print(estimator.decision_path(self.x_sol))
-            # print(estimator.predict(self.x_sol))
-            # print("initial")
-            # print(estimator.decision_path(self.x0))
-            # print(estimator.predict(self.x_sol))
-        # Print variables
-        # for v in self.model.getVars():
-        #     print('%s %g' % (v.varName, v.x))
-
-    def checkResultPlausibility(self):
-        x_sol = np.array(self.x_sol,dtype=np.float32)
+    def __checkResultPlausibility(self):
+        x_sol = np.array(self.x_sol, dtype=np.float32)
         if self.isolationForest.predict(x_sol)[0] == 1:
             if self.verbose:
                 print("Result is an inlier")
         else:
             assert self.isolationForest.predict(x_sol)[0] == -1
             print("Result is an outlier")
-    
-    def checkSolution(self, solution):
-        for f in range(len(solution)):
-            self.x_var_sol[f].setAttr(GRB.Attr.LB, solution[f] - eps)
-            self.x_var_sol[f].setAttr(GRB.Attr.UB, solution[f] + eps)
 
-        self.model.write("rf_check.lp")
-        self.model.setParam(GRB.Param.ImpliedCuts,2)
-        # self.model.setParam(GRB.Param.Method,3)
-        self.model.setParam(GRB.Param.Threads,4)
-        self.model.setParam(GRB.Param.TimeLimit,300)
-
-        self.model.optimize()
-        self.solutionFeasibility = self.model.status == GRB.OPTIMAL
+    # ---------------------- Public methods ------------------------
+    def buildModel(self):
+        self.initSolution()
+        self.__buildTrees()
+        self.__addInterTreeConstraints()
+        useMutuallyExcPlanesCuts = self.mutuallyExclusivePlanesCutsActivated
+        useLinCombOfPlanes = (self.constraintsType
+                              == TreeConstraintsType.LinearCombinationOfPlanes)
+        if useMutuallyExcPlanesCuts and not useLinCombOfPlanes:
+            self.__addMutuallyExclusivePlanesCuts()
+        if self.isolationForest:
+            self.__addIsolationForestPlausibilityConstraint()
+        self.addActionnabilityConstraints()
+        self.addOneHotEncodingConstraints()
+        self.__initModelObjective()
 
     def solveModel(self):
         self.model.write("rf.lp")
-        self.model.setParam(GRB.Param.ImpliedCuts,2)
-        # self.model.setParam(GRB.Param.Method,3)
-        self.model.setParam(GRB.Param.Threads,4)
-        self.model.setParam(GRB.Param.TimeLimit,900)
-
+        self.model.setParam(GRB.Param.ImpliedCuts, 2)
+        self.model.setParam(GRB.Param.Threads, 4)
+        self.model.setParam(GRB.Param.TimeLimit, 900)
         self.model.optimize()
-
         self.runTime = self.model.Runtime
-
         if self.model.status != GRB.OPTIMAL:
             self.objValue = "inf"
             self.maxSkLearnError = "inf"
             self.maxMyMilpError = "inf"
-            self.x_sol=self.x0
+            self.x_sol = self.x0
             return False
-
+        # Get model solution
         self.objValue = self.model.ObjVal
-        self.x_sol=[[]] 
+        self.x_sol = [[]]
         for f in range(self.nFeatures):
-            self.x_sol[0].append(self.x_var_sol[f].getAttr(GRB.Attr.X)) 
-        
-        self.checkPredictionResult()
-        if self.isolationForest:
-            self.checkResultPlausibility()
-        
+            self.x_sol[0].append(self.x_var_sol[f].getAttr(GRB.Attr.X))
         if self.verbose:
-            print("Solution built \n", self.x_sol, " with prediction ", self.clf.predict(self.x_sol))
-        
+            print("Solution built \n", self.x_sol,
+                  " with prediction ", self.clf.predict(self.x_sol))
+        # Check results consistency
+        self.__checkIfBadPrediction(self.x_sol)
+        self.__checkClassificationScore(self.x_sol)
+        self.__checkDecisionPath(self.x_sol)
+        if self.isolationForest:
+            self.__checkResultPlausibility()
         return True
-
-
-       

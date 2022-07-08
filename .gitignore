@@ -1,11 +1,21 @@
-.idea/*
-.vscode/*
+# Ignore all cache files
 *.pyc
 __pycache__/*
 .pytest_cache/*
+# Ignore all linear programming files
+*.lp
+# Ignore the counterfactual datasets
+datasets/counterfactuals/*.csv
+# Ignore csv files in test folder
+test/*.csv
+# Ignore result.csv file in root folder
+results/*
+NumericalResults.csv
+# Other
+.idea/*
+.vscode/*
 dist/*
 *egg-info/*
 *.tar.gz
 .qt_for_python/*
-rf.lp
 uiEnv/*
