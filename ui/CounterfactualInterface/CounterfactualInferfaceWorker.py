@@ -1,16 +1,17 @@
 # Author: Moises Henrique Pereira
 # this class handles to run the counterfactual generation
-# it is needed because this process takes time enough to freeze the interface,
+# it is needed because this process takes time enough to freeze the interface, 
 # so, this class is used to be instantiated in another thread
 
+from .CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
+
+from CounterFactualParameters import FeatureType
+from CounterFactualParameters import BinaryDecisionVariables, TreeConstraintsType
+from RandomForestCounterFactual import RandomForestCounterFactualMilp
+
 import numpy as np
+
 from PyQt5.QtCore import QObject, pyqtSignal
-# Load OCEAN functions
-from src.CounterFactualParameters import FeatureType
-from src.CounterFactualParameters import BinaryDecisionVariables, TreeConstraintsType
-from src.RandomForestCounterFactual import RandomForestCounterFactualMilp
-# Load UI functions
-from ui.interface.CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
 
 class CounterfactualInferfaceWorker(QObject):
 
@@ -42,13 +43,13 @@ class CounterfactualInferfaceWorker(QObject):
             1-self.__controller.predictedOriginalClass[0],
             isolationForest=self.__controller.isolationForest,
             constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
-            objectiveNorm=0,
-            mutuallyExclusivePlanesCutsActivated=True,
-            strictCounterFactual=True,
+            objectiveNorm=0, 
+            mutuallyExclusivePlanesCutsActivated=True, 
+            strictCounterFactual=True, 
             verbose=True,
             binaryDecisionVariables=BinaryDecisionVariables.PathFlow_y,
             featuresActionnability=self.__controller.model.transformedFeaturesActionability,
-            featuresType=self.__controller.model.transformedFeaturesType,
+            featuresType=self.__controller.model.transformedFeaturesType, 
             featuresPossibleValues=self.__controller.model.transformedFeaturesPossibleValues)
 
         randomForestMilp.buildModel()
@@ -115,5 +116,5 @@ class CounterfactualInferfaceWorker(QObject):
         else:
             # showing the steps
             self.progress.emit(CounterfactualInterfaceEnums.Status.ERROR_MSG.value)
-
+        
         self.finished.emit()

@@ -7,10 +7,10 @@ from PyQt5 import QtWidgets
 # from Dash.DashApp import dashApp
 # import threading
 
-from ui.MainApplication.MainApplicationWindow import MainApplicationWindow
+from .MainApplicationWindow import MainApplicationWindow
 
 class MainApplication():
-
+    
     def __init__(self):
         self.MainApplicationWindow = None
 
@@ -27,4 +27,5 @@ class MainApplication():
 
 # this function run the dash server
 # def runDash(debug, use_reloader):
-#     dashApp.run_server(debug=debug, use_reloader=use_reloader)
+#     dashApp.run_server(debug=debug, use_reloader=use_reloader) 
+

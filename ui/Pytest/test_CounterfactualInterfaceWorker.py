@@ -1,5 +1,5 @@
 # Author: Moises Henrique Pereira
-# this class handle the worker's functions tests
+# this class handle the worker's functions tests  
 
 import pytest
 import sys
@@ -7,7 +7,7 @@ import sys
 from PyQt5 import QtWidgets
 
 from ui.mainTest import StaticObjects
-from ui.interface.CounterfactualInferfaceWorker import CounterfactualInferfaceWorker
+from ui.CounterfactualInterface.CounterfactualInferfaceWorker import CounterfactualInferfaceWorker
 
 # the init worker expect a CounterfactualInterfaceController as parameter
 # send another type would arrise an assertionError

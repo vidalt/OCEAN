@@ -3,7 +3,7 @@
 
 from PyQt5 import QtWidgets
 
-from ui.interface.CounterfactualInterfaceController import CounterfactualInterfaceController
+from CounterfactualInterface.CounterfactualInterfaceController import CounterfactualInterfaceController
 
 class MainApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -16,8 +16,9 @@ class MainApplicationWindow(QtWidgets.QMainWindow):
         self.setWindowTitle('OceanUI')
 
         # dashView = DashView()
-        # self.setCentralWidget(dashView)
+        # self.setCentralWidget(dashView) 
 
         self.__counterfactualInterfaceController = CounterfactualInterfaceController()
         self.__counterfactualInterfaceController.view.show()
         self.setCentralWidget(self.__counterfactualInterfaceController.view)
+

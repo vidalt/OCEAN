@@ -1,30 +1,34 @@
 # Author: Moises Henrique Pereira
 # this class handle the logic over the interface, interacting with model, view and worker
 # also taking the selected dataset informations from model to send to counterfactual generator in worker class
+
 import numpy as np
+
+from .CounterfactualInterfaceView import CounterfactualInterfaceView
+from .CounterfactualInterfaceModel import CounterfactualInterfaceModel
+from .CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
+
+from .CounterfactualInferfaceWorker import CounterfactualInferfaceWorker
+
+from CounterfactualEngine.CounterfactualEngine import CounterfactualEngine
+
+from CounterFactualParameters import FeatureType
+
+from .ComboboxList.ComboboxListController import ComboboxListController
+from .DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
+from .LineEditMinimumMaximum.LineEditMinimumMaximumController import LineEditMinimumMaximumController
+from .Slider3Ranges.Slider3RangesController import Slider3RangesController
+
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
-# Load OCEAN functions
-from src.CounterFactualParameters import FeatureType
-# Load UI functions
-from ui.engine.CounterfactualEngine import CounterfactualEngine
-from ui.interface.CounterfactualInterfaceView import CounterfactualInterfaceView
-from ui.interface.CounterfactualInterfaceModel import CounterfactualInterfaceModel
-from ui.interface.CounterfactualInterfaceEnums import CounterfactualInterfaceEnums
-from ui.interface.CounterfactualInferfaceWorker import CounterfactualInferfaceWorker
-from ui.interface.ComboboxList.ComboboxListController import ComboboxListController
-from ui.interface.DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
-from ui.interface.LineEditMinimumMaximum.LineEditMinimumMaximumController import LineEditMinimumMaximumController
-from ui.interface.Slider3Ranges.Slider3RangesController import Slider3RangesController
-
 
 class CounterfactualInterfaceController():
 
     def __init__(self):
         self.view = CounterfactualInterfaceView()
         self.model = CounterfactualInterfaceModel()
-
+        
         self.__initializeView()
 
         self.__chosenDataset = CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value
@@ -32,8 +36,7 @@ class CounterfactualInterfaceController():
 
         self.view.randomPoint.connect(self.__handlerRandomPoint)
         self.view.calculateClass.connect(self.__handlerCalculateClass)
-        self.view.generateCounterfactual.connect(
-            self.__handlerGenerateCounterfactual)
+        self.view.generateCounterfactual.connect(self.__handlerGenerateCounterfactual)
 
         self.randomForestClassifier = None
         self.isolationForest = None
@@ -46,13 +49,12 @@ class CounterfactualInterfaceController():
 
         self.featuresConstraints = {}
 
-    # this function takes the dataframe names and send them to interface
 
+    # this function takes the dataframe names and send them to interface
     def __initializeView(self):
         datasets = self.model.getDatasetsName()
 
-        datasetsName = [
-            CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value]
+        datasetsName = [CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value]
         for datasetName in datasets:
             auxDatasetName = datasetName.split('.')[0]
             datasetsName.append(auxDatasetName)
@@ -75,11 +77,9 @@ class CounterfactualInterfaceController():
             xTrain, yTrain = self.model.getTrainData()
 
             # training the random forest and isolation forest models
-            if xTrain is not None and yTrain is not None:
-                self.randomForestClassifier = CounterfactualEngine.trainRandomForestClassifier(
-                    xTrain, yTrain)
-                self.isolationForest = CounterfactualEngine.trainIsolationForest(
-                    xTrain)
+            if xTrain is not None and yTrain is not None: 
+                self.randomForestClassifier = CounterfactualEngine.trainRandomForestClassifier(xTrain, yTrain)
+                self.isolationForest = CounterfactualEngine.trainIsolationForest(xTrain)
 
             # showing the features components and informations
             for feature in self.model.features:
@@ -90,62 +90,53 @@ class CounterfactualInterfaceController():
                         value0 = self.model.featuresInformations[feature]['value0']
                         value1 = self.model.featuresInformations[feature]['value1']
 
-                        componentController = DoubleRadioButtonController(
-                            self.view)
-                        componentController.initializeView(
-                            feature, str(value0), str(value1))
+                        componentController = DoubleRadioButtonController(self.view)
+                        componentController.initializeView(feature, str(value0), str(value1))
 
                     elif featureType is FeatureType.Discrete:
                         minValue = self.model.featuresInformations[feature]['min']
                         maxValue = self.model.featuresInformations[feature]['max']
 
                         # componentController = LineEditMinimumMaximumController(self.view)
-                        componentController = Slider3RangesController(
-                            self.view)
-                        componentController.initializeView(
-                            feature, minValue, maxValue, decimalPlaces=0)
+                        componentController = Slider3RangesController(self.view)
+                        componentController.initializeView(feature, minValue, maxValue, decimalPlaces=0)
 
                     elif featureType is FeatureType.Numeric:
                         minValue = self.model.featuresInformations[feature]['min']
                         maxValue = self.model.featuresInformations[feature]['max']
 
                         # componentController = LineEditMinimumMaximumController(self.view)
-                        componentController = Slider3RangesController(
-                            self.view)
-                        componentController.initializeView(
-                            feature, minValue, maxValue)
-
+                        componentController = Slider3RangesController(self.view)
+                        componentController.initializeView(feature, minValue, maxValue)
+                        
                     elif featureType is FeatureType.Categorical:
                         componentController = ComboboxListController(self.view)
-                        componentController.initializeView(
-                            feature, self.model.featuresInformations[feature]['possibleValues'])
+                        componentController.initializeView(feature, self.model.featuresInformations[feature]['possibleValues'])
 
                     # adding the view to selectedPoint component
                     self.view.addFeatureWidget(componentController.view)
                     # saving the controller to facilitate the access to components
                     self.__dictControllersSelectedPoint[feature] = componentController
-
+            
         else:
             # cleaning the view
             self.view.clearView()
             self.__dictControllersSelectedPoint.clear()
 
-    # this function get a random datapoint from dataset
+    # this function get a random datapoint from dataset 
     def __handlerRandomPoint(self):
         self.view.clearCounterfactual()
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
-            randomDataPoint = self.model.getRandomPoint(
-                self.randomForestClassifier)
+            randomDataPoint = self.model.getRandomPoint(self.randomForestClassifier)
 
             # showing the values in their respective component
             for index, feature in enumerate(self.model.features):
                 if feature != 'Class':
-                    self.__dictControllersSelectedPoint[feature].setSelectedValue(
-                        randomDataPoint[index])
+                    self.__dictControllersSelectedPoint[feature].setSelectedValue(randomDataPoint[index])
 
+    # this function takes the selected data point and calculate the respective class
     def __handlerCalculateClass(self):
-        """ Takes the selected data point and calculate the respective class."""
         self.view.clearCounterfactual()
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
@@ -153,20 +144,16 @@ class CounterfactualInterfaceController():
             auxiliarDataPoint = []
             for feature in self.model.features:
                 if feature != 'Class':
-                    content = self.__dictControllersSelectedPoint[feature].getContent(
-                    )
-                    assert content is not None
+                    content = self.__dictControllersSelectedPoint[feature].getContent()
                     auxiliarDataPoint.append(content['value'])
-
+                    
             self.chosenDataPoint = np.array(auxiliarDataPoint)
 
             # transforming the datapoint to predict its class
-            self.transformedChosenDataPoint = self.model.transformDataPoint(
-                self.chosenDataPoint)
-
+            self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
+            
             # predicting the datapoint class and showing its value
-            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(
-                self.randomForestClassifier, [self.transformedChosenDataPoint])
+            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
             self.view.showOriginalClass(self.predictedOriginalClass[0])
 
     # this function takes the selected data point,
@@ -181,49 +168,41 @@ class CounterfactualInterfaceController():
 
         if self.__chosenDataset != CounterfactualInterfaceEnums.SelectDataset.DEFAULT.value:
             # showing the steps
-            self.view.showCounterfactualStatus(
-                CounterfactualInterfaceEnums.Status.STEP1.value)
+            self.view.showCounterfactualStatus(CounterfactualInterfaceEnums.Status.STEP1.value)
 
-            # getting the datapoint
+            # getting the datapoint 
             auxiliarDataPoint = []
             for feature in self.model.features:
                 if feature != 'Class':
                     featureType = self.model.featuresInformations[feature]['featureType']
 
-                    content = self.__dictControllersSelectedPoint[feature].getContent(
-                    )
+                    content = self.__dictControllersSelectedPoint[feature].getContent()
 
                     auxiliarDataPoint.append(content['value'])
 
                     if featureType is FeatureType.Binary:
-                        notAllowedValue = content['notAllowedValue']
-                        self.featuresConstraints[feature] = {
-                            'featureType': featureType, 'notAllowedValue': notAllowedValue}
+                        notAllowedValue = content['notAllowedValue']   
+                        self.featuresConstraints[feature] = {'featureType': featureType, 'notAllowedValue':notAllowedValue}         
 
                     elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
-                        selectedMinimum = self.model.transformSingleNumericalValue(
-                            feature, content['minimumValue'])
-                        selectedMaximum = self.model.transformSingleNumericalValue(
-                            feature, content['maximumValue'])
-                        self.featuresConstraints[feature] = {'featureType': featureType,
-                                                             'selectedMinimum': selectedMinimum,
-                                                             'selectedMaximum': selectedMaximum}
+                        selectedMinimum = self.model.transformSingleNumericalValue(feature, content['minimumValue'])
+                        selectedMaximum = self.model.transformSingleNumericalValue(feature, content['maximumValue'])
+                        self.featuresConstraints[feature] = {'featureType': featureType, 
+                                                               'selectedMinimum':selectedMinimum, 
+                                                               'selectedMaximum':selectedMaximum}
 
                     elif featureType is FeatureType.Categorical:
-                        self.featuresConstraints[feature] = {'featureType': featureType,
-                                                             'notAllowedValues': content['notAllowedValues']}
-
+                        self.featuresConstraints[feature] = {'featureType': featureType, 
+                                                               'notAllowedValues':content['notAllowedValues']}
+                    
             self.chosenDataPoint = np.array(auxiliarDataPoint)
 
             # showing the steps
-            self.view.showCounterfactualStatus(
-                CounterfactualInterfaceEnums.Status.STEP2.value)
+            self.view.showCounterfactualStatus(CounterfactualInterfaceEnums.Status.STEP2.value)
             # transforming the datapoint to predic its class and generate its counterfactual explanation
-            self.transformedChosenDataPoint = self.model.transformDataPoint(
-                self.chosenDataPoint)
+            self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
             # predicting the datapoint class
-            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(
-                self.randomForestClassifier, [self.transformedChosenDataPoint])
+            self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(self.randomForestClassifier, [self.transformedChosenDataPoint])
             self.view.showOriginalClass(self.predictedOriginalClass[0])
 
             # running the counterfactual generation in another thread
@@ -236,16 +215,14 @@ class CounterfactualInterfaceController():
             self.worker.finished.connect(self.restorCursor)
             self.thread.finished.connect(self.thread.deleteLater)
             self.worker.progress.connect(self.reportProgress)
-            self.worker.couterfactualClass.connect(
-                self.updateCounterfactualClass)
-            self.worker.tableCounterfactualValues.connect(
-                self.updateCounterfactualTable)
+            self.worker.couterfactualClass.connect(self.updateCounterfactualClass)
+            self.worker.tableCounterfactualValues.connect(self.updateCounterfactualTable)
             self.thread.start()
 
     # this function is used to show the counterfactual step
     def reportProgress(self, status):
         assert isinstance(status, str)
-
+        
         # showing the steps
         self.view.showCounterfactualStatus(status)
 
@@ -267,7 +244,7 @@ class CounterfactualInterfaceController():
     # this function is used to change the default cursor to wait cursor
     def waitCursor(self):
         QApplication.setOverrideCursor(Qt.WaitCursor)
-
+    
     # this function is used to restor the default cursor
     def restorCursor(self):
         # updating cursor

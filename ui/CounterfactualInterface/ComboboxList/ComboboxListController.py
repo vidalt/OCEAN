@@ -3,7 +3,7 @@
 # this component has a combobox with completion to help the user
 # and has to lists to show to user the allowed values and the not allowes values given a feature
 
-from ui.interface.ComboboxList.ComboboxListView import ComboboxListView
+from .ComboboxListView import ComboboxListView
 
 class ComboboxListController:
 

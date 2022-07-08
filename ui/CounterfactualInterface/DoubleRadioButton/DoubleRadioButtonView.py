@@ -4,10 +4,10 @@
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import Qt
 
-from ui.interface.DoubleRadioButton.Ui_DoubleRadioButton import Ui_DoubleRadioButton
+from .Ui_DoubleRadioButton import Ui_DoubleRadioButton
 
 class DoubleRadioButtonView(QWidget, Ui_DoubleRadioButton):
-
+    
     def __init__(self, parent:'QWidget'=None):
         super(DoubleRadioButtonView, self).__init__(parent)
         self.setupUi(self)
@@ -28,7 +28,7 @@ class DoubleRadioButtonView(QWidget, Ui_DoubleRadioButton):
         assert isinstance(featureName, str)
         assert isinstance(value0, str)
         assert isinstance(value1, str)
-
+        
         self.labelFeatureName.setText(featureName)
         self.radioButtonValue0.setText(value0)
         self.radioButtonValue1.setText(value1)
@@ -45,7 +45,7 @@ class DoubleRadioButtonView(QWidget, Ui_DoubleRadioButton):
             if self.radioButtonValue0.isChecked():
                 content['notAllowedValue'] = self.radioButtonValue1.text()
             elif self.radioButtonValue1.isChecked():
-                content['notAllowedValue'] = self.radioButtonValue0.text()
+                content['notAllowedValue'] = self.radioButtonValue0.text() 
 
         return content
 

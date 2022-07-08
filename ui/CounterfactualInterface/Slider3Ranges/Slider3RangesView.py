@@ -3,8 +3,8 @@
 
 from PyQt5.QtWidgets import QWidget
 
-from ui.interface.Slider3Ranges.Slider3RangesEnums import Slider3RangesEnums
-from ui.interface.Slider3Ranges.Ui_Slider3Ranges import Ui_Slider3Ranges
+from .Slider3RangesEnums import Slider3RangesEnums
+from .Ui_Slider3Ranges import Ui_Slider3Ranges
 
 class Slider3RangesView(QWidget, Ui_Slider3Ranges):
 
@@ -12,8 +12,8 @@ class Slider3RangesView(QWidget, Ui_Slider3Ranges):
         super(Slider3RangesView, self).__init__(parent)
         self.setupUi(self)
 
-        self.__minValue = 0
-        self.__maxValue = 1
+        self.__minValue = 0 
+        self.__maxValue = 1 
 
         self.doubleSpinBoxMinimum.valueChanged.connect(lambda: self.__onUpdateMinimumValue())
         self.doubleSpinBoxMaximum.valueChanged.connect(lambda: self.__onUpdateMaximumValue())
@@ -58,7 +58,7 @@ class Slider3RangesView(QWidget, Ui_Slider3Ranges):
         self.doubleSpinBoxMinimum.setValue(minValue)
 
         self.doubleSpinBoxMaximum.setValue(maxValue)
-
+    
     def __updateView(self, minValue, maxValue, value):
         assert minValue is not None
         assert maxValue is not None
@@ -68,7 +68,7 @@ class Slider3RangesView(QWidget, Ui_Slider3Ranges):
         self.__maxValue = maxValue
 
         self.labelSlider.updateSlider(minValue, maxValue)
-
+        
         self.labelRangeMinimum.updateRange(minValue, maxValue, minValue)
         self.labelRangeValue.updateRange(minValue, maxValue, value)
         self.labelRangeMaximum.updateRange(minValue, maxValue, maxValue)
@@ -101,13 +101,13 @@ class Slider3RangesView(QWidget, Ui_Slider3Ranges):
         content = None
 
         if self.checkBoxActionability.isChecked():
-            content = {'value':self.__getRangeCurrentValue(),
-                       'minimumValue':self.__getRangeMinimumValue(),
+            content = {'value':self.__getRangeCurrentValue(), 
+                       'minimumValue':self.__getRangeMinimumValue(), 
                        'maximumValue':self.__getRangeMaximumValue()}
-
+        
         else:
-            content = {'value':self.__getRangeCurrentValue(),
-                       'minimumValue':self.__getRangeCurrentValue(),
+            content = {'value':self.__getRangeCurrentValue(), 
+                       'minimumValue':self.__getRangeCurrentValue(), 
                        'maximumValue':self.__getRangeCurrentValue()}
 
         return content
