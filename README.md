@@ -1,4 +1,4 @@
-<img src="ocean_logo.svg" width="300">
+<img src="ocean_logo.svg" width="400">
 
 # Optimal Counterfactual Explanations in Tree Ensembles
 
@@ -23,6 +23,12 @@ Run the following commands from the project root to install the requirements. Yo
     python -m pip install -i https://pypi.gurobi.com gurobipy
     pip install .
 ```
+
+The installation can be checked by running the test suite:
+```shell
+   python -m pytest test\
+```
+The integration tests require a working Gurobi license. If a license is not available, the tests will pass and print a warning. 
 
 ## Reproducing the paper results
 This project enables to reproduce the numerical experiments used to produce the tables and figures of the paper.
