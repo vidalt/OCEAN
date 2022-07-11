@@ -9,22 +9,22 @@ from ui.interface.InterfaceController import InterfaceController
 
 class MainApplicationWindow(QtWidgets.QMainWindow):
     """
-    Instantiates the controller responsible for the counterfactual interface
+    Instantiate the controller responsible for the counterfactual interface.
     """
 
     def __init__(self):
         super(MainApplicationWindow, self).__init__()
 
-        # setting the minimum size
-        width, height = 720, 380
-        self.setMinimumSize(width, height)
+        # Setting the minimum size
+        WIDTH, HEIGHT = 720, 380
+        self.setMinimumSize(WIDTH, HEIGHT)
 
-        self.setWindowTitle('OceanUI')
+        self.setWindowTitle('OCEAN: Optimal Counterfactual Explanations')
 
-        self.__counterfactualInterfaceController = InterfaceController(
+        self.__interfaceController = InterfaceController(
             interfaceType='iterative')
-        self.__counterfactualInterfaceController.view.show()
-        self.setCentralWidget(self.__counterfactualInterfaceController.view)
+        self.__interfaceController.view.show()
+        self.setCentralWidget(self.__interfaceController.view)
 
         helpAction = QtWidgets.QAction('&About', self)
         # helpAction.setShortcut('Ctrl+Q')

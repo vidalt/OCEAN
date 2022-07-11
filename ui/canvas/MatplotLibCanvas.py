@@ -86,14 +86,14 @@ class MatplotLibCanvas(FigureCanvasQTAgg, QObject):
                 uniqueValuesFeature = None
                 rotation = False
                 if self.controller.model.featuresType[f] is FeatureType.Binary:
-                    content = self.controller.dictControllersSelectedPoint[f].getContent(
+                    content = self.controller.initPointFeatures[f].getContent(
                     )
                     uniqueValuesFeature = [
                         content['value0'], content['value1']]
                     rotation = False
 
                 elif self.controller.model.featuresType[f] is FeatureType.Discrete or self.controller.model.featuresType[f] is FeatureType.Numeric:
-                    content = self.controller.dictControllersSelectedPoint[f].getContent(
+                    content = self.controller.initPointFeatures[f].getContent(
                     )
                     minimumValue = math.floor(content['minimumValue'])
                     minimumValue = min(
@@ -108,7 +108,7 @@ class MatplotLibCanvas(FigureCanvasQTAgg, QObject):
                     rotation = False
 
                 elif self.controller.model.featuresType[f] is FeatureType.Categorical:
-                    content = self.controller.dictControllersSelectedPoint[f].getContent(
+                    content = self.controller.initPointFeatures[f].getContent(
                     )
                     uniqueValuesFeature = content['allPossibleValues']
                     rotation = True
@@ -120,7 +120,7 @@ class MatplotLibCanvas(FigureCanvasQTAgg, QObject):
                 value = datapoint.iloc[0][f]
                 xs.append(i)
                 if self.controller.model.featuresType[f] == FeatureType.Discrete or self.controller.model.featuresType[f] == FeatureType.Numeric:
-                    content = self.controller.dictControllersSelectedPoint[f].getContent(
+                    content = self.controller.initPointFeatures[f].getContent(
                     )
                     maximumValue = math.ceil(content['maximumValue'])
                     ys.append(float(value)-minimumValue)

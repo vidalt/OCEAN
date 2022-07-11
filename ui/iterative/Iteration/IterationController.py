@@ -13,7 +13,6 @@ from ui.interface.ComboboxList.ComboboxListController import ComboboxListControl
 from ui.interface.DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
 from ui.interface.Slider3Ranges.Slider3RangesController import Slider3RangesController
 from ..IterativeWorker import IterativeWorker
-
 # Load OCEAN functions
 from src.CounterFactualParameters import FeatureType
 
@@ -36,12 +35,12 @@ class IterationController():
 
         self.iterationName = None
 
-        self.randomForestClassifier = randomForestClassifier
+        self.rfClassifier = randomForestClassifier
         self.isolationForest = isolationForest
 
         self.__initializeView()
 
-        self.dictControllersSelectedPoint = {}
+        self.initPointFeatures = {}
 
         self.chosenDataPoint = None
         self.transformedChosenDataPoint = None
@@ -158,7 +157,7 @@ class IterationController():
                 componentController.view.checkBoxActionability.hide()
                 self.view.addFeatureWidget(feature, componentController.view)
                 # saving the controller to facilitate the access to components
-                self.dictControllersSelectedPoint[feature] = componentController
+                self.initPointFeatures[feature] = componentController
 
         self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
@@ -178,10 +177,10 @@ class IterationController():
     def __setActionable(self, features):
         for feature in self.model.features:
             if feature != 'Class':
-                self.dictControllersSelectedPoint[feature].setActionable(False)
+                self.initPointFeatures[feature].setActionable(False)
 
         for feature in features:
-            self.dictControllersSelectedPoint[feature].setActionable(True)
+            self.initPointFeatures[feature].setActionable(True)
 
     # this function checks if the current datapoint is allowed, considering the constraints
     def getCurrentDataframeAllowance(self, selectedFeatures, currentDataframe):
@@ -191,7 +190,7 @@ class IterationController():
             featureType = self.model.featuresInformations[feature]['featureType']
 
             currentValue = currentDataframe[feature].tolist()[0]
-            content = self.dictControllersSelectedPoint[feature].getContent()
+            content = self.initPointFeatures[feature].getContent()
 
             if featureType is FeatureType.Binary:
                 allowedDict[feature] = True
@@ -247,9 +246,9 @@ class IterationController():
             transformedCurrent = self.model.transformDataPoint(
                 currentDataframe.to_numpy()[0][:-1])
             predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(
-                self.randomForestClassifier, [transformedCurrent])
+                self.rfClassifier, [transformedCurrent])
             predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                self.randomForestClassifier, [transformedCurrent])
+                self.rfClassifier, [transformedCurrent])
 
             # adding the updated prediction class, and percentage
             currentDataframe['Class'] = predictedCurrentClass[0]
@@ -269,7 +268,7 @@ class IterationController():
                 parentDataPoint[:-1])
             # predicting the parent datapoint class probabilities
             predictedParentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                self.randomForestClassifier, [transformedParentDataPoint])
+                self.rfClassifier, [transformedParentDataPoint])
             # building the parent dataframe
             parentDataframe = pd.DataFrame(
                 data=[parentDataPoint], columns=self.model.features)
@@ -285,9 +284,9 @@ class IterationController():
                     lastScenarioDataPoint)
                 # predicting the parent datapoint class and probabilities
                 predictedLastScenarioClass = CounterfactualEngine.randomForestClassifierPredict(
-                    self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                    self.rfClassifier, [transformedLastScenarioDataPoint])
                 predictedLastScenarioClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                    self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                    self.rfClassifier, [transformedLastScenarioDataPoint])
                 # adding class
                 lastScenarioDataPoint = np.append(
                     lastScenarioDataPoint, predictedLastScenarioClass[0])
@@ -307,7 +306,7 @@ class IterationController():
             transformedCounterfactualDataPoint = self.model.transformDataPoint(
                 self.counterfactualToPlot[:-1])
             predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                self.randomForestClassifier, [transformedCounterfactualDataPoint])
+                self.rfClassifier, [transformedCounterfactualDataPoint])
             counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
 
             # get current point allowance
@@ -349,7 +348,7 @@ class IterationController():
         auxiliarDataPoint = []
         for feature in self.model.features:
             if feature != 'Class':
-                content = self.dictControllersSelectedPoint[feature].getContent(
+                content = self.initPointFeatures[feature].getContent(
                 )
                 auxiliarDataPoint.append(content['value'])
 
@@ -361,9 +360,9 @@ class IterationController():
 
         # predicting the datapoint class and showing its value
         self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(
-            self.randomForestClassifier, [self.transformedChosenDataPoint])
+            self.rfClassifier, [self.transformedChosenDataPoint])
         self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-            self.randomForestClassifier, [self.transformedChosenDataPoint])
+            self.rfClassifier, [self.transformedChosenDataPoint])
 
     # this function updates the graph with the original, current, last, and the counterfactual points
     def __updateGraph(self, suggestedFeatures=None):
@@ -383,7 +382,7 @@ class IterationController():
                 auxiliarDataPoint = []
                 for feature in self.model.features:
                     if feature != 'Class':
-                        content = self.dictControllersSelectedPoint[feature].getContent(
+                        content = self.initPointFeatures[feature].getContent(
                         )
                         auxiliarDataPoint.append(content['value'])
 
@@ -395,9 +394,9 @@ class IterationController():
 
                 # predicting the datapoint class and showing its value
                 self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(
-                    self.randomForestClassifier, [self.transformedChosenDataPoint])
+                    self.rfClassifier, [self.transformedChosenDataPoint])
                 self.predictedOriginalClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                    self.randomForestClassifier, [self.transformedChosenDataPoint])
+                    self.rfClassifier, [self.transformedChosenDataPoint])
 
                 # saving the updated current point values and class
                 if self.updatedCurrentPoint is None:
@@ -417,9 +416,9 @@ class IterationController():
                     transformedCurrentDataPoint = self.model.transformDataPoint(
                         self.updatedCurrentPoint)
                     predictedCurrentClass = CounterfactualEngine.randomForestClassifierPredict(
-                        self.randomForestClassifier, [transformedCurrentDataPoint])
+                        self.rfClassifier, [transformedCurrentDataPoint])
                     predictedCurrentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                        self.randomForestClassifier, [transformedCurrentDataPoint])
+                        self.rfClassifier, [transformedCurrentDataPoint])
 
                     currentDataframe['Class'] = predictedCurrentClass[0]
                     currentDataframe['prob1'] = predictedCurrentClassPercentage[0][1]
@@ -433,7 +432,7 @@ class IterationController():
                     parentDataPoint[:-1])
                 # predicting the parent datapoint class probabilities
                 predictedParentClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                    self.randomForestClassifier, [transformedParentDataPoint])
+                    self.rfClassifier, [transformedParentDataPoint])
                 # building the parent dataframe
                 parentDataframe = pd.DataFrame(
                     data=[parentDataPoint], columns=self.model.features)
@@ -450,9 +449,9 @@ class IterationController():
                         lastScenarioDataPoint)
                     # predicting the parent datapoint class and probabilities
                     predictedLastScenarioClass = CounterfactualEngine.randomForestClassifierPredict(
-                        self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                        self.rfClassifier, [transformedLastScenarioDataPoint])
                     predictedLastScenarioClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                        self.randomForestClassifier, [transformedLastScenarioDataPoint])
+                        self.rfClassifier, [transformedLastScenarioDataPoint])
                     # adding class
                     lastScenarioDataPoint = np.append(
                         lastScenarioDataPoint, predictedLastScenarioClass[0])
@@ -472,7 +471,7 @@ class IterationController():
                 transformedCounterfactualDataPoint = self.model.transformDataPoint(
                     self.counterfactualToPlot[:-1])
                 predictedCounterfactualClassPercentage = CounterfactualEngine.randomForestClassifierPredictProbabilities(
-                    self.randomForestClassifier, [transformedCounterfactualDataPoint])
+                    self.rfClassifier, [transformedCounterfactualDataPoint])
                 counterfactualToPlotDataframe['prob1'] = predictedCounterfactualClassPercentage[0][1]
 
                 # get current point allowance
@@ -502,9 +501,9 @@ class IterationController():
             if feature != 'Class':
                 featureType = self.model.featuresInformations[feature]['featureType']
 
-                actionable = self.dictControllersSelectedPoint[feature].getActionable(
+                actionable = self.initPointFeatures[feature].getActionable(
                 )
-                content = self.dictControllersSelectedPoint[feature].getContent(
+                content = self.initPointFeatures[feature].getContent(
                 )
                 currentValue = self.updatedCurrentPoint[i]
 
@@ -538,7 +537,7 @@ class IterationController():
 
         self.view.blockSignals(True)
         nextIteration = IterationController(original=self.original, parent=self, model=self.model,
-                                            randomForestClassifier=self.randomForestClassifier, isolationForest=self.isolationForest)
+                                            randomForestClassifier=self.rfClassifier, isolationForest=self.isolationForest)
         iterationName = self.original.view.addNewIterationTab(
             nextIteration.view)
         dictNextFeaturesInformation['iterationName'] = iterationName

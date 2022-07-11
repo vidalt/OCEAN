@@ -1,4 +1,5 @@
 # Author: Moises Henrique Pereira
+
 from ui.app.MainIterativeApplication import MainApplication
 
 

@@ -13,11 +13,11 @@ class IterativeWorker(QObject):
     """
     Handles the counterfactual generation.
 
-    It is needed because this process can take enough time enough
-    to freeze the interface,  so, this class is used to
-    be instantiated in another thread
+    It is needed because this process can take a long time
+    and freeze the interface. Hence, this class is
+    instantiated in another thread.
     """
-
+    # Initialize pyqt signals
     finished = pyqtSignal()
     counterfactualDataframe = pyqtSignal(object)
     counterfactualSteps = pyqtSignal(str)
@@ -26,12 +26,61 @@ class IterativeWorker(QObject):
     def __init__(self, controller):
         super().__init__()
         self.__controller = controller
-        self.__values = []
+        self.initialPoint = self.__controller.transformedChosenDataPoint
+
+    def __add_custom_constraints(self, result, oceanMilp):
+        """
+        Add custom constraints to the optimization model until
+        the counterfactual explanation respects all customs
+        constraints of the user.
+        """
+        constraintIndex = 0
+        contradictoryFeatures = []
+        initialPoint = self.__controller.initPointFeatures
+        featureInformations = self.__controller.model.featuresInformations
+        for index, feature in enumerate(self.__controller.model.features):
+            if feature != 'Class':
+                featureType = self.__controller.model.featuresType[feature]
+                content = initialPoint[feature].getContent()
+                if featureType is FeatureType.Binary:
+                    constraintIndex += 1
+                elif featureType in [FeatureType.Discrete,
+                                     FeatureType.Numeric]:
+                    minVal = float(content['minimumValue'])
+                    maxVal = float(content['maximumValue'])
+                    if float(result[index]) < minVal:
+                        contradictoryFeatures.append(feature)
+                        oceanMilp.model.addConstr(
+                            oceanMilp.x_var_sol[constraintIndex] >= minVal,
+                            feature + ' minimum constraint')
+                    if float(result[index]) > maxVal:
+                        contradictoryFeatures.append(feature)
+                        oceanMilp.model.addConstr(
+                            oceanMilp.x_var_sol[constraintIndex] <= maxVal,
+                            feature+' maximum constraint')
+                    constraintIndex += 1
+                elif featureType is FeatureType.Categorical:
+                    notAllowedValues = content['notAllowedValues']
+                    if result[index] in notAllowedValues:
+                        contradictoryFeatures.append(feature)
+                    for val in featureInformations[feature]['possibleValues']:
+                        if val == result[index]:
+                            oceanMilp.model.addConstr(
+                                oceanMilp.x_var_sol[constraintIndex] == 0,
+                                feature + '_' + val + ' not allowed')
+                        constraintIndex += 1
+        return contradictoryFeatures
 
     def run(self):
-        randomForestMilp = RandomForestCounterFactualMilp(self.__controller.randomForestClassifier,
-            [self.__controller.transformedChosenDataPoint],
-            1-self.__controller.predictedOriginalClass[0],
+        model = self.__controller.model
+        actionability = model.transformedFeaturesActionability
+        possibleValues = model.transformedFeaturesPossibleValues
+        featuresType = model.transformedFeaturesType
+
+        # Build MILP model
+        oceanMilp = RandomForestCounterFactualMilp(
+            self.__controller.rfClassifier,
+            [self.initialPoint], 1-self.__controller.predictedOriginalClass[0],
             isolationForest=None,
             # isolationForest=self.__controller.isolationForest,
             constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,
@@ -40,85 +89,58 @@ class IterativeWorker(QObject):
             strictCounterFactual=True,
             verbose=False,
             binaryDecisionVariables=BinaryDecisionVariables.PathFlow_y,
-            featuresActionnability=self.__controller.model.transformedFeaturesActionability,
-            featuresType=self.__controller.model.transformedFeaturesType,
-            featuresPossibleValues=self.__controller.model.transformedFeaturesPossibleValues)
+            featuresActionnability=actionability,
+            featuresType=featuresType,
+            featuresPossibleValues=possibleValues)
+        oceanMilp.buildModel()
 
-        randomForestMilp.buildModel()
-
-        contradictoryFeatures = []
+        # ---- Generate counterfactual explanation ----
         counterfactualFound = False
-        # while True:
         for i in range(10):
-            self.counterfactualSteps.emit('Counterfactual Iteration number '+str(i+1)+' out of 10')
+            self.counterfactualSteps.emit(
+                'Counterfactual Iteration number '+str(i+1)+' out of 10')
+            oceanMilp.solveModel()
+            # Get the counterfactual explanation of the current datapoint
+            cfExplanation = oceanMilp.x_sol
 
-            randomForestMilp.solveModel()
-            counterfactualResult = randomForestMilp.x_sol
-
-            # getting the counterfactual to the current datapoint
-            counterfactualResult = randomForestMilp.x_sol
-
-            if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
-                counterfactualFound = False
+            # Check results
+            counterfactualNotFound = (
+                np.array(cfExplanation) == np.array([self.initialPoint])).all()
+            if counterfactualNotFound:
                 print('!'*75)
-                print('ERROR: Model is infeasible')
+                print('ERROR: Could not find a counterfactual explanations.')
+                print('The model is infeasible.')
                 print('!'*75)
                 self.counterfactualError.emit()
-                # self.finished.emit()
                 break
 
-            elif counterfactualResult is not None:
+            elif cfExplanation is not None:
                 counterfactualFound = True
-                counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
+                # Predict class of counterfactual
+                counterfactualClass = self.__controller.rfClassifier.predict(
+                    cfExplanation)
+                assert (counterfactualClass == 1
+                        - self.__controller.predictedOriginalClass[0])
+                result = self.__controller.model.invertTransformedDataPoint(
+                    cfExplanation[0])
+                result = np.append(result, counterfactualClass[0])
 
-                result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
-                result = np.append(result, counterfactualResultClass[0])
-
-                constraintIndex = 0
-                contradictoryFeatures = []
-                for index, feature in enumerate(self.__controller.model.features):
-                    if feature != 'Class':
-                        if self.__controller.model.featuresType[feature] is FeatureType.Binary:
-                            constraintIndex += 1
-
-                        elif self.__controller.model.featuresType[feature] is FeatureType.Discrete or self.__controller.model.featuresType[feature] is FeatureType.Numeric:
-                            content = self.__controller.dictControllersSelectedPoint[feature].getContent()
-                            minimumValue = float(content['minimumValue'])
-                            maximumValue = float(content['maximumValue'])
-
-                            if float(result[index]) < minimumValue:
-                                contradictoryFeatures.append(feature)
-
-                                randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] >= minimumValue, feature+' minimum constraint')
-
-                            if float(result[index]) > maximumValue:
-                                contradictoryFeatures.append(feature)
-
-                                randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] <= maximumValue, feature+' maximum constraint')
-
-                            constraintIndex += 1
-
-                        elif self.__controller.model.featuresType[feature] is FeatureType.Categorical:
-                            content = self.__controller.dictControllersSelectedPoint[feature].getContent()
-                            notAllowedValues = content['notAllowedValues']
-
-                            if result[index] in notAllowedValues:
-                                contradictoryFeatures.append(feature)
-
-                            for value in self.__controller.model.featuresInformations[feature]['possibleValues']:
-                                if value == result[index]:
-                                    randomForestMilp.model.addConstr(randomForestMilp.x_var_sol[constraintIndex] == 0, feature+'_'+value+' not allowed')
-
-                                constraintIndex += 1
+                # Check that the user's custom constraints are
+                # respected. Add the constraints if not.
+                contradictoryFeatures = self.__add_custom_constraints(
+                    result, oceanMilp)
 
                 if len(contradictoryFeatures) == 0:
-                    # sending the counterfactual
+                    # Success: send the counterfactual
                     self.counterfactualDataframe.emit(result)
                     break
 
         if len(contradictoryFeatures) > 0 and counterfactualFound:
             print('!'*75)
-            print('ERROR: It was not possible to find the counterfactual with those constraints')
+            print('ERROR: It was not possible to find the counterfactual '
+                  'with those constraints')
+            print('after 10 iterations of solving the model '
+                  'with added constraints.')
             print('!'*75)
             self.counterfactualError.emit()
 

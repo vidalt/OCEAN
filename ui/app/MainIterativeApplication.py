@@ -4,6 +4,10 @@ import sys
 import threading
 from PyQt5 import QtWidgets
 import dash
+import dash_core_components as dcc
+import dash_html_components as html
+import plotly.graph_objects as go
+import plotly.express as px
 # Import UI functions
 from ui.app.MainIterativeApplicationWindow import MainApplicationWindow
 
@@ -35,4 +39,12 @@ def runDash(debug, use_reloader):
     Run the dash server
     """
     app = dash.Dash(__name__)
+
+    figure = px.bar()
+    app.layout = html.Div(
+        dcc.Graph(
+            id='graph',
+            figure=figure)
+        )
+
     app.run_server(debug=False)
