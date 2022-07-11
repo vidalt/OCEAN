@@ -21,12 +21,12 @@ class IterationView(QWidget, Ui_Iteration):
         super(IterationView, self).__init__()
         self.setupUi(self)
 
-        self.pushButtonNext.clicked.connect(lambda: self.nextIteration.emit())
-        self.pushButtonFinish.clicked.connect(
-            lambda: self.finishIteration.emit())
-
         self.__dictItems = {}
 
+        self.pushButtonNext.clicked.connect(
+            lambda: self.nextIteration.emit())
+        self.pushButtonFinish.clicked.connect(
+            lambda: self.finishIteration.emit())
         self.comboBoxCheckable.itemsChanged.connect(
             lambda: self.__onItemsChanged())
 

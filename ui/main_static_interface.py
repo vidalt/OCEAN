@@ -1,11 +1,12 @@
 # Author: Moises Henrique Pereira
-# Run the application
+
 # Import ui functions
-from ui.app.MainStaticApplication import MainApplication
+from ui.app.MainApplication import MainApplication
 
 
 def main():
-    application = MainApplication()
+    interfaceType = 'static'
+    application = MainApplication(interfaceType)
     application.run()
 
 

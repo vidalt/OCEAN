@@ -1,12 +1,10 @@
 import numpy as np
 from PyQt5.QtCore import QThread
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication
 # Import ui functions
-from .CounterfactualInterfaceViewStatic import CounterfactualInterfaceViewStatic
+from ui.interface.InterfaceController import InterfaceController
+from ui.static.StaticViewer import StaticViewer
 from ui.static.InterfaceWorker import InterfaceWorker
 from ui.engine.CounterfactualEngine import CounterfactualEngine
-from ui.interface.InterfaceModel import InterfaceModel
 from ui.interface.InterfaceEnums import InterfaceEnums
 from ui.interface.ComboboxList.ComboboxListController import ComboboxListController
 from ui.interface.DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
@@ -15,44 +13,25 @@ from ui.interface.Slider3Ranges.Slider3RangesController import Slider3RangesCont
 from src.CounterFactualParameters import FeatureType
 
 
-class StaticController:
+class StaticController(InterfaceController):
 
     def __init__(self):
-        self.view = CounterfactualInterfaceViewStatic()
-        self.model = InterfaceModel()
+        super().__init__()
+        self.view = StaticViewer()
+        self.initializeView()
 
-        self.__initializeView()
-
-        self.__chosenDataset = InterfaceEnums.SelectDataset.DEFAULT.value
         self.view.chosenDataset.connect(self.__handlerChosenDataset)
-
         self.view.randomPoint.connect(self.__handlerRandomPoint)
-
         self.view.calculateClass.connect(self.__handlerCalculateClass)
+
         self.view.generateCounterfactual.connect(
             self.__handlerGenerateCounterfactual)
 
-        self.randomForestClassifier = None
-        self.isolationForest = None
-
-        self.__dictControllersSelectedPoint = {}
-
-        self.chosenDataPoint = None
-        self.transformedChosenDataPoint = None
-        self.predictedOriginalClass = None
-
         self.featuresConstraints = {}
 
-    def __initializeView(self):
-        """ Send the dataframe names to interface. """
-        datasets = self.model.getDatasetsName()
-
-        datasetsName = [InterfaceEnums.SelectDataset.DEFAULT.value]
-        for datasetName in datasets:
-            auxDatasetName = datasetName.split('.')[0]
-            datasetsName.append(auxDatasetName)
-
-        self.view.initializeView(datasetsName)
+        # Set each view on a tab
+        self.interfaceViewer.tabWidget.addTab(self.view,
+                                              'Static Counterfactual')
 
     def __handlerChosenDataset(self):
         """ Opens the selected dataset, trains the random forest
@@ -64,7 +43,7 @@ class StaticController:
         if self.__chosenDataset != InterfaceEnums.SelectDataset.DEFAULT.value:
             # cleaning the view
             self.view.clearView()
-            self.__dictControllersSelectedPoint.clear()
+            self.initPointFeatures.clear()
 
             # opening the desired dataset
             self.model.openChosenDataset(self.__chosenDataset)
@@ -119,12 +98,12 @@ class StaticController:
                     # adding the view to selectedPoint component
                     self.view.addFeatureWidget(componentController.view)
                     # saving the controller to facilitate the access to components
-                    self.__dictControllersSelectedPoint[feature] = componentController
+                    self.initPointFeatures[feature] = componentController
 
         else:
             # cleaning the view
             self.view.clearView()
-            self.__dictControllersSelectedPoint.clear()
+            self.initPointFeatures.clear()
 
     # this function get a random datapoint from dataset
     def __handlerRandomPoint(self):
@@ -137,7 +116,7 @@ class StaticController:
             # showing the values in their respective component
             for index, feature in enumerate(self.model.features):
                 if feature != 'Class':
-                    self.__dictControllersSelectedPoint[feature].setSelectedValue(
+                    self.initPointFeatures[feature].setSelectedValue(
                         randomDataPoint[index])
 
     # this function takes the selected data point and calculate the respective class
@@ -149,8 +128,7 @@ class StaticController:
             auxiliarDataPoint = []
             for feature in self.model.features:
                 if feature != 'Class':
-                    content = self.__dictControllersSelectedPoint[feature].getContent(
-                    )
+                    content = self.initPointFeatures[feature].getContent()
                     auxiliarDataPoint.append(content['value'])
 
             self.chosenDataPoint = np.array(auxiliarDataPoint)
@@ -185,7 +163,7 @@ class StaticController:
                 if feature != 'Class':
                     featureType = self.model.featuresInformations[feature]['featureType']
 
-                    content = self.__dictControllersSelectedPoint[feature].getContent(
+                    content = self.initPointFeatures[feature].getContent(
                     )
 
                     auxiliarDataPoint.append(content['value'])
@@ -258,12 +236,3 @@ class StaticController:
             assert len(item) == 3
 
         self.view.showCounterfactualComparison(counterfactualComparison)
-
-    # this function is used to change the default cursor to wait cursor
-    def waitCursor(self):
-        QApplication.setOverrideCursor(Qt.WaitCursor)
-
-    # this function is used to restor the default cursor
-    def restorCursor(self):
-        # updating cursor
-        QApplication.restoreOverrideCursor()

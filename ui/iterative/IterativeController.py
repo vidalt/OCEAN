@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import QThread
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtWidgets import QMessageBox
 # Load UI functions
+from ui.interface.InterfaceController import InterfaceController
 from .IterativeWorker import IterativeWorker
 from .Iteration.IterationController import IterationController
-from .IterativeViewer import IterativeViewer
-from ui.interface.InterfaceModel import InterfaceModel
+from ui.iterative.IterativeViewer import IterativeViewer
 from ui.interface.InterfaceEnums import InterfaceEnums
 from ui.interface.ComboboxList.ComboboxListController import ComboboxListController
 from ui.interface.DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
@@ -17,50 +16,30 @@ from ui.engine.CounterfactualEngine import CounterfactualEngine
 from src.CounterFactualParameters import FeatureType
 
 
-class IterativeController:
+class IterativeController(InterfaceController):
 
     def __init__(self):
+        super().__init__()
         self.view = IterativeViewer()
-        self.model = InterfaceModel()
+        self.initializeView()
 
-        self.__initializeView()
-
-        self.__chosenDataset = InterfaceEnums.SelectDataset.DEFAULT.value
         self.view.chosenDataset.connect(self.__handlerChosenDataset)
         self.view.randomPoint.connect(self.__handlerRandomPoint)
         self.view.calculateClass.connect(self.__handlerCalculateClass)
+
         self.view.nextIteration.connect(self.__handlerNextIteration)
 
-        self.rfClassifier = None
-        self.isolationForest = None
-
-        self.chosenDataPoint = None
         self.__dataframeChosenDataPoint = None
-        self.predictedOriginalClass = None
-
         self.__canvas = None
-
-        self.transformedChosenDataPoint = None
-        self.initPointFeatures = {}
         self.__samplesToPlot = None
         self.transformedSamplesToPlot = None
         self.transformedSamplesClasses = None
-
         self.__suggestedFeaturesToPlot = None
-
         self.__counterfactualStep = None
 
-    # this function takes the dataframe names and send them to interface
-
-    def __initializeView(self):
-        datasets = self.model.getDatasetsName()
-
-        datasetsName = [InterfaceEnums.SelectDataset.DEFAULT.value]
-        for datasetName in datasets:
-            auxDatasetName = datasetName.split('.')[0]
-            datasetsName.append(auxDatasetName)
-
-        self.view.initializeView(datasetsName)
+        # Set each view on a tab
+        self.interfaceViewer.tabWidget.addTab(
+            self.view, 'Iterative Counterfactual')
 
     def __handlerChosenDataset(self):
         """
@@ -80,78 +59,73 @@ class IterativeController:
             xTrain, yTrain = self.model.getTrainData()
 
             # Training the random forest and isolation forest models
-            if xTrain is not None and yTrain is not None:
-                self.rfClassifier = CounterfactualEngine.trainRandomForestClassifier(
-                    xTrain, yTrain)
-                self.isolationForest = CounterfactualEngine.trainIsolationForest(
-                    xTrain)
+            assert(xTrain is not None and yTrain is not None)
+            self.rfClassifier = CounterfactualEngine.trainRandomForestClassifier(
+                xTrain, yTrain)
+            self.isolationForest = CounterfactualEngine.trainIsolationForest(
+                xTrain)
 
-                # --- Plot the features importance ---
-                featureImportance = self.rfClassifier.feature_importances_
-                featureImportance = pd.DataFrame(data={
-                    'features': self.model.transformedFeaturesOrdered,
-                    'importance': featureImportance})
-                featureImportance = featureImportance.sort_values(
-                    by='importance', ascending=False)
-                # Plot on widget
-                self.__canvas = self.view.getCanvas()
-                self.__canvas.updateFeatureImportanceGraph(
-                    featureImportance, 'features', 'importance')
+            # --- Plot the features importance ---
+            featureImportance = self.rfClassifier.feature_importances_
+            featureImportance = pd.DataFrame(data={
+                'features': self.model.transformedFeaturesOrdered,
+                'importance': featureImportance})
+            featureImportance = featureImportance.sort_values(
+                by='importance', ascending=False)
+            # Plot on widget
+            self.__canvas = self.view.getCanvas()
+            self.__canvas.updateFeatureImportanceGraph(
+                featureImportance, 'features', 'importance')
 
             # ------ Show features components and informations ------
             for feature in self.model.features:
                 if feature != 'Class':
                     featureInformations = self.model.featuresInformations[feature]
                     featureType = featureInformations['featureType']
-                    componentController = None
+                    component = None
                     if featureType is FeatureType.Binary:
                         value0 = featureInformations['value0']
                         value1 = featureInformations['value1']
-                        componentController = DoubleRadioButtonController(
-                            self.view)
-                        componentController.initializeView(
+                        component = DoubleRadioButtonController(self.view)
+                        component.initializeView(
                             feature, str(value0), str(value1))
                     elif featureType is FeatureType.Discrete:
                         minValue = featureInformations['min']
                         maxValue = featureInformations['max']
-                        componentController = Slider3RangesController(
-                            self.view)
-                        componentController.initializeView(
+                        component = Slider3RangesController(self.view)
+                        component.initializeView(
                             feature, minValue, maxValue, decimalPlaces=0)
                     elif featureType is FeatureType.Numeric:
                         minValue = featureInformations['min']
                         maxValue = featureInformations['max']
-                        componentController = Slider3RangesController(
-                            self.view)
-                        componentController.initializeView(
+                        component = Slider3RangesController(self.view)
+                        component.initializeView(
                             feature, minValue, maxValue)
                     elif featureType is FeatureType.Categorical:
-                        componentController = ComboboxListController(
+                        component = ComboboxListController(
                             self.view, featureInformations['possibleValues'])
-                        componentController.initializeView(
+                        component.initializeView(
                             feature, featureInformations['possibleValues'])
 
                     # Add the view to selectedPoint component
-                    componentController.view.checkBoxActionability.hide()
-                    self.view.addFeatureWidget(componentController.view)
+                    component.view.checkBoxActionability.hide()
+                    self.view.addFeatureWidget(component.view)
                     # Save the controller to facilitate access to components
-                    self.initPointFeatures[feature] = componentController
+                    self.initPointFeatures[feature] = component
         else:
-            # cleaning the view
+            # Clear the viewer
             self.view.clearView()
             self.initPointFeatures.clear()
 
-    # this function get a random datapoint from dataset
     def __handlerRandomPoint(self):
+        """
+        Get a random datapoint from dataset.
+        """
         self.view.clearClass()
 
         if self.__chosenDataset != InterfaceEnums.SelectDataset.DEFAULT.value:
-            randomDataPoint = self.model.getRandomPoint(
-                self.rfClassifier)
-            randomDataPoint = ['4', 'male', '2',
-                               'own', '1', '2', '5', '5', 'business']
-
-            # showing the values in their respective component
+            randomDataPoint = self.model.getRandomPoint(self.rfClassifier)
+            # Show the values of the data point in components
             for index, feature in enumerate(self.model.features):
                 if feature != 'Class':
                     self.initPointFeatures[feature].setSelectedValue(
@@ -203,50 +177,51 @@ class IterativeController:
     def getCounterfactualExplanation(self, counterfactual):
         self.view.enableNext(True)
 
-        dictNextFeaturesInformation = {}
+        nextFeaturesInfo = {}
         for i, feature in enumerate(self.model.features):
             if feature != 'Class':
                 featureType = self.model.featuresInformations[feature]['featureType']
 
-                actionable = self.initPointFeatures[feature].getActionable(
-                )
-                content = self.initPointFeatures[feature].getContent(
-                )
+                actionable = self.initPointFeatures[feature].getActionable()
+                content = self.initPointFeatures[feature].getContent()
                 currentValue = content['value']
 
                 if featureType is FeatureType.Binary:
                     value0 = content['value0']
                     value1 = content['value1']
 
-                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
-                                                            'value0': value0,
-                                                            'value1': value1,
-                                                            'value': currentValue}
+                    nextFeaturesInfo[feature] = {'actionable': actionable,
+                                                 'value0': value0,
+                                                 'value1': value1,
+                                                 'value': currentValue}
 
-                elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                elif featureType in [FeatureType.Discrete, FeatureType.Numeric]:
                     minimumValue = content['minimumValue']
                     maximumValue = content['maximumValue']
 
-                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
-                                                            'minimumValue': minimumValue,
-                                                            'maximumValue': maximumValue,
-                                                            'value': currentValue}
+                    nextFeaturesInfo[feature] = {'actionable': actionable,
+                                                 'minimumValue': minimumValue,
+                                                 'maximumValue': maximumValue,
+                                                 'value': currentValue}
 
                 elif featureType is FeatureType.Categorical:
                     allowedValues = content['allowedValues']
                     notAllowedValues = content['notAllowedValues']
                     allPossibleValues = content['allPossibleValues']
-                    dictNextFeaturesInformation[feature] = {'actionable': actionable,
-                                                            'allowedValues': allowedValues,
-                                                            'notAllowedValues': notAllowedValues,
-                                                            'allPossibleValues': allPossibleValues,
-                                                            'value': currentValue}
+                    nextFeaturesInfo[feature] = {
+                        'actionable': actionable,
+                        'allowedValues': allowedValues,
+                        'notAllowedValues': notAllowedValues,
+                        'allPossibleValues': allPossibleValues,
+                        'value': currentValue}
 
-        nextIteration = IterationController(original=self, parent=self, model=self.model,
-                                            randomForestClassifier=self.rfClassifier, isolationForest=self.isolationForest)
+        nextIteration = IterationController(
+            original=self, parent=self, model=self.model,
+            randomForestClassifier=self.rfClassifier,
+            isolationForest=self.isolationForest)
         iterationName = self.addNewIterationTab(nextIteration.view)
-        dictNextFeaturesInformation['iterationName'] = iterationName
-        nextIteration.setFeaturesAndValues(dictNextFeaturesInformation)
+        nextFeaturesInfo['iterationName'] = iterationName
+        nextIteration.setFeaturesAndValues(nextFeaturesInfo)
         nextIteration.setCounterfactual(counterfactual)
 
         suggestedFeatures = []
@@ -254,7 +229,7 @@ class IterativeController:
             if feature != 'Class':
                 featureType = self.model.featuresInformations[feature]['featureType']
 
-                if featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+                if featureType in [FeatureType.Discrete, FeatureType.Numeric]:
                     if float(self.chosenDataPoint[ind]) != float(counterfactual[ind]):
                         suggestedFeatures.append(feature)
 
@@ -292,13 +267,17 @@ class IterativeController:
             self.__counterfactualStep = None
 
         QMessageBox.information(self.view, 'Counterfactual error',
-                                'It was not possible to generate the counterfactual with those constraints', QMessageBox.Ok)
+                                'It was not possible to generate the '
+                                'counterfactual with those constraints',
+                                QMessageBox.Ok)
         self.view.enableNext(True)
         self.restorCursor()
 
-    # this function generates the counterfactual given the current point
     def __generateCounterfactualAndNextIteration(self):
-        # running the counterfactual generation in another thread
+        """
+        Generate the counterfactual given the current initial point.
+        """
+        # Run the counterfactual generation algorithm in another thread
         self.thread = QThread(self.view)
         self.worker = IterativeWorker(self)
         self.worker.moveToThread(self.thread)
@@ -309,10 +288,8 @@ class IterativeController:
             self.handlerCounterfactualSteps)
         self.worker.counterfactualError.connect(
             self.handlerCounterfactualError)
-        # self.worker.finished.connect(self.worker.deleteLater)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.restorCursor)
-        # self.worker.finished.connect(self.handlerCounterfactualSteps)
         self.thread.finished.connect(self.thread.deleteLater)
         self.thread.start()
 
@@ -322,12 +299,3 @@ class IterativeController:
 
         if self.__chosenDataset != InterfaceEnums.SelectDataset.DEFAULT.value:
             self.__generateCounterfactualAndNextIteration()
-
-    # this function is used to change the default cursor to wait cursor
-    def waitCursor(self):
-        QApplication.setOverrideCursor(Qt.WaitCursor)
-
-    # this function is used to restor the default cursor
-    def restorCursor(self):
-        # updating cursor
-        QApplication.restoreOverrideCursor()

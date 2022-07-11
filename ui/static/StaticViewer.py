@@ -7,7 +7,7 @@ from PyQt5.QtGui import QColor
 
 from .Ui_CounterfactualInterfaceStatic import Ui_CounterfactualInterfaceStatic
 
-class CounterfactualInterfaceViewStatic(QWidget, Ui_CounterfactualInterfaceStatic):
+class StaticViewer(QWidget, Ui_CounterfactualInterfaceStatic):
 
     chosenDataset = pyqtSignal()
     randomPoint = pyqtSignal()
@@ -15,11 +15,11 @@ class CounterfactualInterfaceViewStatic(QWidget, Ui_CounterfactualInterfaceStati
     generateCounterfactual = pyqtSignal()
 
     def __init__(self):
-        super(CounterfactualInterfaceViewStatic, self).__init__()
+        super(StaticViewer, self).__init__()
         self.setupUi(self)
 
         self.comboBoxSelectDataset.currentTextChanged.connect(lambda: self.chosenDataset.emit())
-        
+
         self.pushButtonRandomPoint.clicked.connect(lambda: self.randomPoint.emit())
 
         self.pushButtonCalculateClass.clicked.connect(lambda: self.calculateClass.emit())
@@ -35,7 +35,7 @@ class CounterfactualInterfaceViewStatic(QWidget, Ui_CounterfactualInterfaceStati
         assert isinstance(datasets, list)
         for dataset in datasets:
             assert isinstance(dataset, str)
-    
+
         if datasets is not None:
             self.comboBoxSelectDataset.clear()
             self.comboBoxSelectDataset.addItems(datasets)
@@ -88,7 +88,7 @@ class CounterfactualInterfaceViewStatic(QWidget, Ui_CounterfactualInterfaceStati
 
         self.plainTextEditCounterfactualStatus.insertPlainText(status)
 
-    # this function is used to clean just the comparison table 
+    # this function is used to clean just the comparison table
     def __clearTableWidgetCounterfactualComparison(self):
         rowCount = self.tableWidgetCounterfactualComparison.rowCount()
         for index in reversed(range(rowCount)):

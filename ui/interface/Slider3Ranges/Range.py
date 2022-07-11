@@ -44,26 +44,25 @@ class Range(QLabel):
 
         self.__enabled = True
 
-    # this function enables the user from changind the value
-
     def enableComponent(self):
+        """
+        Allow the user to change the value.
+        """
         self.__enabled = True
-        self.setStyleSheet('''QLabel {
-            background-color: #049DD9;
-            border-style:solid;
-            border-width:1px;
-            border-color: #049DD9;
-        }''')
+        self.setStyleSheet('''QLabel {background-color: #049DD9;
+                                      border-style: solid;
+                                      border-width: 1px;
+                                      border-color: #049DD9;}''')
 
-    # this function blocks the user from changing the value
     def disableComponent(self):
+        """
+        Prohibit the user from changing the value.
+        """
         self.__enabled = False
-        self.setStyleSheet('''QLabel {
-            background-color: grey;
-            border-style:solid;
-            border-width:1px;
-            border-color: #049DD9;
-        }''')
+        self.setStyleSheet('''QLabel {background-color: grey;
+                                      border-style:solid;
+                                      border-width:1px;
+                                      border-color: #049DD9;}''')
 
     @property
     def minValue(self):
@@ -77,19 +76,15 @@ class Range(QLabel):
     def value(self):
         return self.__value
 
-    # this function is used to indicate what slider needs to be used
     def setSlider(self, slider):
         assert isinstance(slider, Slider)
 
         self.__slider = slider
-
         self.__minX = slider.geometry().topLeft().x()
         self.__maxX = slider.geometry().topRight().x()
-
         self.__minValue = slider.minValue
         self.__maxValue = slider.maxValue
 
-    # this function is used to set the initial values
     def initializeRange(self, minValue, maxValue, value, space):
         assert minValue is not None
         assert maxValue is not None
@@ -152,18 +147,7 @@ class Range(QLabel):
     def __updatePos(self, posX):
         assert posX is not None
 
-        if not self.__enabled:
-            return
-
-        if posX <= self.__maxX and posX >= self.__minX:
-            value = self.__slider.getValueFromPos(posX)
-            self.setValue(value)
-
-        elif posX >= self.__maxX:
-            value = self.__slider.getValueFromPos(posX)
-            self.setValue(value)
-
-        elif posX <= self.__minX:
+        if self.__enabled:
             value = self.__slider.getValueFromPos(posX)
             self.setValue(value)
 
@@ -172,16 +156,18 @@ class Range(QLabel):
             self.__rangeValue.setText(str(self.__value))
             self.__rangeValue.adjustSize()
             self.__rangeValue.raise_()
+            rangeWidth = self.__rangeValue.width()
 
-            labelPosX = self.pos().x()+(self.width()/2-self.__rangeValue.width()/2)
-            if labelPosX < self.__minX+self.__rangeValue.width():
-                labelPosX += self.__rangeValue.width()/2
-            elif labelPosX > self.__maxX-self.__rangeValue.width():
-                labelPosX -= self.__rangeValue.width()/2
+            labelPosX = self.pos().x()+(self.width()/2-rangeWidth/2)
+            if labelPosX < self.__minX+rangeWidth:
+                labelPosX += rangeWidth/2
+            elif labelPosX > self.__maxX-rangeWidth:
+                labelPosX -= rangeWidth/2
             labelPosY = self.__slider.pos().y()+self.__space
 
-            self.__rangeValue.setGeometry(
-                labelPosX, labelPosY, self.__rangeValue.width(), self.__rangeValue.height())
+            self.__rangeValue.setGeometry(labelPosX, labelPosY,
+                                          rangeWidth,
+                                          self.__rangeValue.height())
 
     def mouseReleaseEvent(self, event):
         self.__isPressed = False

@@ -96,6 +96,7 @@ class IterativeWorker(QObject):
 
         # ---- Generate counterfactual explanation ----
         counterfactualFound = False
+        contradictoryFeatures = []
         for i in range(10):
             self.counterfactualSteps.emit(
                 'Counterfactual Iteration number '+str(i+1)+' out of 10')

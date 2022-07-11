@@ -3,7 +3,6 @@
 import os
 import random as rd
 import pandas as pd
-import numpy as np
 # Import OCEAN functions
 from src.CounterFactualParameters import FeatureType
 from src.CounterFactualParameters import getFeatureType
@@ -109,22 +108,17 @@ class InterfaceModel():
             return self.currentDatasetReader.X[self.transformedFeaturesOrdered], self.currentDatasetReader.y
         return None, None
 
-    # this function returns a random point from train dataset
     def getRandomPoint(self, randomForestClassifier):
+        """
+        Return a random point from training dataset.
+        """
         if self.currentDatasetReader is not None:
             xTrain, yTrain = self.getTrainData()
-            predicted = randomForestClassifier.predict(xTrain)
-
-            predicted0Index = np.where(predicted == 0)[0]
-            predicted0Index += 2
-
-            randomIndex = rd.randint(0, len(predicted0Index)-1)
-            randomPredicted0 = predicted0Index[randomIndex]
-            randomPoint = self.data.loc[randomPredicted0].to_numpy()
-
+            randomIndex = rd.randint(0, len(xTrain)-1)
+            randomPoint = self.data.loc[randomIndex].to_numpy()
             return randomPoint
-
-        return None
+        else:
+            return None
 
     # this function takes a selected point and create a dataframe that can be prepared in toolsDatasetReader
     # this prepared datapoint can be used in train and prediction functions

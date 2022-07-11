@@ -1,10 +1,12 @@
 # Author: Moises Henrique Pereira
 
-from ui.app.MainIterativeApplication import MainApplication
+# Import ui functions
+from ui.app.MainApplication import MainApplication
 
 
 def main():
-    application = MainApplication()
+    interfaceType = 'iterative'
+    application = MainApplication(interfaceType)
     application.run()
 
 

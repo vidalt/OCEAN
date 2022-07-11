@@ -138,7 +138,6 @@ class IterationController():
                 elif featureType is FeatureType.Categorical:
                     actionable = content['actionable']
                     allowedValues = content['allowedValues']
-                    notAllowedValues = content['notAllowedValues']
                     allPossibleValues = content['allPossibleValues']
                     value = content['value']
 
@@ -182,8 +181,11 @@ class IterationController():
         for feature in features:
             self.initPointFeatures[feature].setActionable(True)
 
-    # this function checks if the current datapoint is allowed, considering the constraints
     def getCurrentDataframeAllowance(self, selectedFeatures, currentDataframe):
+        """
+        Checks if the current datapoint is allowed
+        considering the user's constraints.
+        """
         allowed = True
         allowedDict = {}
         for feature in selectedFeatures:
@@ -195,7 +197,7 @@ class IterationController():
             if featureType is FeatureType.Binary:
                 allowedDict[feature] = True
 
-            elif featureType is FeatureType.Discrete or featureType is FeatureType.Numeric:
+            elif featureType in [FeatureType.Discrete, FeatureType.Numeric]:
                 minValue = float(content['minimumValue'])
                 maxValue = float(content['maximumValue'])
                 currentValue = float(currentValue)
@@ -209,7 +211,7 @@ class IterationController():
                 allowedValues = content['allowedValues']
 
                 allowedDict[feature] = True
-                if not currentValue in allowedValues:
+                if currentValue not in allowedValues:
                     allowed = False
                     allowedDict[feature] = False
 

@@ -107,10 +107,9 @@ class IterativeViewer(QWidget, UI_Iterative):
         yText = self.comboBoxAxisY.currentText()
         return xText, yText
 
-    # this function is used to update the class component
     def showOriginalClass(self, classValue):
         assert classValue is not None
-        self.labelOriginalClass.setText('Original Class: '+str(classValue))
+        self.labelOriginalClass.setText('Original Class: ' + str(classValue))
 
     def enableNext(self, enabled):
         self.pushButtonNext.setEnabled(enabled)
