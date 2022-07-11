@@ -134,11 +134,15 @@ class Range(QLabel):
     def setValue(self, newValue):
         assert newValue is not None
 
-        if newValue >= self.__slider.minValue and newValue <= self.__slider.maxValue:
+        if (newValue >= self.__slider.minValue
+                and newValue <= self.__slider.maxValue):
             self.__value = newValue
 
-            t = (newValue-self.__slider.minValue) / \
-                (self.__slider.maxValue-self.__slider.minValue)
+            intervalLength = self.__slider.maxValue-self.__slider.minValue
+            if intervalLength == 0:
+                t = (newValue-self.__slider.minValue)
+            else:
+                t = (newValue-self.__slider.minValue)/intervalLength
 
             newPos = ((1-t)*self.__minX)+(t*self.__maxX)
 
