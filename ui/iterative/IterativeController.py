@@ -8,9 +8,6 @@ from .IterativeWorker import IterativeWorker
 from .Iteration.IterationController import IterationController
 from ui.iterative.IterativeViewer import IterativeViewer
 from ui.interface.InterfaceEnums import InterfaceEnums
-from ui.interface.ComboboxList.ComboboxListController import ComboboxListController
-from ui.interface.DoubleRadioButton.DoubleRadioButtonController import DoubleRadioButtonController
-from ui.interface.Slider3Ranges.Slider3RangesController import Slider3RangesController
 from ui.engine.CounterfactualEngine import CounterfactualEngine
 # Load OCEAN functions
 from src.CounterFactualParameters import FeatureType
@@ -54,16 +51,8 @@ class IterativeController(InterfaceController):
             # Clean the view
             self.view.clearView()
             self.initPointFeatures.clear()
-            # Open the selected dataset
-            self.model.openChosenDataset(self.__chosenDataset)
-            xTrain, yTrain = self.model.getTrainData()
 
-            # Training the random forest and isolation forest models
-            assert(xTrain is not None and yTrain is not None)
-            self.rfClassifier = CounterfactualEngine.trainRandomForestClassifier(
-                xTrain, yTrain)
-            self.isolationForest = CounterfactualEngine.trainIsolationForest(
-                xTrain)
+            self.train_random_and_isolation_forests(self.__chosenDataset)
 
             # --- Plot the features importance ---
             featureImportance = self.rfClassifier.feature_importances_
@@ -80,33 +69,7 @@ class IterativeController(InterfaceController):
             # ------ Show features components and informations ------
             for feature in self.model.features:
                 if feature != 'Class':
-                    featureInformations = self.model.featuresInformations[feature]
-                    featureType = featureInformations['featureType']
-                    component = None
-                    if featureType is FeatureType.Binary:
-                        value0 = featureInformations['value0']
-                        value1 = featureInformations['value1']
-                        component = DoubleRadioButtonController(self.view)
-                        component.initializeView(
-                            feature, str(value0), str(value1))
-                    elif featureType is FeatureType.Discrete:
-                        minValue = featureInformations['min']
-                        maxValue = featureInformations['max']
-                        component = Slider3RangesController(self.view)
-                        component.initializeView(
-                            feature, minValue, maxValue, decimalPlaces=0)
-                    elif featureType is FeatureType.Numeric:
-                        minValue = featureInformations['min']
-                        maxValue = featureInformations['max']
-                        component = Slider3RangesController(self.view)
-                        component.initializeView(
-                            feature, minValue, maxValue)
-                    elif featureType is FeatureType.Categorical:
-                        component = ComboboxListController(
-                            self.view, featureInformations['possibleValues'])
-                        component.initializeView(
-                            feature, featureInformations['possibleValues'])
-
+                    component = self.get_component_from_feature(feature)
                     # Add the view to selectedPoint component
                     component.view.checkBoxActionability.hide()
                     self.view.addFeatureWidget(component.view)
@@ -122,15 +85,8 @@ class IterativeController(InterfaceController):
         Get a random datapoint from dataset.
         """
         self.view.clearClass()
-
         if self.__chosenDataset != InterfaceEnums.SelectDataset.DEFAULT.value:
-            randomDataPoint = self.model.getRandomPoint(self.rfClassifier)
-            # Show the values of the data point in components
-            for index, feature in enumerate(self.model.features):
-                if feature != 'Class':
-                    self.initPointFeatures[feature].setSelectedValue(
-                        randomDataPoint[index])
-
+            self.sample_random_point()
             self.view.enableNext(False)
 
     def __handlerCalculateClass(self):
@@ -142,24 +98,9 @@ class IterativeController(InterfaceController):
         if self.__chosenDataset != InterfaceEnums.SelectDataset.DEFAULT.value:
             featureName = ''
             try:
-                # Get the datapoint
-                dataPoint = []
-                for feature in self.model.features:
-                    if feature != 'Class':
-                        featureName = feature
-                        content = self.initPointFeatures[feature].getContent()
-                        dataPoint.append(content['value'])
-                self.chosenDataPoint = np.array(dataPoint)
-
-                # transforming the datapoint to predict its class
-                self.transformedChosenDataPoint = self.model.transformDataPoint(self.chosenDataPoint)
-
-                # predicting the datapoint class and showing its value
-                self.predictedOriginalClass = CounterfactualEngine.randomForestClassifierPredict(
-                    self.rfClassifier, [self.transformedChosenDataPoint])
+                featureName = self.transform_and_predict_data_point()
                 self.view.showOriginalClass(self.predictedOriginalClass[0])
                 self.view.enableNext(True)
-
             except:
                 QMessageBox.information(
                     self.view, 'Missing value',

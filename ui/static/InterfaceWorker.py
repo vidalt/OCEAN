@@ -34,7 +34,7 @@ class InterfaceWorker(QObject):
         self.progress.emit(InterfaceEnums.Status.STEP3.value)
 
         # instantiating the optimization model
-        randomForestMilp = RandomForestCounterFactualMilp(self.__controller.randomForestClassifier,
+        randomForestMilp = RandomForestCounterFactualMilp(self.__controller.rfClassifier,
             [self.__controller.transformedChosenDataPoint],
             1-self.__controller.predictedOriginalClass[0],
             isolationForest=self.__controller.isolationForest,
@@ -87,7 +87,7 @@ class InterfaceWorker(QObject):
         if (np.array(counterfactualResult) == np.array([self.__controller.transformedChosenDataPoint])).all():
             self.progress.emit('Model is infeasible')
         elif counterfactualResult is not None:
-            counterfactualResultClass = self.__controller.randomForestClassifier.predict(counterfactualResult)
+            counterfactualResultClass = self.__controller.rfClassifier.predict(counterfactualResult)
 
             result = self.__controller.model.invertTransformedDataPoint(counterfactualResult[0])
 
