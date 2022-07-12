@@ -1,5 +1,4 @@
-# Author: Moises Henrique Pereira
-
+"""Handle the interface."""
 import sys
 from PyQt5 import QtWidgets
 # Import UI functions
@@ -7,9 +6,7 @@ from ui.app.MainApplicationWindow import MainApplicationWindow
 
 
 class MainApplication():
-    """
-    Handle the interface.
-    """
+    """Handle the interface."""
 
     def __init__(self, interfaceType):
         self.interfaceType = interfaceType

@@ -54,7 +54,7 @@ class InterfaceController():
         self.model.openChosenDataset(chosenDataset)
         xTrain, yTrain = self.model.getTrainData()
 
-        # Training the random forest and isolation forest models
+        # Train the random forest and isolation forest models
         assert(xTrain is not None and yTrain is not None)
         self.rfClassifier = engine.trainRandomForestClassifier(xTrain, yTrain)
         self.isolationForest = engine.trainIsolationForest(xTrain)
