@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from PyQt5.QtCore import QThread
 from PyQt5.QtWidgets import QMessageBox
@@ -8,7 +7,6 @@ from .IterativeWorker import IterativeWorker
 from .Iteration.IterationController import IterationController
 from ui.iterative.IterativeViewer import IterativeViewer
 from ui.interface.InterfaceEnums import InterfaceEnums
-from ui.engine.CounterfactualEngine import CounterfactualEngine
 # Load OCEAN functions
 from src.CounterFactualParameters import FeatureType
 

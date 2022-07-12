@@ -3,7 +3,7 @@ from PyQt5.QtCore import QThread
 # Import ui functions
 from ui.interface.InterfaceController import InterfaceController
 from ui.static.StaticViewer import StaticViewer
-from ui.static.InterfaceWorker import InterfaceWorker
+from ui.static.StaticWorker import StaticWorker
 from ui.engine.CounterfactualEngine import CounterfactualEngine as engine
 from ui.interface.InterfaceEnums import InterfaceEnums
 # Import OCEAN functions
@@ -139,7 +139,7 @@ class StaticController(InterfaceController):
 
             # Run the counterfactual generation in another thread
             self.thread = QThread()
-            self.worker = InterfaceWorker(self)
+            self.worker = StaticWorker(self)
             self.worker.moveToThread(self.thread)
             self.thread.started.connect(self.worker.run)
             self.worker.finished.connect(self.thread.quit)
