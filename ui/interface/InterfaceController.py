@@ -26,6 +26,7 @@ class InterfaceController():
 
     def __init__(self):
         self.interfaceViewer = InterfaceViewer()
+        self.interfaceViewer.setupUi(self.interfaceViewer)
         self.model = InterfaceModel()
 
         self.__chosenDataset = InterfaceEnums.SelectDataset.DEFAULT.value
