@@ -3,9 +3,8 @@
 import numpy as np
 import pandas as pd
 from PyQt5.QtCore import QThread
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMessageBox
 # Load UI functions
+from ui.interface.InterfaceController import InterfaceController
 from .IterationView import IterationView
 from .FinalIteration.FinalIterationController import FinalIterationController
 from ui.engine.CounterfactualEngine import CounterfactualEngine
@@ -17,17 +16,19 @@ from ..IterativeWorker import IterativeWorker
 from src.CounterFactualParameters import FeatureType
 
 
-class IterationController():
+class IterationController(InterfaceController):
     """
     Handle the logic over the interface, interacting with model,
     view and worker also taking the selected dataset informations
     from model to send to counterfactual generator in worker class
     """
 
-    def __init__(self, original, parent, model,
-                 randomForestClassifier, isolationForest):
+    def __init__(self, original, parent, model, rfClassifier, isolationForest):
+        super().__init__()
         self.original = original
         self.parent = parent
+        self.rfClassifier = rfClassifier
+        self.isolationForest = isolationForest
 
         self.view = IterationView()
         self.view.outdatedGraph.connect(self.__onOutdatedGraph)
@@ -35,20 +36,8 @@ class IterationController():
 
         self.iterationName = None
 
-        self.rfClassifier = randomForestClassifier
-        self.isolationForest = isolationForest
-
-        self.__initializeView()
-
-        self.initPointFeatures = {}
-
-        self.chosenDataPoint = None
-        self.transformedChosenDataPoint = None
-
         self.updatedCurrentPoint = None
         self.updatedCurrentClass = None
-
-        self.predictedOriginalClass = None
         self.predictedOriginalClassPercentage = None
 
         self.counterfactualToPlot = None
@@ -76,12 +65,6 @@ class IterationController():
             lambda: self.__handlerFinishIteration())
 
         self.__runningCounterfactual = False
-
-    def __initializeView(self):
-        """
-        Takes the dataframe names and send them to interface.
-        """
-        self.view.initializeView()
 
     def __onOutdatedGraph(self):
         self.__updateGraph()
@@ -161,23 +144,20 @@ class IterationController():
         self.view.addFeaturesOptions(list(self.model.features[:-1]))
         self.__calculateClass()
 
-    # this function draw the suggested feature
     def setSuggestedFeaturesToPlot(self, suggestedFeatures):
+        """Draw the suggested features."""
         self.__suggestedFeaturesToPlot = suggestedFeatures
-
         self.view.selectFeatures(self.__suggestedFeaturesToPlot)
-
         self.__updateGraph(self.__suggestedFeaturesToPlot)
 
     def setCounterfactual(self, countefactual):
         self.counterfactualToPlot = countefactual
 
-    # this function sets the actionability to the components
     def __setActionable(self, features):
+        """Set the actionability to the components."""
         for feature in self.model.features:
             if feature != 'Class':
                 self.initPointFeatures[feature].setActionable(False)
-
         for feature in features:
             self.initPointFeatures[feature].setActionable(True)
 
@@ -229,18 +209,13 @@ class IterationController():
 
         selectedFeatures = self.view.getSelectedFeatures()
         if len(selectedFeatures) == len(updatedPoint):
-            # setting actionability
-            # self.__setActionable(selectedFeatures)
-
             self.__suggestedFeaturesToPlot = selectedFeatures
-
             # current datapoint
             currentDataPoint = self.chosenDataPoint.copy()
             currentDataPoint = np.append(
                 currentDataPoint, self.predictedOriginalClass)
             currentDataframe = pd.DataFrame(
                 data=[currentDataPoint], columns=self.model.features)
-
             # updating the values
             for i, f in enumerate(selectedFeatures):
                 currentDataframe[f] = updatedPoint[i]
@@ -539,7 +514,7 @@ class IterationController():
 
         self.view.blockSignals(True)
         nextIteration = IterationController(original=self.original, parent=self, model=self.model,
-                                            randomForestClassifier=self.rfClassifier, isolationForest=self.isolationForest)
+                                            rfClassifier=self.rfClassifier, isolationForest=self.isolationForest)
         iterationName = self.original.view.addNewIterationTab(
             nextIteration.view)
         dictNextFeaturesInformation['iterationName'] = iterationName
@@ -629,8 +604,9 @@ class IterationController():
         counterfactualComparison = []
         for i, feature in enumerate(self.model.features):
             if feature != 'Class':
-                counterfactualComparison.append([feature, str(
-                    self.original.chosenDataPoint[i]), str(self.updatedCurrentPoint[i])])
+                counterfactualComparison.append(
+                    [feature, str(self.original.chosenDataPoint[i]),
+                     str(self.updatedCurrentPoint[i])])
 
         finalIteration = FinalIterationController(self)
         finalIteration.updateComparisonLabel(
@@ -643,15 +619,9 @@ class IterationController():
 
         self.restorCursor()
 
-    # this function is used to change the default cursor to wait cursor
-    def waitCursor(self):
-        QApplication.setOverrideCursor(Qt.WaitCursor)
-
-    # this function is used to restor the default cursor
-    def restorCursor(self):
-        # updating cursor
-        QApplication.restoreOverrideCursor()
-
     def __errorPlotHandler(self, featureError):
-        QMessageBox.information(self.view, 'Invalid feature value',
-                                'The graph could not be updated, because some constraint is contradictory at feature '+featureError, QMessageBox.Ok)
+        QMessageBox.information(
+            self.view, 'Invalid feature value',
+            'The graph could not be updated, because some constraint'
+            ' is contradictory at feature '+featureError,
+            QMessageBox.Ok)

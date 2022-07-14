@@ -1,5 +1,4 @@
 # Author: Moises Henrique Pereira
-# Import the UI file to access and interact with interface components
 
 from PyQt5.QtWidgets import QWidget, QListWidgetItem
 from PyQt5.QtCore import pyqtSignal

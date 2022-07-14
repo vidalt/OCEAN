@@ -56,7 +56,7 @@ class IterativeController(InterfaceController):
             # --- Plot the features importance ---
             featureImportance = self.rfClassifier.feature_importances_
             featureImportance = pd.DataFrame(data={
-                'features': self.model.transformedFeaturesOrdered,
+                'features': self.model.processedFeaturesOrdered,
                 'importance': featureImportance})
             featureImportance = featureImportance.sort_values(
                 by='importance', ascending=False)
@@ -112,7 +112,6 @@ class IterativeController(InterfaceController):
         for i, feature in enumerate(self.model.features):
             if feature != 'Class':
                 featureType = self.model.featuresInformations[feature]['featureType']
-
                 actionable = self.initPointFeatures[feature].getActionable()
                 content = self.initPointFeatures[feature].getContent()
                 currentValue = content['value']
@@ -120,7 +119,6 @@ class IterativeController(InterfaceController):
                 if featureType is FeatureType.Binary:
                     value0 = content['value0']
                     value1 = content['value1']
-
                     nextFeaturesInfo[feature] = {'actionable': actionable,
                                                  'value0': value0,
                                                  'value1': value1,
@@ -129,7 +127,6 @@ class IterativeController(InterfaceController):
                 elif featureType in [FeatureType.Discrete, FeatureType.Numeric]:
                     minimumValue = content['minimumValue']
                     maximumValue = content['maximumValue']
-
                     nextFeaturesInfo[feature] = {'actionable': actionable,
                                                  'minimumValue': minimumValue,
                                                  'maximumValue': maximumValue,
@@ -148,8 +145,7 @@ class IterativeController(InterfaceController):
 
         nextIteration = IterationController(
             original=self, parent=self, model=self.model,
-            randomForestClassifier=self.rfClassifier,
-            isolationForest=self.isolationForest)
+            rfClassifier=self.rfClassifier, isolationForest=self.isolationForest)
         iterationName = self.addNewIterationTab(nextIteration.view)
         nextFeaturesInfo['iterationName'] = iterationName
         nextIteration.setFeaturesAndValues(nextFeaturesInfo)
@@ -227,6 +223,5 @@ class IterativeController(InterfaceController):
     def __handlerNextIteration(self):
         self.waitCursor()
         self.view.enableNext(False)
-
         if self.__chosenDataset != InterfaceEnums.SelectDataset.DEFAULT.value:
             self.__generateCounterfactualAndNextIteration()

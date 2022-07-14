@@ -22,7 +22,7 @@ class IterativeWorker(InterfaceWorker):
         # Build OCEAN model
         oceanMilp = self.buildMilpModel(self.__controller.model,
                                         self.__controller)
-        self.add_user_constraints(oceanMilp, self.__controller)
+        # oceanMilp = self.add_user_constraints(oceanMilp, self.__controller)
         # ---- Generate counterfactual explanation ----
         oceanMilp.solveModel()
         # Get the counterfactual explanation of the current datapoint
