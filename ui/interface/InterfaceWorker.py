@@ -47,7 +47,7 @@ class InterfaceWorker(QObject):
         return cfExplanationClass, result
 
     def add_user_constraints(self, oceanMilp, controller):
-        """Add the user constraints to the optimization model"""
+        """Add the user constraints to the optimization model."""
         constraintIndex = 0
         model = controller.model
         for feature in controller.model.features:
@@ -88,3 +88,10 @@ class InterfaceWorker(QObject):
                                 oceanMilp.x_var_sol[constraintIndex] == 0,
                                 feature + '_' + value + ' not allowed')
                         constraintIndex += 1
+                else:
+                    print('Error: unknown feature type:'
+                          ' feature ', feature,
+                          ' of type ', featureType,
+                          ' is unsupported.')
+                    raise TypeError
+        return oceanMilp

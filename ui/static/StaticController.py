@@ -43,15 +43,7 @@ class StaticController(InterfaceController):
             self.initPointFeatures.clear()
 
             self.train_random_and_isolation_forests(self.__chosenDataset)
-
-            # showing the features components and informations
-            for feature in self.model.features:
-                if feature != 'Class':
-                    component = self.get_component_from_feature(feature)
-                    # adding the view to selectedPoint component
-                    self.view.addFeatureWidget(component.view)
-                    # Save the controller to facilitate access to components
-                    self.initPointFeatures[feature] = component
+            self.show_feature_info_component()
         else:
             # cleaning the view
             self.view.clearView()

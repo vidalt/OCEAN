@@ -24,7 +24,7 @@ class StaticWorker(InterfaceWorker):
         # Build OCEAN model
         oceanMilp = self.buildMilpModel(self.__controller.model,
                                         self.__controller)
-        self.add_user_constraints(oceanMilp, self.__controller)
+        oceanMilp = self.add_user_constraints(oceanMilp, self.__controller)
         oceanMilp.solveModel()
         cfExplanation = oceanMilp.x_sol
 

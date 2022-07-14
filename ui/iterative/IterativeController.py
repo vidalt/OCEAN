@@ -51,6 +51,7 @@ class IterativeController(InterfaceController):
             self.initPointFeatures.clear()
 
             self.train_random_and_isolation_forests(self.__chosenDataset)
+            self.show_feature_info_component()
 
             # --- Plot the features importance ---
             featureImportance = self.rfClassifier.feature_importances_
@@ -64,15 +65,6 @@ class IterativeController(InterfaceController):
             self.__canvas.updateFeatureImportanceGraph(
                 featureImportance, 'features', 'importance')
 
-            # ------ Show features components and informations ------
-            for feature in self.model.features:
-                if feature != 'Class':
-                    component = self.get_component_from_feature(feature)
-                    # Add the view to selectedPoint component
-                    component.view.checkBoxActionability.hide()
-                    self.view.addFeatureWidget(component.view)
-                    # Save the controller to facilitate access to components
-                    self.initPointFeatures[feature] = component
         else:
             # Clear the viewer
             self.view.clearView()

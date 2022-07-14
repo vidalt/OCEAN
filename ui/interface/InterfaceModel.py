@@ -44,7 +44,6 @@ class InterfaceModel():
         _, _, datasetsName = next(os.walk(self.datasetsPath))
         return datasetsName
 
-    # this function
     def openChosenDataset(self, chosenDataset: str) -> None:
         """
         Get the dataset system path and instantiate a tool dataset reader.

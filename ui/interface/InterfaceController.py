@@ -60,10 +60,22 @@ class InterfaceController():
         self.rfClassifier = engine.trainRandomForestClassifier(xTrain, yTrain)
         self.isolationForest = engine.trainIsolationForest(xTrain)
 
+    def show_feature_info_component(self):
+        """Show features components and informations."""
+        for feature in self.model.features:
+            if feature != 'Class':
+                component = self.get_component_from_feature(feature)
+                # Add the view to selectedPoint component
+                component.view.checkBoxActionability.hide()
+                self.view.addFeatureWidget(component.view)
+                # Save the controller to facilitate access to components
+                self.initPointFeatures[feature] = component
+
     def get_component_from_feature(self, feature):
         """
-        Get the relevant component for each feature type,
-        initialize it with its min/max values and return it.
+        Select the relevant component for the feature
+        according to its type and initialize it with
+        its min/max values.
         """
         featureInformations = self.model.featuresInformations[feature]
         featureType = featureInformations['featureType']
