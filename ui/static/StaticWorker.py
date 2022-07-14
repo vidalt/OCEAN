@@ -46,17 +46,16 @@ class StaticWorker(InterfaceWorker):
                     counterfactualComparison.append(
                         [feature, str(item1), str(item2)])
 
-            # showing the steps
+            # Show the steps
             self.progress.emit(InterfaceEnums.Status.STEP4.value)
-            # showing the counterfactual class
+            # Show the counterfactual class
             self.couterfactualClass.emit(str(cfExplanationClass[0]))
-            # showing the steps
+            # Show the steps
             self.progress.emit(InterfaceEnums.Status.STEP5.value)
-            # showing the comparisson between the selected and the counterfactual values
+            # Show the comparison between the initial and counterfactual values
             self.tableCounterfactualValues.emit(counterfactualComparison)
-
         else:
-            # showing the steps
+            # Show the steps
             self.progress.emit(InterfaceEnums.Status.ERROR_MSG.value)
 
         self.finished.emit()

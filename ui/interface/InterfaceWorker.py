@@ -15,9 +15,9 @@ class InterfaceWorker(QObject):
 
     def buildMilpModel(self, model, controller):
         """Instantiate the optimization model."""
-        actionability = model.transformedFeaturesActionability
-        possibleValues = model.transformedFeaturesPossibleValues
-        featuresType = model.transformedFeaturesType
+        actionability = model.processedFeaturesActionability
+        possibleValues = model.processedFeaturesPossibleValues
+        featuresType = model.processedFeaturesType
         # Build OCEAN model
         oceanMilp = RandomForestCounterFactualMilp(
             controller.rfClassifier,

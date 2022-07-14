@@ -84,14 +84,14 @@ class StaticController(InterfaceController):
                 InterfaceEnums.Status.STEP1.value)
 
             # Get the datapoint
-            auxiliarDataPoint = []
+            datapoint = []
             featuresInformations = self.model.featuresInformations
             for feature in self.model.features:
                 if feature != 'Class':
                     featureType = featuresInformations[feature]['featureType']
                     content = self.initPointFeatures[feature].getContent()
 
-                    auxiliarDataPoint.append(content['value'])
+                    datapoint.append(content['value'])
 
                     if featureType is FeatureType.Binary:
                         notAllowedValue = content['notAllowedValue']
@@ -115,7 +115,7 @@ class StaticController(InterfaceController):
                             'featureType': featureType,
                             'notAllowedValues': content['notAllowedValues']}
 
-            self.chosenDataPoint = np.array(auxiliarDataPoint)
+            self.chosenDataPoint = np.array(datapoint)
 
             # Show the steps
             self.view.showCounterfactualStatus(

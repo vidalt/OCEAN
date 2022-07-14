@@ -64,14 +64,14 @@ class InterfaceController():
         """Show features components and informations."""
         for feature in self.model.features:
             if feature != 'Class':
-                component = self.get_component_from_feature(feature)
+                component = self.__get_feature_component(feature)
                 # Add the view to selectedPoint component
                 component.view.checkBoxActionability.hide()
                 self.view.addFeatureWidget(component.view)
                 # Save the controller to facilitate access to components
                 self.initPointFeatures[feature] = component
 
-    def get_component_from_feature(self, feature):
+    def __get_feature_component(self, feature):
         """
         Select the relevant component for the feature
         according to its type and initialize it with

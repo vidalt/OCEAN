@@ -20,25 +20,6 @@ class InterfaceModel():
         self.datasetsPath = os.getcwd()
         self.datasetsPath = os.path.join(self.datasetsPath, 'datasets')
 
-        self.currentDatasetReader = None
-
-        self.data = None
-        self.__transformedData = None
-
-        self.features = None
-        self.featuresType = None
-        self.featuresActionability = None
-
-        self.featuresInformations = None
-
-        self.transformedFeatures = None
-        self.transformedFeaturesOrdered = None
-        self.transformedFeaturesType = None
-        self.transformedFeaturesActionability = None
-        self.transformedFeaturesPossibleValues = None
-
-        self.featuresOneHotEncode = None
-
     def getDatasetsName(self):
         """ Access dataframes directory and return the name """
         _, _, datasetsName = next(os.walk(self.datasetsPath))
@@ -54,7 +35,7 @@ class InterfaceModel():
         # Find path to data set
         chosenDatasetName = chosenDataset + '.csv'
         chosenDatasetPath = os.path.join(self.datasetsPath, chosenDatasetName)
-
+        # Read data from path
         self.data = pd.read_csv(chosenDatasetPath)
         self.features = self.data.columns
         self.featuresType = {
@@ -65,69 +46,73 @@ class InterfaceModel():
             feature: getFeatureActionnability(self.data[feature][1])
             for feature in self.data.columns if feature != 'Class'}
         self.data = self.data.drop(1)
-        # Read feature informations
+
+        # Collect relevant feature informations
         self.featuresInformations = {}
         for feature in self.features:
             if feature != 'Class':
+                actionability = self.featuresActionability[feature]
+                featuresType = self.featuresType[feature]
                 if self.featuresType[feature] is FeatureType.Binary:
                     values = self.data[feature].unique()
                     self.featuresInformations[feature] = {
-                        'featureType': self.featuresType[feature],
-                        'featureActionnability': self.featuresActionability[feature],
+                        'featureType': featuresType,
+                        'featureActionnability': actionability,
                         'value0': values[0],
                         'value1': values[1]}
 
                 elif self.featuresType[feature] in [FeatureType.Discrete,
                                                     FeatureType.Numeric]:
                     self.featuresInformations[feature] = {
-                        'featureType': self.featuresType[feature],
-                        'featureActionnability': self.featuresActionability[feature],
+                        'featureType': featuresType,
+                        'featureActionnability': actionability,
                         'min': min(self.data[feature].astype(float)),
                         'max': max(self.data[feature].astype(float))}
                 elif self.featuresType[feature] is FeatureType.Categorical:
+                    uniqueValues = self.data[feature].value_counts().keys()
                     self.featuresInformations[feature] = {
-                        'featureType': self.featuresType[feature],
-                        'featureActionnability': self.featuresActionability[feature],
-                        'possibleValues': self.data[feature].value_counts().keys().tolist()}
+                        'featureType': featuresType,
+                        'featureActionnability': actionability,
+                        'possibleValues': uniqueValues.tolist()}
 
-        self.currentDatasetReader = DatasetReader(chosenDatasetPath)
-        self.__transformedData = self.currentDatasetReader.data
-        self.transformedFeatures = self.currentDatasetReader.data.columns
+        # Process data using datasetReader
+        self.dataReader = DatasetReader(chosenDatasetPath)
+        self.processedData = self.dataReader.data
+        self.processedFeatures = self.dataReader.data.columns
 
-        self.transformedFeaturesOrdered = []
+        self.processedFeaturesOrdered = []
         for feature in self.features:
             if feature != 'Class':
                 if self.featuresType[feature] is FeatureType.Binary:
-                    self.transformedFeaturesOrdered.append(feature)
+                    self.processedFeaturesOrdered.append(feature)
                 elif self.featuresType[feature] in [FeatureType.Discrete,
                                                     FeatureType.Numeric]:
-                    self.transformedFeaturesOrdered.append(feature)
+                    self.processedFeaturesOrdered.append(feature)
                 elif self.featuresType[feature] is FeatureType.Categorical:
                     for value in self.featuresInformations[feature][
                             'possibleValues']:
-                        self.transformedFeaturesOrdered.append(
+                        self.processedFeaturesOrdered.append(
                             feature + '_' + value)
 
-        self.featuresOneHotEncode = self.currentDatasetReader.oneHotEncoding
-        self.transformedFeaturesType = self.currentDatasetReader.featuresType
-        self.transformedFeaturesActionability = self.currentDatasetReader.featuresActionnability
-        self.transformedFeaturesPossibleValues = self.currentDatasetReader.featuresPossibleValues
+        self.featuresOneHotEncode = self.dataReader.oneHotEncoding
+        self.processedFeaturesType = self.dataReader.featuresType
+        self.processedFeaturesActionability = self.dataReader.featuresActionnability
+        self.processedFeaturesPossibleValues = self.dataReader.featuresPossibleValues
 
-    # this function
     def getTrainData(self):
         """
         Returns the train and test data from chosen dataset
         """
-        if self.currentDatasetReader is not None:
-            return (self.currentDatasetReader.X[self.transformedFeaturesOrdered],
-                    self.currentDatasetReader.y)
+        if self.dataReader is not None:
+            return (self.dataReader.X[self.processedFeaturesOrdered],
+                    self.dataReader.y)
         return None, None
 
     def getRandomPoint(self, randomForestClassifier):
         """
         Return a random point from training dataset.
         """
-        if self.currentDatasetReader is not None:
+        if self.dataReader is not None:
             xTrain, yTrain = self.getTrainData()
             randomIndex = rd.randint(0, len(xTrain)-1)
             randomPoint = self.data.loc[randomIndex].to_numpy()
@@ -137,8 +122,9 @@ class InterfaceModel():
 
     def transformDataPoint(self, selectedDataPoint):
         """
-        Create a dataframe that can be prepared in toolsDatasetReader.
-        The transformed datapoint can be used for training and inference.
+        Transform the selected datapoint to have normalized features
+        and one-hot-encoded categorical features.
+        This follows the pre-processing of the datasetReader.
         """
         assert selectedDataPoint is not None
         if 'Class' in self.features:
@@ -169,6 +155,8 @@ class InterfaceModel():
                             transformedDataPoint.append(1)
                         else:
                             transformedDataPoint.append(0)
+                else:
+                    raise TypeError
 
         return transformedDataPoint
 
@@ -178,10 +166,10 @@ class InterfaceModel():
         data point user readable in a dictionary.
         """
         assert transformedDataPoint is not None
-        if 'Class' in self.transformedFeatures:
-            assert len(transformedDataPoint) == len(self.transformedFeatures)-1
+        if 'Class' in self.processedFeatures:
+            assert len(transformedDataPoint) == len(self.processedFeatures)-1
         else:
-            assert len(transformedDataPoint) == len(self.transformedFeatures)
+            assert len(transformedDataPoint) == len(self.processedFeatures)
 
         dataPoint = []
         index = 0
@@ -197,8 +185,10 @@ class InterfaceModel():
 
                 elif self.featuresType[feature] in [FeatureType.Discrete,
                                                     FeatureType.Numeric]:
-                    value = self.transformSingleNumericalValue(
-                        feature, transformedDataPoint[index])
+                    minVal = self.featuresInformations[feature]['min']
+                    maxVal = self.featuresInformations[feature]['max']
+                    value = minVal+(transformedDataPoint[index])*(
+                        maxVal-minVal)
                     dataPoint.append(value)
                     index += 1
 
