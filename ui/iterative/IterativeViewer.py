@@ -2,7 +2,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5 import QtCore, QtWidgets
 # Import UI functions
 from ui.interface.InterfaceViewer import InterfaceViewer
-from .Dash.DashView import DashView
+from ui.canvas.FeatureImportanceCanvas import FeatureImportanceCanvas
 
 
 class IterativeViewer(InterfaceViewer):
@@ -192,7 +192,8 @@ class IterativeViewer(InterfaceViewer):
         self.labelFeatureImportance.setMaximumSize(QtCore.QSize(16777215, 25))
         self.labelFeatureImportance.setObjectName("labelFeatureImportance")
         self.verticalLayout.addWidget(self.labelFeatureImportance)
-        self.widgetContainerCanvas = DashView(self.widgetFeatureImportance)
+        self.widgetContainerCanvas = FeatureImportanceCanvas(
+            self.widgetFeatureImportance)
         self.widgetContainerCanvas.setObjectName("widgetContainerCanvas")
         self.verticalLayout.addWidget(self.widgetContainerCanvas)
         self.horizontalLayout_3.addWidget(self.widgetFeatureImportance)
