@@ -165,7 +165,8 @@ class Range(QLabel):
                 labelPosX -= rangeWidth/2
             labelPosY = self.__slider.pos().y()+self.__space
 
-            self.__rangeValue.setGeometry(labelPosX, labelPosY,
+            self.__rangeValue.setGeometry(int(labelPosX),
+                                          int(labelPosY),
                                           rangeWidth,
                                           self.__rangeValue.height())
 
@@ -175,8 +176,10 @@ class Range(QLabel):
     def __updateValueFromPosition(self, posX):
         assert posX is not None
 
-        self.setGeometry(posX-self.width()/2,
-                         self.geometry().y(), self.width(), self.height())
+        self.setGeometry(int(posX-self.width()/2),
+                         int(self.geometry().y()),
+                         self.width(),
+                         self.height())
         self.__updateRangeValue()
 
         self.__signals.updateValueSignal.emit(self)
