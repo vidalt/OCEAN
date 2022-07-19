@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'c:\Users\Moises\Documents\GitHub\OCEAN\ui\CounterfactualInterface\ComboboxList\ComboboxList.ui'
+# Form implementation generated from reading ui file
+#  'c:\Users\Moises\Documents\GitHub\OCEAN\ui...
+#   CounterfactualInterface\ComboboxList\ComboboxList.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.4
 #
@@ -9,42 +11,50 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+import ui.resources.resources
 
 
 class Ui_ComboboxList(object):
     def setupUi(self, ComboboxList):
         ComboboxList.setObjectName("ComboboxList")
         ComboboxList.resize(293, 175)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                           QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(ComboboxList.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            ComboboxList.sizePolicy().hasHeightForWidth())
         ComboboxList.setSizePolicy(sizePolicy)
         ComboboxList.setMaximumSize(QtCore.QSize(500, 16777215))
         self.gridLayout = QtWidgets.QGridLayout(ComboboxList)
         self.gridLayout.setObjectName("gridLayout")
         self.labelFeatureName = QtWidgets.QLabel(ComboboxList)
         self.labelFeatureName.setMinimumSize(QtCore.QSize(0, 25))
-        self.labelFeatureName.setStyleSheet("QLabel {\n"
-"    font-weight: bold;\n"
-"}")
+        self.labelFeatureName.setStyleSheet(
+            "QLabel {\n"
+            "    font-weight: bold;\n"
+            "}")
         self.labelFeatureName.setText("")
         self.labelFeatureName.setObjectName("labelFeatureName")
         self.gridLayout.addWidget(self.labelFeatureName, 0, 0, 1, 1)
         self.comboBoxValues = QtWidgets.QComboBox(ComboboxList)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.comboBoxValues.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.comboBoxValues.sizePolicy().hasHeightForWidth())
         self.comboBoxValues.setSizePolicy(sizePolicy)
         self.comboBoxValues.setMinimumSize(QtCore.QSize(120, 25))
         self.comboBoxValues.setObjectName("comboBoxValues")
         self.gridLayout.addWidget(self.comboBoxValues, 1, 0, 1, 1)
         self.checkBoxActionability = QtWidgets.QCheckBox(ComboboxList)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.checkBoxActionability.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.checkBoxActionability.sizePolicy().hasHeightForWidth())
         self.checkBoxActionability.setSizePolicy(sizePolicy)
         self.checkBoxActionability.setMinimumSize(QtCore.QSize(0, 25))
         self.checkBoxActionability.setLayoutDirection(QtCore.Qt.RightToLeft)
@@ -52,33 +62,41 @@ class Ui_ComboboxList(object):
         self.checkBoxActionability.setObjectName("checkBoxActionability")
         self.gridLayout.addWidget(self.checkBoxActionability, 0, 2, 1, 3)
         self.listWidgetAllowedValues = QtWidgets.QListWidget(ComboboxList)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                           QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.listWidgetAllowedValues.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.listWidgetAllowedValues.sizePolicy().hasHeightForWidth())
         self.listWidgetAllowedValues.setSizePolicy(sizePolicy)
-        self.listWidgetAllowedValues.setMaximumSize(QtCore.QSize(16777215, 100))
-        self.listWidgetAllowedValues.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+        self.listWidgetAllowedValues.setMaximumSize(
+            QtCore.QSize(16777215, 100))
+        self.listWidgetAllowedValues.setSelectionMode(
+            QtWidgets.QAbstractItemView.MultiSelection)
         self.listWidgetAllowedValues.setObjectName("listWidgetAllowedValues")
         self.gridLayout.addWidget(self.listWidgetAllowedValues, 1, 2, 2, 3)
         self.pushButtonUncheckAll = QtWidgets.QPushButton(ComboboxList)
         self.pushButtonUncheckAll.setMinimumSize(QtCore.QSize(45, 25))
         self.pushButtonUncheckAll.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Images/uncheckAll.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/uncheckAll.png"),
+                       QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButtonUncheckAll.setIcon(icon)
         self.pushButtonUncheckAll.setObjectName("pushButtonUncheckAll")
         self.gridLayout.addWidget(self.pushButtonUncheckAll, 3, 4, 1, 1)
         self.labelSpacer = QtWidgets.QLabel(ComboboxList)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum,
+                                           QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.labelSpacer.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.labelSpacer.sizePolicy().hasHeightForWidth())
         self.labelSpacer.setSizePolicy(sizePolicy)
         self.labelSpacer.setMinimumSize(QtCore.QSize(0, 70))
-        self.labelSpacer.setStyleSheet("QLabel {\n"
-"    font-weight: bold;\n"
-"}")
+        self.labelSpacer.setStyleSheet(
+            "QLabel {\n"
+            "    font-weight: bold;\n"
+            "}")
         self.labelSpacer.setText("")
         self.labelSpacer.setObjectName("labelSpacer")
         self.gridLayout.addWidget(self.labelSpacer, 2, 0, 2, 1)
@@ -86,7 +104,8 @@ class Ui_ComboboxList(object):
         self.pushButtonCheckAll.setMinimumSize(QtCore.QSize(45, 25))
         self.pushButtonCheckAll.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/Images/checkAll.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(":/icons/checkAll.png"),
+                        QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButtonCheckAll.setIcon(icon1)
         self.pushButtonCheckAll.setObjectName("pushButtonCheckAll")
         self.gridLayout.addWidget(self.pushButtonCheckAll, 3, 3, 1, 1)
@@ -94,7 +113,8 @@ class Ui_ComboboxList(object):
         self.pushButtonResetOptions.setMinimumSize(QtCore.QSize(45, 25))
         self.pushButtonResetOptions.setText("")
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/Images/resetOptions.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap(":/icons/resetOptions.png"),
+                        QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.pushButtonResetOptions.setIcon(icon2)
         self.pushButtonResetOptions.setObjectName("pushButtonResetOptions")
         self.gridLayout.addWidget(self.pushButtonResetOptions, 3, 2, 1, 1)
@@ -104,8 +124,16 @@ class Ui_ComboboxList(object):
 
     def retranslateUi(self, ComboboxList):
         _translate = QtCore.QCoreApplication.translate
-        ComboboxList.setWindowTitle(_translate("ComboboxList", "Form"))
-        self.checkBoxActionability.setText(_translate("ComboboxList", "actionable"))
-        self.pushButtonUncheckAll.setToolTip(_translate("ComboboxList", "<html><head/><body><p>uncheck all</p></body></html>"))
-        self.pushButtonCheckAll.setToolTip(_translate("ComboboxList", "<html><head/><body><p>check all</p></body></html>"))
-        self.pushButtonResetOptions.setToolTip(_translate("ComboboxList", "<html><head/><body><p>reset options</p></body></html>"))
+        ComboboxList.setWindowTitle(
+            _translate("ComboboxList", "Form"))
+        self.checkBoxActionability.setText(
+            _translate("ComboboxList", "actionable"))
+        self.pushButtonUncheckAll.setToolTip(
+            _translate("ComboboxList",
+                       "<html><head/><body><p>uncheck all</p></body></html>"))
+        self.pushButtonCheckAll.setToolTip(
+            _translate("ComboboxList",
+                       "<html><head/><body><p>check all</p></body></html>"))
+        self.pushButtonResetOptions.setToolTip(
+            _translate("ComboboxList",
+                       "<html><head/><body><p>reset</p></body></html>"))
