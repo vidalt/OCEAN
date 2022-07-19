@@ -21,7 +21,7 @@ Run the following commands from the project root to install the requirements. Yo
     source env/bin/activate
     pip install -r requirements.txt
     python -m pip install -i https://pypi.gurobi.com gurobipy
-    pip install .
+    pip install -e .
 ```
 
 The installation can be checked by running the test suite:
@@ -88,25 +88,20 @@ You can then get back to the root directory, and launch the benchmark with
     python src/benchmarks/runBenchmarkWithMace.py
 ```
 ## User Interface
-
-Folder `ui` contains the source code of a user interface; this application can help some users by facilitating the interaction with the OCEAN algorithm.
-Run the following commands to start the interface:
-
+Two user interfaces are available. The `static` and `iterative` interfaces can be started using:
 ```shell
     source env/bin/activate
     cd ui
-    python main.py
+    python ui\main_static_interface.py
 ```
-
-The following git demonstrates the use of the interface:
+and
+```shell
+    source env/bin/activate
+    cd ui
+    python main_iterative_interface.py
+```
+resepctively. The interfaces allow the user to analyze their own dataset, which has to be placed inside the `datasets` folder in the root directory. The `static` interface allows to generate optimal counterfactual explanation with user-specified constraints on the allowed feature changes. The following gif demonstrates the use of the static interface:
 
 ![](ui_gif_v1.gif)
 
-Some automated tests can also be done. If you wish to run them, use the following commands:
-
-```shell
-    source env/bin/activate
-    cd ui
-    pytest
-```
-Or, `pytest -v` to see a detailed version of the test results.
+The `iterative` interface allows the user to iteratively modify the initial observation for which to derive counterfactual explanations. It shows the different counterfactual explanations generated through the iterations. A tutorial is included in this interface in the main menu: 'About'->'Help'.
