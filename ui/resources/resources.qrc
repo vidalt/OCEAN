@@ -1,0 +1,8 @@
+<RCC>
+  <qresource>
+    <file>icons/resetOptions.png</file>
+    <file>icons/checkAll.png</file>
+    <file>icons/uncheckAll.png</file>
+    <file>icons/outdatedChart.png</file>
+  </qresource>
+</RCC>
