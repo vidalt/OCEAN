@@ -34,4 +34,4 @@ jobs:
     - name: Test with pytest
       run: |
         # Test OCEAN functions and ignore UI tests
-        python -m pytest --ignore=test\ui
+        python -m pytest --ignore=test/ui
