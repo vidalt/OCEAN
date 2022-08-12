@@ -4,11 +4,11 @@ import pandas as pd
 from gurobipy import GurobiError
 from pathlib import Path
 # Import local functions to test
-from src.RunExperimentsRoutines import trainModelAndSolveCounterFactuals
-from src.BuildCounterFactualSeekedSet import buildCounterFactualSeekedFile
+from src.experiment_routines import train_model_and_solve_counterfactual
+from src.build_counterfactual_set import build_counterfactual_file
 
 
-class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
+class test_train_model_and_solve_counterfactual(unittest.TestCase):
     # Test parameters
     dataset = 'datasets/German-Credit.csv'
     desiredOutcome = 1
@@ -22,7 +22,7 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
     counterfactualOneHotDatasetFile = pathToCounterfactual / oneHotDataset
     resultFile = THIS_DIR.parent / 'NumericalResults.csv'
     # Create a counterfactual seeked set
-    buildCounterFactualSeekedFile(datasetFile, desiredOutcome, nbCf)
+    build_counterfactual_file(datasetFile, desiredOutcome, nbCf)
 
     def __remove_numerical_results_file(self):
         """
@@ -34,14 +34,14 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
             pass
 
     def test_emptyCallHasTypeError(self):
-        """ Check trainModelAndSolveCounterFactuals requires two arguments """
-        self.assertRaises(TypeError, trainModelAndSolveCounterFactuals)
+        """ Check train_model_and_solve_counterfactual requires two arguments """
+        self.assertRaises(TypeError, train_model_and_solve_counterfactual)
 
     def test_simpleFunctionCall(self):
         """ Simple call to function on a single data set. """
         self.__remove_numerical_results_file()
         try:
-            trainModelAndSolveCounterFactuals(
+            train_model_and_solve_counterfactual(
                 self.datasetFile, self.counterfactualOneHotDatasetFile,
                 rf_max_depth=4, rf_n_estimators=20, ilf_n_estimators=20)
             gurobiLicenseAvailable = True
@@ -60,7 +60,7 @@ class test_trainModelAndSolveCounterFactuals(unittest.TestCase):
             self.__remove_numerical_results_file()
 
     def test_incorrectObjNormRaisesValueError(self):
-        self.assertRaises(ValueError, trainModelAndSolveCounterFactuals,
+        self.assertRaises(ValueError, train_model_and_solve_counterfactual,
                           self.datasetFile,
                           self.counterfactualOneHotDatasetFile,
                           rf_max_depth=4, objectiveNorm=3)

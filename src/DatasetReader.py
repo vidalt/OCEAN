@@ -59,8 +59,9 @@ class DatasetReader:
         self.x0 = [self.data.iloc[0, self.data.columns != 'Class']]
         self.XwithGoodPoint = self.data.loc[self.data['Class']
                                             == 1, self.data.columns != 'Class']
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-                self.X, self.y, test_size=0.2, random_state=0)
+        splits = train_test_split(self.X, self.y,
+                                  test_size=0.2, random_state=0)
+        self.X_train, self.X_test, self.y_train, self.y_test = splits
 
     def __remove_columns_with_unique_value(self):
         for column in self.data.columns:

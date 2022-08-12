@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 # Import local functions to test
-from src.dataProcessing import DatasetReader
+from src.DatasetReader import DatasetReader
 from src.CounterFactualParameters import FeatureType
 from src.CounterFactualParameters import FeatureActionnability
 

@@ -4,13 +4,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 from pathlib import Path
 # Import OCEAN functions
-from src.dataProcessing import DatasetReader
+from src.DatasetReader import DatasetReader
 from src.RfClassifierCounterFactual import RfClassifierCounterFactualMilp
 from src.CounterFactualParameters import TreeConstraintsType
 from src.CounterFactualParameters import BinaryDecisionVariables
 
 
-def checkFeasibilityOfCounterFactuals(clf, ilf, reader,
+def check_counterfactuals_feasibility(clf, ilf, reader,
                                       indices, desiredOutcome):
     allSolved = True
     count = 1
@@ -38,8 +38,8 @@ def checkFeasibilityOfCounterFactuals(clf, ilf, reader,
         print("Not all models could be solved")
 
 
-def buildCounterFactualSeekedFile(datasetFile, desiredOutcome,
-                                  nbCounterFactuals, checkFeasibility=False):
+def build_counterfactual_file(datasetFile, desiredOutcome,
+                              nbCounterFactuals, checkFeasibility=False):
     print("Start treating", datasetFile)
     # Read data from file
     reader = DatasetReader(datasetFile)
@@ -77,7 +77,7 @@ def buildCounterFactualSeekedFile(datasetFile, desiredOutcome,
               "estimators with max samples", ilf.max_samples)
         nodes = [est.tree_.node_count for est in ilf.estimators_]
         print(sum(nodes)/len(nodes), "nodes on average")
-        checkFeasibilityOfCounterFactuals(
+        check_counterfactuals_feasibility(
             clf, ilf, reader, dataWithoutDesiredResults.index, desiredOutcome)
 
     # -- Output results to csv files --

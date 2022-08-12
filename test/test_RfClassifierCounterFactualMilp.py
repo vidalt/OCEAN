@@ -6,7 +6,7 @@ from sklearn.datasets import make_moons
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 # Import local functions
-from src.dataProcessing import DatasetReader
+from src.DatasetReader import DatasetReader
 from src.RfClassifierCounterFactual import RfClassifierCounterFactualMilp
 from src.CounterFactualParameters import BinaryDecisionVariables
 from src.CounterFactualParameters import TreeConstraintsType
