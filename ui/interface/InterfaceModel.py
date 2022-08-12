@@ -6,7 +6,7 @@ import pandas as pd
 from src.CounterFactualParameters import FeatureType
 from src.CounterFactualParameters import getFeatureType
 from src.CounterFactualParameters import getFeatureActionnability
-from src.dataProcessing import DatasetReader
+from src.DatasetReader import DatasetReader
 
 
 class InterfaceModel():

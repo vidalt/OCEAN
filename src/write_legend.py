@@ -1,7 +1,7 @@
 import os
 
 
-def writeLegend(numericalResultsFileName):
+def write_legend(numericalResultsFileName):
     """ Write header of csv file if file is just created. """
     # Check that 'results' directory exists, create it if needed
     if not os.path.exists('results'):

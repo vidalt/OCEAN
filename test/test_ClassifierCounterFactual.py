@@ -3,8 +3,6 @@ from sklearn.datasets import make_moons
 from sklearn.ensemble import RandomForestClassifier
 # Import local functions to test
 from src.ClassifierCounterFactual import ClassifierCounterFactualMilp
-from src.CounterFactualParameters import BinaryDecisionVariables
-from src.CounterFactualParameters import TreeConstraintsType
 
 
 class test_ClassifierCounterFactualMilp(unittest.TestCase):
@@ -46,21 +44,6 @@ class test_ClassifierCounterFactualMilp(unittest.TestCase):
         ClassifierCounterFactualMilp(
             self.classifier, sample, self.outputDesired,
             objectiveNorm=2)
-
-    def test_defaultParametersIsBestFormulation(self):
-        """
-        Several implementations have been tested, the best
-        performing one should use:
-         constraintsType=TreeConstraintsType.LinearCombinationOfPlanes
-        and
-         binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda
-        """
-        classCfMilp = ClassifierCounterFactualMilp(
-            self.classifier, self.X[0:5, :], self.outputDesired)
-        self.assertEqual(classCfMilp.constraintsType,
-                         TreeConstraintsType.LinearCombinationOfPlanes)
-        self.assertEqual(classCfMilp.binaryDecisionVariables,
-                         BinaryDecisionVariables.LeftRight_lambda)
 
     def test_InitializeSolutionDecisionVariables(self):
         classCfMilp = ClassifierCounterFactualMilp(

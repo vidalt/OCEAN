@@ -3,15 +3,15 @@ from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 # Load OCEAN functions
-from src.dataProcessing import DatasetReader
-from src.RandomForestCounterFactual import RandomForestCounterFactualMilp
+from src.DatasetReader import DatasetReader
+from src.RfClassifierCounterFactual import RfClassifierCounterFactualMilp
 from src.benchmarks.CuiRandomForestCounterFactual import CuiRandomForestCounterFactualMilp
 from src.CounterFactualParameters import BinaryDecisionVariables
 from src.CounterFactualParameters import TreeConstraintsType
-from src.writeResults import writeLegend
+from src.write_legend import write_legend
 
 
-def trainModelAndSolveCounterFactuals(
+def train_model_and_solve_counterfactual(
         trainingSetFile, counterfactualsFile,
         rf_max_depth=7, rf_n_estimators=100,
         ilfActivated=True, ilf_max_samples=128, ilf_n_estimators=100,
@@ -26,14 +26,15 @@ def trainModelAndSolveCounterFactuals(
         nbCounterFactualsComputed="all",
         writeColNames=False):
     if writeColNames:
-        writeLegend(numericalResultsFileName)
+        write_legend(numericalResultsFileName)
 
     # - Load and read data from file -
     reader = DatasetReader(trainingSetFile)
     # - Train random and isolation forests -
     # Train random forest
-    clf = RandomForestClassifier(
-        max_depth=rf_max_depth, random_state=random_state, n_estimators=rf_n_estimators)
+    clf = RandomForestClassifier(max_depth=rf_max_depth,
+                                 random_state=random_state,
+                                 n_estimators=rf_n_estimators)
     clf.fit(reader.X_train.values, reader.y_train.values)
     train_score = clf.score(reader.X_train, reader.y_train)
     test_score = clf.score(reader.X_test, reader.y_test)
@@ -43,7 +44,8 @@ def trainModelAndSolveCounterFactuals(
     print(sum(nodes)/len(nodes), "nodes on average")
 
     # Train isolation forest
-    ilf = IsolationForest(random_state=random_state, max_samples=ilf_max_samples,
+    ilf = IsolationForest(random_state=random_state,
+                          max_samples=ilf_max_samples,
                           n_estimators=ilf_n_estimators, contamination=0.1)
     ilf.fit(reader.XwithGoodPoint.values)
     print("Isolation forest with", ilf.n_estimators,
@@ -88,7 +90,7 @@ def trainModelAndSolveCounterFactuals(
             cuiMilp.solveModel()
         else:
             # Compute counterfactual
-            randomForestMilp = RandomForestCounterFactualMilp(
+            randomForestMilp = RfClassifierCounterFactualMilp(
                 clf, x0, y0_desired,
                 isolationForest=ilfForMilp,
                 constraintsType=constraintsType,
@@ -155,7 +157,7 @@ def trainModelAndSolveCounterFactuals(
         write.close()
 
 
-def runNumericalExperiments(
+def run_numerical_experiments(
     datasetsWithCounterfactualsDict,
     rf_max_depthList=[7],
     rf_n_estimatorsList=[100],
@@ -173,7 +175,7 @@ def runNumericalExperiments(
     randomCostsActivated=False,
     numericalResultsFileName="NumericalResults.csv"
 ):
-    writeLegend(numericalResultsFileName)
+    write_legend(numericalResultsFileName)
 
     count = 0
     for trainingSetFile in datasetsWithCounterfactualsDict:

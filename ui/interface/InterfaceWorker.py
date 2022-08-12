@@ -4,7 +4,7 @@ import numpy as np
 from PyQt5.QtCore import QObject
 # Load OCEAN functions
 from src.CounterFactualParameters import FeatureType
-from src.RandomForestCounterFactual import RandomForestCounterFactualMilp
+from src.RfClassifierCounterFactual import RfClassifierCounterFactualMilp
 
 
 class InterfaceWorker(QObject):
@@ -19,7 +19,7 @@ class InterfaceWorker(QObject):
         possibleValues = model.processedFeaturesPossibleValues
         featuresType = model.processedFeaturesType
         # Build OCEAN model
-        oceanMilp = RandomForestCounterFactualMilp(
+        oceanMilp = RfClassifierCounterFactualMilp(
             controller.rfClassifier,
             [controller.transformedChosenDataPoint],
             1-controller.predictedOriginalClass[0],

@@ -1,14 +1,9 @@
-import pandas as pd
-import sklearn
 import gurobipy as gp
-import numpy as np
-
-from sklearn.tree import DecisionTreeClassifier
 from gurobipy import GRB
 from sklearn.ensemble._iforest import _average_path_length
 
-from src.ClassifierCounterFactual import *
-from src.RandomAndIsolationForest import *
+from src.ClassifierCounterFactual import ClassifierCounterFactualMilp
+from src.RandomAndIsolationForest import RandomAndIsolationForest
 
 
 class CuiRandomForestCounterFactualMilp(ClassifierCounterFactualMilp):

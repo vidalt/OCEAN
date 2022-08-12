@@ -14,10 +14,12 @@ class DecisionTreeCounterFactualMilp(ClassifierCounterFactualMilp):
             binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda):
         ClassifierCounterFactualMilp.__init__(
             self, classifier, sample, outputDesired,
-            constraintsType, objectiveNorm, verbose,
-            featuresType, featuresPossibleValues,
-            binaryDecisionVariables)
+            objectiveNorm, verbose,
+            featuresType, featuresPossibleValues)
         self.model.modelName = "DecisionTreeCounterFactualMilp"
+        # Specify formulation parameters of forest MILP
+        self.constraintsType = constraintsType
+        self.binaryDecisionVariables = binaryDecisionVariables
         # The LinearCombinationOfPlanes is not implemented for a DT
         assert(self.constraintsType in [
                TreeConstraintsType.ExtendedFormulation,

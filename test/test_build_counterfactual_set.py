@@ -2,10 +2,10 @@ import unittest
 from pathlib import Path
 import pandas as pd
 # Import local functions to test
-from src.BuildCounterFactualSeekedSet import buildCounterFactualSeekedFile
+from src.build_counterfactual_set import build_counterfactual_file
 
 
-class test_BuildCounterFactualSeekedSet(unittest.TestCase):
+class test_build_counterfactual_set(unittest.TestCase):
     # Test parameters
     dataset = 'datasets/Students-Performance-MAT.csv'
     desiredOutcome = 1
@@ -19,13 +19,13 @@ class test_BuildCounterFactualSeekedSet(unittest.TestCase):
     oneHotDataset = "OneHot_" + datasetName
     counterfactualOneHotDatasetFile = pathToCounterfactual / oneHotDataset
 
-    def test_buildCounterFactualSeekedFile(self):
+    def test_build_counterfactual_file(self):
         """
         Simple function call to build counterfactual set
         for a single dataset.
         """
-        buildCounterFactualSeekedFile(self.datasetFile, self.desiredOutcome,
-                                      self.nbCounterFactuals)
+        build_counterfactual_file(self.datasetFile, self.desiredOutcome,
+                                  self.nbCounterFactuals)
 
     def test_folderAndFilesCreated(self):
         # Test if the 'counterfactuals' folder has been created

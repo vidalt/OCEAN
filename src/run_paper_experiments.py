@@ -1,4 +1,4 @@
-from src.RunExperimentsRoutines import runNumericalExperiments
+from src.experiment_routines import run_numerical_experiments
 from src.BuildCounterFactualSeekedSet import buildCounterFactualSeekedFile
 from src.CounterFactualParameters import BinaryDecisionVariables
 
@@ -37,7 +37,7 @@ for dataset in datasetsWithDesiredOutcome:
 # ----------------- FIGURE 1 -----------------
 # Compute the numerical experiments needed to build figure 1
 # and store in results/Figure1.csv
-runNumericalExperiments(
+run_numerical_experiments(
     ourDatasetsWithCounterfactualsDict,
     rf_max_depthList=[5], rf_n_estimatorsList=[100],
     ilfActivatedList=[False], ilf_max_samplesList=[32],
@@ -50,7 +50,7 @@ runNumericalExperiments(
 objectiveNormList = [1]
 # Compute the numerical results necessary to plot the result of OCEAN
 # for Figure 2 and store them in results/Figure2_OCEAN.csv"
-runNumericalExperiments(
+run_numerical_experiments(
     mediumDatasetsDict, rf_max_depthList=range(3, 9),
     rf_n_estimatorsList=[100], ilfActivatedList=[False],
     ilf_max_samplesList=[32], ilf_n_estimatorsList=[100],
@@ -60,7 +60,7 @@ runNumericalExperiments(
 
 # Compute the numerical results necessary to plot the result of OAE
 # for Figure 2 and store them in results/Figure2_OAE.csv"
-runNumericalExperiments(
+run_numerical_experiments(
     mediumDatasetsDict, rf_max_depthList=range(3, 9),
     rf_n_estimatorsList=[100], ilfActivatedList=[False],
     ilf_max_samplesList=[32], ilf_n_estimatorsList=[100],
@@ -72,7 +72,7 @@ runNumericalExperiments(
 objectiveNormList = [1]
 # Compute the numerical results necessary to plot the result of OCEAN
 # for Figure 3 and store them in results/Figure3_OCEAN.csv
-runNumericalExperiments(
+run_numerical_experiments(
     mediumDatasetsDict, rf_max_depthList=[5],
     rf_n_estimatorsList=[10, 20, 50, 100, 200, 500],
     ilfActivatedList=[False], ilf_max_samplesList=[32],
@@ -88,7 +88,7 @@ runNumericalExperiments(
 #        are provided with './counterfactuals/OneHot_...'
 #        we get the information on categorical features
 #        from the dataset ./datasets/...')
-runNumericalExperiments(
+run_numerical_experiments(
     mediumDatasetsDict, rf_max_depthList=[5],
     rf_n_estimatorsList=[10, 20, 50, 100, 200, 500],
     ilfActivatedList=[False], ilf_max_samplesList=[32],
@@ -100,7 +100,7 @@ runNumericalExperiments(
 # ----------------- TABLE 4 -----------------
 # Compute plausibility results for table 4
 # and store them in results/Table4.csv"
-runNumericalExperiments(
+run_numerical_experiments(
     ourDatasetsWithCounterfactualsDict,
     rf_max_depthList=[5], rf_n_estimatorsList=[100],
     ilfActivatedList=[True], ilf_max_samplesList=[32],
