@@ -5,7 +5,7 @@ from sklearn.ensemble import IsolationForest
 from pathlib import Path
 # Import OCEAN functions
 from src.dataProcessing import DatasetReader
-from src.RandomForestCounterFactual import RandomForestCounterFactualMilp
+from src.RfClassifierCounterFactual import RfClassifierCounterFactualMilp
 from src.CounterFactualParameters import TreeConstraintsType
 from src.CounterFactualParameters import BinaryDecisionVariables
 
@@ -18,7 +18,7 @@ def checkFeasibilityOfCounterFactuals(clf, ilf, reader,
         print("Start checking", count, "out of", len(indices))
         count += 1
         x0 = [reader.data.loc[index, reader.data.columns != 'Class']]
-        randomForestMilp = RandomForestCounterFactualMilp(
+        randomForestMilp = RfClassifierCounterFactualMilp(
             clf, x0, desiredOutcome,
             isolationForest=ilf,
             constraintsType=TreeConstraintsType.LinearCombinationOfPlanes,

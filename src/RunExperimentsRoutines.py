@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import IsolationForest
 # Load OCEAN functions
 from src.dataProcessing import DatasetReader
-from src.RandomForestCounterFactual import RandomForestCounterFactualMilp
+from src.RfClassifierCounterFactual import RfClassifierCounterFactualMilp
 from src.benchmarks.CuiRandomForestCounterFactual import CuiRandomForestCounterFactualMilp
 from src.CounterFactualParameters import BinaryDecisionVariables
 from src.CounterFactualParameters import TreeConstraintsType
@@ -88,7 +88,7 @@ def trainModelAndSolveCounterFactuals(
             cuiMilp.solveModel()
         else:
             # Compute counterfactual
-            randomForestMilp = RandomForestCounterFactualMilp(
+            randomForestMilp = RfClassifierCounterFactualMilp(
                 clf, x0, y0_desired,
                 isolationForest=ilfForMilp,
                 constraintsType=constraintsType,

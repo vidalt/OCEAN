@@ -5,6 +5,7 @@ from sklearn.ensemble import RandomForestClassifier
 from src.CounterFactualParameters import BinaryDecisionVariables
 from src.CounterFactualParameters import TreeConstraintsType
 from src.ClassifierCounterFactual import ClassifierCounterFactualMilp
+from src.RandomForestCounterfactual import RandomForestCounterfactualMilp
 from src.TreeMilpManager import TreeInMilpManager
 
 
@@ -26,14 +27,15 @@ class test_TreeMilpManager(unittest.TestCase):
 
     def test_ClassOnToyData(self):
         """ Simple call should not raise errors. """
+        rfCfMilp = RandomForestCounterfactualMilp()
         # Initialize x_var_sol
         self.classCfMilp.initSolution()
         # Create a TreeMilpManager
         TreeInMilpManager(self.randomForest.estimators_[0].tree_,
                           self.classCfMilp.model, self.classCfMilp.x_var_sol,
                           self.outputDesired, self.classCfMilp.featuresType,
-                          self.classCfMilp.constraintsType,
-                          self.classCfMilp.binaryDecisionVariables)
+                          rfCfMilp.constraintsType,
+                          rfCfMilp.binaryDecisionVariables)
 
     def test_addTreeVariablesAndConstraintsToMilp(self):
         # Initialize x_var_sol
@@ -101,15 +103,16 @@ class test_TreeMilpManager(unittest.TestCase):
                          TreeConstraintsType.LinearCombinationOfPlanes)
         self.assertEqual(treeMng.binaryDecisionVariables,
                          BinaryDecisionVariables.LeftRight_lambda)
-        # - Default parameters from class ClassifierCounterFactualMilp -
+        # - Default parameters from class RandomForestCounterfactualMilp -
+        rfCfMilp = RandomForestCounterfactualMilp()
         # Create a TreeMilpManager
         treeMng = TreeInMilpManager(self.randomForest.estimators_[0].tree_,
                                     self.classCfMilp.model,
                                     self.classCfMilp.x_var_sol,
                                     self.outputDesired,
                                     self.classCfMilp.featuresType,
-                                    self.classCfMilp.constraintsType,
-                                    self.classCfMilp.binaryDecisionVariables)
+                                    rfCfMilp.constraintsType,
+                                    rfCfMilp.binaryDecisionVariables)
         # Test value of default parameters
         self.assertEqual(treeMng.constraintsType,
                          TreeConstraintsType.LinearCombinationOfPlanes)
