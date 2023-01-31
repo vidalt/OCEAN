@@ -30,6 +30,58 @@ The installation can be checked by running the test suite:
 ```
 The integration tests require a working Gurobi license. If a license is not available, the tests will pass and print a warning. 
 
+### Getting started
+A minimal working example using OCEAN to derive an optimal counterfactual explanation is presented below.
+
+```python
+  # Load packages
+  import os as os
+  from sklearn.ensemble import RandomForestClassifier
+  # Load OCEAN modules
+  from src.DatasetReader import DatasetReader
+  from src.RfClassifierCounterFactual import RfClassifierCounterFactualMilp
+
+  # - Specify the path to your data set -
+  #   Add your data set to a "datasets" folder and specify the name of the csv file.
+  #   Note that the specific structure of the csv file should be respected :
+  #   -  The first row specifies the features names; the name should be label column should be "Class".
+  #   -  The second row specifies the features types (B=binary, C=categorical, D=discrete, N=numerical).
+  #   -  The third row specifies the features actionability (FREE, INC=increasing, FIXED, and PREDICT for the "Class").
+  #   -  The remaining rows form the training data.
+  DATASET = "Phishing.csv"
+  dirname = os.path.dirname(__file__)
+  datasetPath = os.path.join(dirname, "datasets", DATASET)
+  # Load and read data from file
+  #    The 'DatasetReader' class will read the type and actionability of features,
+  #    normalize the features to [0,1], and encode the categorical features to
+  #    one-hot encodded binary features.
+  reader = DatasetReader(datasetPath)
+
+  # Train a random forest using sklearn
+  rf = RandomForestClassifier(max_depth=6, random_state=1, n_estimators=100)
+  rf.fit(reader.X_train.values, reader.y_train.values)
+
+  # - Select initial observation for which to compute a counterfactual -
+  #   For instance, here, we select the first training sample as the initial observation.
+  x0 = [reader.X_train.values[0]]
+  y0 = rf.predict(x0)
+  targetClass = 1 - y0
+  print('Initial observation x0: ', x0)
+  print('Current class: ', y0)
+  print('Target class: ', targetClass)
+
+  # - Solve OCEAN to find counterfactual -
+  #   The feature types and actionability are read from the 'reader' object.
+  randomForestMilp = RfClassifierCounterFactualMilp(
+      rf, x0, targetClass,
+      featuresActionnability=reader.featuresActionnability,
+      featuresType=reader.featuresType,
+      featuresPossibleValues=reader.featuresPossibleValues,
+      verbose=True)
+  randomForestMilp.buildModel()
+  randomForestMilp.solveModel()
+```
+
 ## Reproducing the paper results
 This project enables to reproduce the numerical experiments used to produce the tables and figures of the paper.
 The folder datasets contains the datasets on which the numerical experiments are performed.
