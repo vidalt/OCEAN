@@ -28,7 +28,7 @@ The installation can be checked by running the test suite:
 ```shell
    python -m pytest test\
 ```
-The integration tests require a working Gurobi license. If a license is not available, the tests will pass and print a warning. 
+The integration tests require a working Gurobi license. If a license is not available, the tests will pass and print a warning.
 
 ### Getting started
 A minimal working example using OCEAN to derive an optimal counterfactual explanation is presented below.
@@ -80,6 +80,11 @@ A minimal working example using OCEAN to derive an optimal counterfactual explan
       verbose=True)
   randomForestMilp.buildModel()
   randomForestMilp.solveModel()
+  print('--- Results ---')
+  print('Initial observation:')
+  print(reader.format_explanation(x0))
+  print('Optimal explanation:')
+  print(reader.format_explanation(randomForestMilp.x_sol))
 ```
 
 ## Reproducing the paper results
