@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
 # Import OCEAN utility functions and custom classes
 from src.CounterFactualParameters import FeatureType
@@ -6,6 +7,12 @@ from src.CounterFactualParameters import FeatureActionnability
 from src.CounterFactualParameters import getFeatureType
 from src.CounterFactualParameters import getFeatureActionnability
 from src.CounterFactualParameters import isFeatureTypeScalable
+
+
+def is_categorical_feature(column, columnFeatures):
+    if column != 'Class' and columnFeatures[column] == FeatureType.Categorical:
+        return True
+    return False
 
 
 class DatasetReader:
@@ -63,6 +70,7 @@ class DatasetReader:
                                   test_size=0.2, random_state=0)
         self.X_train, self.X_test, self.y_train, self.y_test = splits
 
+    # -- Private methods --
     def __remove_columns_with_unique_value(self):
         for column in self.data.columns:
             if len(self.data[column].unique()) == 1:
@@ -92,35 +100,54 @@ class DatasetReader:
 
     def __one_hot_encoding_of_categorical_features(self, features,
                                                    actionnability):
-        oneHotEncoding = dict()
-        categoricalColumns = [str(column) for column in self.data.columns
-                              if column != 'Class'
-                              and features[column] == FeatureType.Categorical]
+        # Store original features names without the y class column
+        self.featureNames = list(self.data.columns)
+        self.featureNames.pop()
 
+        # Change the order of features in list: categorical column at the end
+        # to facilitate the one-hot encoding and decoding.
+        count = 0
+        for c in range(len(self.data.columns)):
+            column = self.data.columns[c]
+            if is_categorical_feature(column, features):
+                self.featureNames.pop(c - count)
+                count += 1
+
+        categoricalColumns = [str(column) for column in self.data.columns
+                              if is_categorical_feature(column, features)]
+        # Duplicate each categorical column into as many dummy one-hot
+        # columns as needed
         for column in categoricalColumns:
             if actionnability[column] == FeatureActionnability.Increasing:
                 print("warning, categorical feature ", column,
                       "cannot be with increasing feasability, changed to free")
                 actionnability[column] = FeatureActionnability.Free
             featureOneHot = pd.get_dummies(self.data[column], prefix=column)
-            oneHotEncoding[column] = []
             for newCol in featureOneHot:
                 features[newCol] = FeatureType.Binary
                 actionnability[newCol] = actionnability[column]
-                oneHotEncoding[column].append(newCol)
+            # Add new columns to data
             self.data = pd.concat([self.data, featureOneHot], axis=1)
+            # Remove the original columns
             self.data.drop([column], axis=1, inplace=True)
 
-        self.oneHotEncoding = dict()
-        for categoricalColumn in categoricalColumns:
-            self.oneHotEncoding[categoricalColumn] = dict()
-            c = 0
-            for column in self.data.columns:
-                if column.split("_") == categoricalColumn:
-                    self.oneHotEncoding[categoricalColumn].append(c)
-                c += 1
         self.data = self.data[[
             col for col in self.data if col != 'Class'] + ['Class']]
+
+        # Store the position of the one-hot columns corresponding to each
+        # categorical feature
+        self.oneHotEncoding = dict()
+        for categoricalColumn in categoricalColumns:
+            self.oneHotEncoding[categoricalColumn] = []
+            c = 0
+            for column in self.data.columns:
+                if categoricalColumn in column.split("_"):
+                    self.oneHotEncoding[categoricalColumn].append(c)
+                c += 1
+
+        # Store the names of the categorical features
+        for f in self.oneHotEncoding:
+            self.featureNames.append(str(f))
 
     def __apply_min_max_scaling(self, features):
         """ Normalize all features between 0 and 1."""
@@ -140,9 +167,10 @@ class DatasetReader:
                 # Set upper bound
                 self.upperBounds[column] = self.data[column].max()
                 # Normalize all values in the column
-                self.data[column] = (self.data[column] - self.data[column].min()) / \
-                    (self.data[column].max() - self.data[column].min())
-                # Add bounds to lists
+                self.data[column] = (
+                    (self.data[column] - self.lowerBounds[column])
+                    / (self.upperBounds[column] - self.lowerBounds[column]))
+                # Keep the bounds in memory to allow inverse operation
                 self.upperBoundsList.append(self.upperBounds[column])
                 self.lowerBoundsList.append(self.lowerBounds[column])
             f += 1
@@ -176,3 +204,43 @@ class DatasetReader:
                           self.featuresType[c],
                           " for feature ", column)
             c += 1
+
+    def __decode_categorical_features(self, x):
+        """
+        Convert back the one-hot-encoded feature
+        into a single categorical feature.
+        """
+        for f in self.oneHotEncoding:
+            colIndices = self.oneHotEncoding[f]
+            nbPossibleValues = len(colIndices)
+            for i in range(nbPossibleValues):
+                if x[colIndices[i]] == 1.0:
+                    # Add a feature at the end
+                    x = np.r_[x, i / (nbPossibleValues-1)]
+        # Delete all columns corresponding to one-hot encodded features
+        colsToDelete = list(self.oneHotEncoding.values())
+        colsToDelete = [item for sublist in colsToDelete for item in sublist]
+        x = np.delete(x, colsToDelete, axis=0)
+        return x
+
+    def __unscale_feature_values(self, x_exp):
+        """ Convert the normalized features back to their full range. """
+        for f in range(len(x_exp)):
+            x_exp[f] = (x_exp[f] * (self.upperBoundsList[f]
+                        - self.lowerBoundsList[f])
+                        + self.lowerBoundsList[f])
+        return x_exp
+
+    # -- Public methods --
+    def format_explanation(self, x_exp):
+        """
+        Return the explanation in the original format:
+            - Decode the one-hot-encoded categorical features.
+            - Inverse transform of the minmax scaling.
+        """
+        xList = []
+        for i in range(len(x_exp)):
+            x = self.__unscale_feature_values(x_exp[i])
+            x = self.__decode_categorical_features(x)
+            xList.append(x)
+        return np.array(xList)
