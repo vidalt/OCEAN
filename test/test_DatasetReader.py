@@ -27,9 +27,34 @@ class test_DatasetReader(unittest.TestCase):
             Dataset: German-Credit
         """
         # - Test features -
-        self.assertEqual(self.reader.X.values[0, 0], 0.8571428571428571)
-        self.assertEqual(self.reader.X.values[0, 3], 0.3333333333333333)
-        self.assertEqual(self.reader.X.values[0, 5], 0.029411764705882353)
+        MIN_DISCRETE = 0.  # 0, by choice for all discrete features
+        MAX_AGE = 75.
+        MAX_JOB = 3.
+        MAX_SAVING = 4.
+        MAX_CHECKING = 3.
+        MAX_CREDIT = 18424.
+        MIN_CREDIT = 250.
+        MAX_DURATION = 72.
+        # Test upper and lower bounds
+        self.assertEqual(self.reader.upperBoundsList[0:6],
+                         [MAX_AGE, MAX_JOB, MAX_SAVING,
+                          MAX_CHECKING, MAX_CREDIT, MAX_DURATION])
+        self.assertEqual(self.reader.lowerBoundsList[0:6],
+                         [MIN_DISCRETE, MIN_DISCRETE, MIN_DISCRETE,
+                          MIN_DISCRETE, MIN_CREDIT, MIN_DISCRETE])
+        # Test min/max scaling
+        self.assertEqual(self.reader.X.values[0, 0],
+                         (67 - MIN_DISCRETE) / (MAX_AGE - MIN_DISCRETE))
+        self.assertEqual(self.reader.X.values[0, 1],
+                         (2 - MIN_DISCRETE) / (MAX_JOB - MIN_DISCRETE))
+        self.assertEqual(self.reader.X.values[0, 2],
+                         (0 - MIN_DISCRETE) / (MAX_SAVING - MIN_DISCRETE))
+        self.assertEqual(self.reader.X.values[0, 3],
+                         (1 - MIN_DISCRETE) / (MAX_CHECKING - MIN_DISCRETE))
+        self.assertEqual(self.reader.X.values[0, 4],
+                         (1169 - MIN_CREDIT) / (MAX_CREDIT - MIN_CREDIT))
+        self.assertEqual(self.reader.X.values[0, 5],
+                         (6 - MIN_DISCRETE) / (MAX_DURATION - MIN_DISCRETE))
         # - Test label -
         self.assertEqual(self.reader.y.values[0], 1)
         self.assertEqual(self.reader.y.values[1], 0)
