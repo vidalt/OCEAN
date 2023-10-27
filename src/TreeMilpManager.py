@@ -1,10 +1,10 @@
 from gurobipy import GRB
-import numpy as np
+
 # Import OCEAN utility functions and types
 from src.CounterFactualParameters import BinaryDecisionVariables
-from src.CounterFactualParameters import TreeConstraintsType
-from src.CounterFactualParameters import FeatureType
 from src.CounterFactualParameters import eps
+from src.CounterFactualParameters import FeatureType
+from src.CounterFactualParameters import TreeConstraintsType
 
 
 class TreeInMilpManager:
@@ -48,18 +48,10 @@ class TreeInMilpManager:
                 stack.append((self.tree.children_left[node_id], depth + 1))
                 stack.append((self.tree.children_right[node_id], depth + 1))
 
-    def addTreeOuputConstraints(self):
-        self.leaves_constr = dict()
-        for v in range(self.n_nodes):
-            maxValueIndex = np.argmax(self.tree.value[v])
-            if self.is_leaves[v] and maxValueIndex != self.outputDesired:
-                self.leaves_constr[v] = self.model.addConstr(
-                    self.y_var[v] <= 0, "leaf_v" + str(v)+"_t"+str(self.id))
-
     def addTreeExtendedFormulationVariablesAndConstraints(self):
         # Tree node disjunction variables
         self.x_var_nodes = dict()
-        for f in self.continuousFeatures:
+        for f in range(self.nFeatures):
             self.x_var_nodes[f] = dict()
             for v in range(self.n_nodes):
                 self.x_var_nodes[f][v] = self.model.addVar(
@@ -68,14 +60,14 @@ class TreeInMilpManager:
 
         # Disjunction polytope constraints
         root_constr_x = dict()
-        for f in self.continuousFeatures:
+        for f in range(self.nFeatures):
             root_constr_x[f] = self.model.addConstr(
                 self.x_var_sol[f] == self.x_var_nodes[f][0],
                 "root_constr_x_f"+str(f)+"_t"+str(self.id))
         disjunction_flow_constr = dict()
         disjunction_left_constr = dict()
         disjunction_right_constr = dict()
-        for f in self.continuousFeatures:
+        for f in range(self.nFeatures):
             disjunction_flow_constr[f] = dict()
             for v in range(self.n_nodes):
                 if not self.is_leaves[v]:
@@ -88,7 +80,7 @@ class TreeInMilpManager:
                     if self.tree.feature[v] == f:
                         disjunction_left_constr[v] = self.model.addConstr(
                             self.x_var_nodes[f][self.tree.children_left[v]]
-                            <= (self.tree.threshold[v])
+                            <= (self.tree.threshold[v] - eps)
                             * self.y_var[self.tree.children_left[v]],
                             "disjunction_left_const_v" + str(v)
                             + "_t" + str(self.id))
@@ -99,11 +91,10 @@ class TreeInMilpManager:
                             "disjunction_right_const_v" + str(v)
                             + "_t" + str(self.id))
 
-        # Linking constraints
-        # between the disjonction polytope and the decision path
+        # Linking constraints between the disjonction
+        # polytope and the decision path
         link_constr = dict()
-        # for f in range(self.nFeatures):
-        for f in self.continuousFeatures:
+        for f in range(self.nFeatures):
             link_constr[f] = dict()
             for v in range(self.n_nodes):
                 link_constr[f][v] = self.model.addConstr(
@@ -138,7 +129,8 @@ class TreeInMilpManager:
 
     def addBranchingAndDecisionPathVariablesAndConstraints(self):
         self.y_var = dict()
-        if self.binaryDecisionVariables == BinaryDecisionVariables.LeftRight_lambda:
+        if (self.binaryDecisionVariables
+           == BinaryDecisionVariables.LeftRight_lambda):
             for v in range(self.n_nodes):
                 self.y_var[v] = self.model.addVar(
                     lb=0, ub=1, vtype=GRB.CONTINUOUS,
@@ -171,7 +163,8 @@ class TreeInMilpManager:
                         self.y_var[self.tree.children_right[v]]
                         <= 1 - self.tree_branching_vars[self.node_depth[v]],
                         "branch_right_v" + str(v)+"_t"+str(self.id))
-        elif self.binaryDecisionVariables == BinaryDecisionVariables.PathFlow_y:
+        elif (self.binaryDecisionVariables
+              == BinaryDecisionVariables.PathFlow_y):
             for v in range(self.n_nodes):
                 self.y_var[v] = self.model.addVar(
                     vtype=GRB.BINARY, name="y"+str(v)+"_t"+str(self.id))
@@ -194,32 +187,36 @@ class TreeInMilpManager:
     def addContinuousVariablesConsistencyConstraints(self):
         if self.constraintsType == TreeConstraintsType.ExtendedFormulation:
             print('Warning: this tree constraint type should be avoided,'
-                  ' use TreeConstraintsType.LinearCombinationOfPlanes instead.')
+                  ' use TreeConstraintsType.LinearCombinationOfPlanes'
+                  ' instead.')
             self.addTreeExtendedFormulationVariablesAndConstraints()
         elif self.constraintsType == TreeConstraintsType.BigM:
             print('Warning: this tree constraint type should be avoided,'
-                  ' use TreeConstraintsType.LinearCombinationOfPlanes instead.')
+                  ' use TreeConstraintsType.LinearCombinationOfPlanes'
+                  ' instead.')
             self.addTreeBigMConstraints()
-        elif self.constraintsType == TreeConstraintsType.LinearCombinationOfPlanes:
+        elif (self.constraintsType
+              == TreeConstraintsType.LinearCombinationOfPlanes):
             pass
         else:
             raise ValueError("Unknown constraints type.")
 
     def addBinaryVariablesConsistencyConstraints(self):
-        self.leftBinaryVariablesConsistencyConstraints = dict()
-        self.rightBinaryVariablesConsistencyConstraints = dict()
+        self.leftBinaryConsistencyCstr = dict()
+        self.rightBinaryConsistencyCstr = dict()
         for v in range(self.n_nodes):
             if not self.is_leaves[v]:
                 f = self.tree.feature[v]
                 if self.featuresType[f] == FeatureType.Binary:
                     assert self.tree.threshold[v] > 0
                     assert self.tree.threshold[v] < 1
-                    self.leftBinaryVariablesConsistencyConstraints[v] = self.model.addConstr(
+                    self.leftBinaryConsistencyCstr[v] = self.model.addConstr(
                         self.x_var_sol[f]
                         + self.y_var[self.tree.children_left[v]] <= 1,
-                        "leftBinaryVariablesConsistencyConstraints_t"
+                        "leftBinaryConsistencyCstr"
                         + str(self.id) + "_v" + str(v))
-                    self.rightBinaryVariablesConsistencyConstraints[v] = self.model.addConstr(
-                        self.x_var_sol[f] >= self.y_var[self.tree.children_right[v]],
-                        "rightBinaryVariablesConsistencyConstraints_t"
+                    self.rightBinaryConsistencyCstr[v] = self.model.addConstr(
+                        self.x_var_sol[f] >=
+                        self.y_var[self.tree.children_right[v]],
+                        "rightBinaryConsistencyCstr"
                         + str(self.id) + "_v" + str(v))
