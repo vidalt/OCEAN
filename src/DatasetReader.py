@@ -225,11 +225,12 @@ class DatasetReader:
 
     def __unscale_feature_values(self, x_exp):
         """ Convert the normalized features back to their full range. """
-        for f in range(len(x_exp)):
-            x_exp[f] = (x_exp[f] * (self.upperBoundsList[f]
+        x = np.zeros_like(x_exp)
+        for f in range(len(x)):
+            x[f] = (x_exp[f] * (self.upperBoundsList[f]
                         - self.lowerBoundsList[f])
                         + self.lowerBoundsList[f])
-        return x_exp
+        return x
 
     # -- Public methods --
     def format_explanation(self, x_exp):

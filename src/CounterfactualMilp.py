@@ -197,6 +197,27 @@ class CounterfactualMilp:
                 self.actionnabilityConstraints[f] = self.model.addConstr(
                     self.x_var_sol[f] == self.x0[0][f],
                     "ActionnabilityFixed_f" + str(f))
+    
+    def addBoundingBoxConstraints(self, boundingBox):
+        """
+        Add constraints to restrict the counterfactual solution to
+        the bounding box specified by the input parameter.
+        
+        :param boundingBox: list of tuples (min, max) for each feature.
+        if min or max is None, the corresponding constraint is not added.
+        """
+        self.BoundingBoxConstraints = dict()
+        if boundingBox is not None:
+            for f in range(self.nFeatures):
+                if self.featuresType[f] == FeatureType.Numeric:
+                    if boundingBox[f][0] is not None:    
+                        self.BoundingBoxConstraints[f] = self.model.addConstr(
+                        self.x_var_sol[f] >= boundingBox[f][0],
+                        "boundingBoxMin_f" + str(f))
+                    if boundingBox[f][1] is not None:
+                        self.BoundingBoxConstraints[f] = self.model.addConstr(
+                            self.x_var_sol[f] <= boundingBox[f][1],
+                            "boundingBoxMax_f" + str(f))
 
     def addOneHotEncodingConstraints(self):
         self.oneHotEncodingConstraints = dict()
