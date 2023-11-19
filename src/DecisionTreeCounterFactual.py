@@ -15,6 +15,7 @@ class DecisionTreeCounterFactualMilp(ClassifierCounterFactualMilp):
             featuresPossibleValues=False,
             featuresActionnability=False,
             oneHotEncoding=False,
+            boundingBox=None,
             constraintsType=TreeConstraintsType.ExtendedFormulation,
             binaryDecisionVariables=BinaryDecisionVariables.LeftRight_lambda):
         ClassifierCounterFactualMilp.__init__(
@@ -26,6 +27,7 @@ class DecisionTreeCounterFactualMilp(ClassifierCounterFactualMilp):
             featuresActionnability=featuresActionnability,
             oneHotEncoding=oneHotEncoding)
         self.model.modelName = "DecisionTreeCounterFactualMilp"
+        self.boundingBox = boundingBox
         # Specify formulation parameters of forest MILP
         self.constraintsType = constraintsType
         self.binaryDecisionVariables = binaryDecisionVariables
@@ -149,6 +151,8 @@ class DecisionTreeCounterFactualMilp(ClassifierCounterFactualMilp):
         # Add constraints on features type and actionability
         self.addActionnabilityConstraints()
         self.addOneHotEncodingConstraints()
+        # Add bounds constraints of features
+        self.addBoundingBoxConstraints(boundingBox=self.boundingBox)
         # Add constraint on target class
         self._add_target_class_constraints()
         self.initObjective()
