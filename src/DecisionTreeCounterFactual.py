@@ -46,7 +46,7 @@ class DecisionTreeCounterFactualMilp(ClassifierCounterFactualMilp):
 
     def _add_target_class_constraints(self):
         # Initialize variable for the tree's prediction
-        self.milp_class = self.model.addVar(vtype=GRB.BINARY,
+        self.milp_class = self.model.addVar(vtype=GRB.INTEGER,
                                             name="milp_class")
         # Identify tree's prediction from y variables
         self.model.addConstr(
