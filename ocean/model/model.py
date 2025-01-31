@@ -112,7 +112,6 @@ class Model(BaseModel):
     def clear_majority_class(self) -> None:
         self.remove(self._scores)
         self._scores.clear()
-        self._scores = gp.tupledict()
 
     def _set_trees(
         self,
