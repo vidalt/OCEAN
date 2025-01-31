@@ -1,32 +1,33 @@
-from collections.abc import Hashable, Mapping
-
 import gurobipy as gp
 import numpy as np
-import pandas as pd
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 
 from ocean.feature import FeatureMapper
-from ocean.model.model import Model
+from ocean.model import Model, Solution
 from ocean.tree import Node, TreeVar, parse_tree
 
 from ..utils import ENV, generate_data
 
 
 def _check_solution(
-    X: Mapping[Hashable, float],
+    solution: Solution,
     *,
     mapper: FeatureMapper,
 ) -> None:
+    series = solution.to_series()
     for name, feature in mapper.items():
         if feature.is_one_hot_encoded:
-            assert sum(X[name, code] for code in feature.codes) == 1.0
-        elif feature.is_binary:
-            assert np.any(np.isclose(X[name], [0.0, 1.0]))
+            assert series.xs(name, level=0).sum() == 1.0
+            continue
+
+        value = series.xs(name, level=0).to_numpy()[0]
+        if feature.is_binary:
+            assert np.any(np.isclose(value, [0.0, 1.0]))
         elif feature.is_numeric:
-            assert feature.levels[0] <= X[name] <= feature.levels[-1]
+            assert feature.levels[0] <= value <= feature.levels[-1]
             if feature.is_discrete:
-                assert np.any(np.isclose(X[name], feature.levels))
+                assert np.any(np.isclose(value, feature.levels))
 
 
 def _check_node(
@@ -34,35 +35,39 @@ def _check_node(
     node: Node,
     *,
     mapper: FeatureMapper,
-    X: Mapping[Hashable, float],
+    solution: Solution,
 ) -> None:
     if node.is_leaf:
         return
 
     left = node.left
     right = node.right
+    series = solution.to_series()
     next_node = left if tree[left.node_id].X == 1.0 else right
     assert tree[next_node.node_id].X == 1.0
 
     feature = node.feature
-    if mapper[feature].is_binary:
-        if X[feature] == 0:
-            assert tree[left.node_id].X == 1.0
-        else:
-            assert tree[right.node_id].X == 1.0
-    elif mapper[feature].is_one_hot_encoded:
+    if mapper[feature].is_one_hot_encoded:
         code = node.code
-        if X[feature, code] == 1.0:
-            assert tree[right.node_id].X == 1.0
-        else:
+        value = series.xs((feature, code), level=(0, 1)).to_numpy()[0]
+        if value == 0.0:
             assert tree[left.node_id].X == 1.0
-    elif mapper[feature].is_numeric:
-        threshold = node.threshold
-        if X[feature] <= threshold:
-            assert tree[left.node_id].X == 1.0, f"{X[feature]} <= {threshold}"
         else:
-            assert tree[right.node_id].X == 1.0, f"{X[feature]} > {threshold}"
-    _check_node(tree, next_node, mapper=mapper, X=X)
+            assert tree[right.node_id].X == 1.0
+    else:
+        value = series.xs(feature, level=0).to_numpy()[0]
+        if mapper[feature].is_binary:
+            if value == 0.0:
+                assert tree[left.node_id].X == 1.0
+            else:
+                assert tree[right.node_id].X == 1.0
+        elif mapper[feature].is_numeric:
+            threshold = node.threshold
+            if value <= threshold:
+                assert tree[left.node_id].X == 1.0, f"{value} <= {threshold}"
+            else:
+                assert tree[right.node_id].X == 1.0, f"{value} > {threshold}"
+    _check_node(tree, next_node, mapper=mapper, solution=solution)
 
 
 def _check_paths(
@@ -83,25 +88,15 @@ def _check_paths(
 
 def _check_prediction(
     clf: RandomForestClassifier,
-    X: Mapping[Hashable, float],
+    solution: Solution,
     mapper: FeatureMapper,
     m_class: int,
     model: Model | None = None,
 ) -> None:
-    solution: dict[tuple[Hashable, Hashable | str], float] = {}
-    for name, feature in mapper.items():
-        if not feature.is_one_hot_encoded:
-            solution[name, ""] = X[name]
-            continue
-
-        for code in feature.codes:
-            key = (name, code)
-            solution[name, code] = X[key]
-
-    x = pd.DataFrame([solution], columns=mapper.columns)
-    prediction = clf.predict(x.to_numpy())[0]
+    x = solution.to_numpy(columns=mapper.columns)
+    prediction = clf.predict(x.reshape(1, -1))[0]
     assert prediction == m_class, (
-        clf.predict_proba(x.to_numpy())[0],
+        clf.predict_proba(x.reshape(1, -1))[0],
         (
             model.function.getValue() / model.function.getValue().sum()
             if model is not None
@@ -211,12 +206,12 @@ def test_model(
     solution = model.solution
     assert solution is not None
 
-    x = solution.to_numpy(mapper=mapper)
+    x = solution.to_numpy(columns=mapper.columns)
 
-    _check_solution(solution.X, mapper=mapper)
+    _check_solution(solution, mapper=mapper)
 
     for tree in model.trees:
-        _check_node(tree, tree.root, mapper=mapper, X=solution.X)
+        _check_node(tree, tree.root, mapper=mapper, solution=solution)
 
     _check_paths(clf, x, model.trees)
 
@@ -229,10 +224,10 @@ def test_model(
     solution = model.solution
     assert solution is not None
 
-    x = solution.to_numpy(mapper=mapper)
+    x = solution.to_numpy(columns=mapper.columns)
 
     _check_paths(clf, x, model.trees)
-    _check_prediction(clf, solution.X, mapper=mapper, m_class=0)
+    _check_prediction(clf, solution, mapper=mapper, m_class=0)
 
     model.clear_majority_class()
 
@@ -245,7 +240,7 @@ def test_model(
     solution = model.solution
     assert solution is not None
 
-    x = solution.to_numpy(mapper=mapper)
+    x = solution.to_numpy(columns=mapper.columns)
 
     _check_paths(clf, x, model.trees)
-    _check_prediction(clf, solution.X, mapper=mapper, m_class=1, model=model)
+    _check_prediction(clf, solution, mapper=mapper, m_class=1, model=model)
