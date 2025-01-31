@@ -25,3 +25,5 @@ repos:
     rev: v1.14.1  # Use the sha / tag you want to point at
     hooks:
     -   id: mypy
+        files: '(ocean|tests)/.*\.py$'
+        args: [--config-file=./mypy.ini]
