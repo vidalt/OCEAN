@@ -26,4 +26,4 @@ repos:
     hooks:
     -   id: mypy
         files: '(ocean|tests)/.*\.py$'
-        args: [--install-types, --config-file=./mypy.ini]
+        args: [--install-types -y, --config-file=./mypy.ini]
