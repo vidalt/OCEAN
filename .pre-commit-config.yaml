@@ -9,3 +9,13 @@ repos:
     -   id: check-yaml
     -   id: check-added-large-files
         args: ['--maxkb=100']
+
+# Run ruff:
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.4
+    hooks:
+    -   id: ruff
+        args: ['--fix', 'ocean', 'tests']
+    -   id: ruff-format
+        args: ['ocean', 'tests']
