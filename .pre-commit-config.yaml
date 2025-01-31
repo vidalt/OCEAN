@@ -21,10 +21,10 @@ repos:
 
 # Run mypy:
 # See https://github.com/pre-commit/mirrors-mypy
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1  # Use the sha / tag you want to point at
+-   repo: local
     hooks:
     -   id: mypy
-        files: '(ocean|tests)/.*\.py$'
-        additional_dependencies: [types-requests,pandas-stubs]
-        args: [--install-types, --config-file=./mypy.ini]
+        name: mypy
+        entry: mypy -v
+        language: python
+        types_or: [python, pyi]
