@@ -3,71 +3,13 @@ from enum import Enum
 
 import gurobipy as gp
 import numpy as np
-import pandas as pd
 
 from ..base import BaseModel
-from ..feature import Feature, FeatureMapper, FeatureVar
+from ..feature import Feature, FeatureVar
 from ..tree import Tree, TreeVar
 from ..typing import Array1D
 from .builder import ModelBuilder, ModelBuilderFactory
-
-
-class Solution:
-    _features: Mapping[Hashable, FeatureVar]
-
-    def __init__(self, features: Mapping[Hashable, FeatureVar]) -> None:
-        self._features = features
-
-    @property
-    def X(self) -> dict[Hashable, float]:
-        X: dict[Hashable, float] = {}
-        for name, feature in self._features.items():
-            if not feature.is_one_hot_encoded:
-                X[name] = feature.X
-                continue
-
-            for code in feature.codes:
-                key = (name, code)
-                X[key] = feature[code].X
-        return X
-
-    def to_series(self) -> "pd.Series[float]":
-        index = []
-        values: list[float] = []
-
-        for name, feature in self._features.items():
-            if not feature.is_one_hot_encoded:
-                index.append(name)
-                values.append(feature.X)
-
-        series = pd.Series(values, index=index).astype(float)
-
-        index.clear()
-        values.clear()
-        for name, feature in self._features.items():
-            if not feature.is_one_hot_encoded:
-                continue
-
-            for code in feature.codes:
-                index.append((name, code))
-                values.append(feature[code].X)
-        encoded = pd.Series(values, index=index).astype(float)
-
-        if encoded.empty:
-            return series
-
-        series.index = pd.MultiIndex.from_product([series.index, [""]])
-        return pd.concat([series, encoded])
-
-    def to_numpy(self, *, mapper: FeatureMapper) -> Array1D:
-        return (
-            self.to_series()
-            .loc[mapper.columns]
-            .to_frame()
-            .T.to_numpy()
-            .flatten()
-            .astype(float)
-        )
+from .solution import Solution
 
 
 class Model(BaseModel):
@@ -195,7 +137,7 @@ class Model(BaseModel):
 
     def _set_weights(self, weights: Array1D | None = None) -> None:
         if weights is None:
-            weights = np.ones(self.n_trees, dtype=float)
+            weights = np.ones(self.n_trees, dtype=np.float64)
 
         if len(weights) != self.n_trees:
             msg = "The number of weights must match the number of trees."

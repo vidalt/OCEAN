@@ -34,7 +34,7 @@ class FeatureVar(Var, FeatureKeeper):
 
         if self.is_numeric:
             self._mu = self._add_mu(model)
-            model.addConstr(self.x == self._xget())
+            model.addConstr(self._x.item() == self._xget())
         elif self.is_one_hot_encoded:
             model.addConstr(self._x.sum() == 1.0)
 
@@ -56,20 +56,14 @@ class FeatureVar(Var, FeatureKeeper):
 
         # Case when the feature is one-hot encoded.
         if self.is_one_hot_encoded:
-            m = len(self.codes)
-            names = [f"{name}[{code}]" for code in self.codes]
-            vtype = gp.GRB.BINARY
-            return model.addMVar(shape=m, vtype=vtype, name=names)
+            return self._add_one_hot_encoded(model, name)
 
         # Case when the feature is binary.
         if self.is_binary:
-            vtype = gp.GRB.BINARY
-            return model.addMVar(shape=1, vtype=vtype, name=name)
+            return self._add_binary(model, name)
 
         # Case when the feature is continuous or discrete.
-        vtype = gp.GRB.CONTINUOUS
-        lb = -gp.GRB.INFINITY
-        return model.addMVar(shape=1, vtype=vtype, lb=lb, name=name)
+        return self._add_numeric(model, name)
 
     def _add_mu(self, model: BaseModel) -> gp.MVar:
         mut = gp.GRB.BINARY if self.is_discrete else gp.GRB.CONTINUOUS
@@ -86,6 +80,23 @@ class FeatureVar(Var, FeatureKeeper):
             model.addConstr(mu[j + 1] <= mu[j])
 
         return mu
+
+    def _add_one_hot_encoded(self, model: BaseModel, name: str) -> gp.MVar:
+        m = len(self.codes)
+        vtype = gp.GRB.BINARY
+        names = [f"{name}[{code}]" for code in self.codes]
+        return model.addMVar(shape=m, vtype=vtype, name=names)
+
+    @staticmethod
+    def _add_binary(model: BaseModel, name: str) -> gp.MVar:
+        vtype = gp.GRB.BINARY
+        return model.addMVar(shape=1, vtype=vtype, name=name)
+
+    @staticmethod
+    def _add_numeric(model: BaseModel, name: str) -> gp.MVar:
+        vtype = gp.GRB.CONTINUOUS
+        lb = -gp.GRB.INFINITY
+        return model.addMVar(shape=1, vtype=vtype, lb=lb, name=name)
 
     def _xget(self) -> gp.LinExpr:
         mu = self._mu
