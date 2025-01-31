@@ -14,18 +14,19 @@ from ..utils import ENV, generate_data
 
 
 def _check_solution(
-    solution: Mapping[Hashable, float],
+    X: Mapping[Hashable, float],
+    *,
     mapper: FeatureMapper,
 ) -> None:
     for name, feature in mapper.items():
         if feature.is_one_hot_encoded:
-            assert sum(solution[name, code] for code in feature.codes) == 1.0
+            assert sum(X[name, code] for code in feature.codes) == 1.0
         elif feature.is_binary:
-            assert np.any(np.isclose(solution[name], [0.0, 1.0]))
+            assert np.any(np.isclose(X[name], [0.0, 1.0]))
         elif feature.is_numeric:
-            assert feature.levels[0] <= solution[name] <= feature.levels[-1]
+            assert feature.levels[0] <= X[name] <= feature.levels[-1]
             if feature.is_discrete:
-                assert np.any(np.isclose(solution[name], feature.levels))
+                assert np.any(np.isclose(X[name], feature.levels))
 
 
 def _check_node(
@@ -33,7 +34,7 @@ def _check_node(
     node: Node,
     *,
     mapper: FeatureMapper,
-    solution: Mapping[Hashable, float],
+    X: Mapping[Hashable, float],
 ) -> None:
     if node.is_leaf:
         return
@@ -45,84 +46,59 @@ def _check_node(
 
     feature = node.feature
     if mapper[feature].is_binary:
-        if solution[feature] == 0:
+        if X[feature] == 0:
             assert tree[left.node_id].X == 1.0
         else:
             assert tree[right.node_id].X == 1.0
     elif mapper[feature].is_one_hot_encoded:
         code = node.code
-        if solution[feature, code] == 1.0:
+        if X[feature, code] == 1.0:
             assert tree[right.node_id].X == 1.0
         else:
             assert tree[left.node_id].X == 1.0
     elif mapper[feature].is_numeric:
         threshold = node.threshold
-        if solution[feature] <= threshold:
-            assert tree[left.node_id].X == 1.0, (
-                f"{solution[feature]} <= {threshold}"
-            )
+        if X[feature] <= threshold:
+            assert tree[left.node_id].X == 1.0, f"{X[feature]} <= {threshold}"
         else:
-            assert tree[right.node_id].X == 1.0, (
-                f"{solution[feature]} > {threshold}"
-            )
-    _check_node(tree, next_node, mapper=mapper, solution=solution)
+            assert tree[right.node_id].X == 1.0, f"{X[feature]} > {threshold}"
+    _check_node(tree, next_node, mapper=mapper, X=X)
 
 
 def _check_paths(
     clf: RandomForestClassifier,
-    solution: Mapping[Hashable, float],
+    X: np.ndarray[tuple[int], np.dtype[np.float64]],
     trees: tuple[TreeVar, ...],
-    mapper: FeatureMapper,
 ) -> None:
-    solution_: dict[tuple[Hashable, Hashable | str], float] = {}
-    for name, feature in mapper.items():
-        if not feature.is_one_hot_encoded:
-            solution_[name, ""] = solution[name]
-            continue
-
-        for code in feature.codes:
-            key = (name, code)
-            solution_[name, code] = solution[key]
-
-    x = pd.DataFrame([solution_], columns=mapper.columns)
-    paths = clf.decision_path(x.to_numpy())  # pyright: ignore[reportUnknownVariableType]
+    paths = clf.decision_path(X.reshape(1, -1))  # pyright: ignore[reportUnknownVariableType]
 
     for t, tree in enumerate(trees):
         # Get the leaf node from the tree
         node = tree.root
         while not node.is_leaf:
-            to = "left" if tree[node.left.node_id].X == 1.0 else "right"
             node = node.left if tree[node.left.node_id].X == 1.0 else node.right
-            idx = paths[0][0, paths[1][t] + node.node_id]  # pyright: ignore[reportIndexIssue, reportUnknownVariableType]
-            assert idx == 1, (
-                "The paths break for:"
-                f"tree={t}, node={node.parent.node_id}, "
-                f"feature={node.parent.feature}\n"
-                f"Model levels={mapper[node.parent.feature].levels}\n"
-                f"Model threshold={node.parent.threshold}\n"
-                f"Solution={solution[node.parent.feature]}\n"
-                f"Path went to {to}"
-            )
+            idx: np.float64 = paths[0][0, paths[1][t] + node.node_id]  # pyright: ignore[reportIndexIssue, reportUnknownVariableType]
+            assert idx == 1
 
 
 def _check_prediction(
     clf: RandomForestClassifier,
-    solution: Mapping[Hashable, float],
+    X: Mapping[Hashable, float],
     mapper: FeatureMapper,
     m_class: int,
     model: Model | None = None,
 ) -> None:
-    solution_: dict[tuple[Hashable, Hashable | str], float] = {}
+    solution: dict[tuple[Hashable, Hashable | str], float] = {}
     for name, feature in mapper.items():
         if not feature.is_one_hot_encoded:
-            solution_[name, ""] = solution[name]
+            solution[name, ""] = X[name]
             continue
 
         for code in feature.codes:
             key = (name, code)
-            solution_[name, code] = solution[key]
+            solution[name, code] = X[key]
 
-    x = pd.DataFrame([solution_], columns=mapper.columns)
+    x = pd.DataFrame([solution], columns=mapper.columns)
     prediction = clf.predict(x.to_numpy())[0]
     assert prediction == m_class, (
         clf.predict_proba(x.to_numpy())[0],
@@ -235,12 +211,14 @@ def test_model(
     solution = model.solution
     assert solution is not None
 
-    _check_solution(solution, mapper=mapper)
+    x = solution.to_numpy(mapper=mapper)
+
+    _check_solution(solution.X, mapper=mapper)
 
     for tree in model.trees:
-        _check_node(tree, tree.root, mapper=mapper, solution=solution)
+        _check_node(tree, tree.root, mapper=mapper, X=solution.X)
 
-    _check_paths(clf, solution, model.trees, mapper)
+    _check_paths(clf, x, model.trees)
 
     model.set_majority_class(m_class=0)
 
@@ -251,8 +229,10 @@ def test_model(
     solution = model.solution
     assert solution is not None
 
-    _check_paths(clf, solution, model.trees, mapper)
-    _check_prediction(clf, solution, mapper=mapper, m_class=0)
+    x = solution.to_numpy(mapper=mapper)
+
+    _check_paths(clf, x, model.trees)
+    _check_prediction(clf, solution.X, mapper=mapper, m_class=0)
 
     model.clear_majority_class()
 
@@ -265,5 +245,7 @@ def test_model(
     solution = model.solution
     assert solution is not None
 
-    _check_paths(clf, solution, model.trees, mapper)
-    _check_prediction(clf, solution, mapper=mapper, m_class=1, model=model)
+    x = solution.to_numpy(mapper=mapper)
+
+    _check_paths(clf, x, model.trees)
+    _check_prediction(clf, solution.X, mapper=mapper, m_class=1, model=model)

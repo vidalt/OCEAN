@@ -44,6 +44,8 @@ def test_parse() -> None:
     assert len(mapper) == n_features
     assert "a" in mapper
     assert "f" not in mapper
+    assert set(mapper.names) == expected_features
+    assert set(mapper.codes) == {"a", "b", "c", ""}
 
 
 def test_parse_valid() -> None:

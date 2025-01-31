@@ -41,6 +41,7 @@ optional-dependencies.dev = [
     "tox",
     "mypy",
     "pandas-stubs",
+    "scipy-stubs",
     "pyright",
 ]
 
@@ -52,6 +53,7 @@ optional-dependencies.test = [
     "tox",
     "mypy",
     "pandas-stubs",
+    "scipy-stubs",
     "pyright",
 ]
 
