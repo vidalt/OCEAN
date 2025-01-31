@@ -3,8 +3,7 @@ from enum import Enum
 
 import gurobipy as gp
 
-from ..model.base import BaseModel
-from ..model.variable import Var
+from ..base import BaseModel, Var
 from .builder import FlowBuilder, FlowBuilderFactory
 from .keeper import TreeKeeper, TreeLike
 from .node import Node

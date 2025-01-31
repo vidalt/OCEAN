@@ -4,10 +4,10 @@ from enum import Enum
 import gurobipy as gp
 import numpy as np
 
+from ..base import BaseModel
 from ..feature import Feature, FeatureVar
 from ..tree import Tree, TreeVar
 from ..typing import Array1D
-from .base import BaseModel
 from .builder import ModelBuilder, ModelBuilderFactory
 
 

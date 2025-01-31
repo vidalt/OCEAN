@@ -2,7 +2,7 @@ from typing import Protocol
 
 import gurobipy as gp
 
-from ..model.base import BaseModel
+from ..base import BaseModel
 from .keeper import TreeKeeper
 
 
