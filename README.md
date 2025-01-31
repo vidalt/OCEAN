@@ -40,6 +40,9 @@ rf.fit(X, y)
 trees = [parse_tree(estimator.tree_, mapper=mapper) for estimator in rf.estimators_]
 
 model = Model(trees, mapper)
+model.build()
+
+model.set_majority_class(m_class=1)
 
 objective = gp.LinExpr()
 
@@ -50,10 +53,9 @@ for feature in model.features.values():
     else:
         objective += feature.x
 
-model.set_objective(objective)
+model.setObjective(objective)
 
 model.optimize()
 
 print(model.solution)
-
 ```
