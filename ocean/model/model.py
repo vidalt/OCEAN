@@ -3,9 +3,10 @@ from enum import Enum
 
 import gurobipy as gp
 import numpy as np
+import pandas as pd
 
 from ..base import BaseModel
-from ..feature import Feature, FeatureVar
+from ..feature import Feature, FeatureMapper, FeatureVar
 from ..tree import Tree, TreeVar
 from ..typing import Array1D
 from .builder import ModelBuilder, ModelBuilderFactory
@@ -29,6 +30,44 @@ class Solution:
                 key = (name, code)
                 X[key] = feature[code].X
         return X
+
+    def to_series(self) -> "pd.Series[float]":
+        index = []
+        values: list[float] = []
+
+        for name, feature in self._features.items():
+            if not feature.is_one_hot_encoded:
+                index.append(name)
+                values.append(feature.X)
+
+        series = pd.Series(values, index=index).astype(float)
+
+        index.clear()
+        values.clear()
+        for name, feature in self._features.items():
+            if not feature.is_one_hot_encoded:
+                continue
+
+            for code in feature.codes:
+                index.append((name, code))
+                values.append(feature[code].X)
+        encoded = pd.Series(values, index=index).astype(float)
+
+        if encoded.empty:
+            return series
+
+        series.index = pd.MultiIndex.from_product([series.index, [""]])
+        return pd.concat([series, encoded])
+
+    def to_numpy(self, *, mapper: FeatureMapper) -> Array1D:
+        return (
+            self.to_series()
+            .loc[mapper.columns]
+            .to_frame()
+            .T.to_numpy()
+            .flatten()
+            .astype(float)
+        )
 
 
 class Model(BaseModel):
@@ -98,8 +137,8 @@ class Model(BaseModel):
         return self._features
 
     @property
-    def solution(self) -> Mapping[Hashable, float]:
-        return self._solution.X
+    def solution(self) -> Solution:
+        return self._solution
 
     def build(self) -> None:
         self._build_trees()
