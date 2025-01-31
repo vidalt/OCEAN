@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Protocol
 
 import gurobipy as gp
 
@@ -9,3 +10,12 @@ class BaseModel(ABC, gp.Model):
 
     def __setattr__(self, name: str, value: int) -> None:
         object.__setattr__(self, name, value)
+
+
+class Var(Protocol):
+    _name: str
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    def build(self, model: BaseModel) -> None: ...

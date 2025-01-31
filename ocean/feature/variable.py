@@ -3,8 +3,7 @@ from collections.abc import Hashable
 import gurobipy as gp
 import numpy as np
 
-from ..model.base import BaseModel
-from ..model.variable import Var
+from ..base import BaseModel, Var
 from .feature import Feature
 from .keeper import FeatureKeeper
 

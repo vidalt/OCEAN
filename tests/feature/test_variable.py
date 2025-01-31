@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
+from ocean.base import BaseModel
 from ocean.feature import Feature, FeatureVar
-from ocean.model.base import BaseModel
 
 from ..utils import ENV
 

@@ -1,7 +1,7 @@
 import pytest
 from sklearn.tree import DecisionTreeClassifier
 
-from ocean.model.base import BaseModel
+from ocean.base import BaseModel
 from ocean.tree import Node, TreeVar, parse_tree
 
 from ..utils import ENV, generate_data
