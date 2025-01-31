@@ -26,4 +26,5 @@ repos:
     hooks:
     -   id: mypy
         files: '(ocean|tests)/.*\.py$'
-        args: [--install-types -y, --config-file=./mypy.ini]
+        additional_dependencies: [pandas-stubs]
+        args: [--install-types, --config-file=./mypy.ini]
