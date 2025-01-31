@@ -11,11 +11,10 @@ repos:
         args: ['--maxkb=100']
 
 # Run ruff:
-
+# See https://github.com/astral-sh/ruff-pre-commit for more information
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.4
     hooks:
     -   id: ruff
-        args: ['--fix', 'ocean', 'tests']
+        args: [--fix]
     -   id: ruff-format
-        args: ['ocean', 'tests']
