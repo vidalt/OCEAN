@@ -18,7 +18,7 @@ pip install git+hhttps://github.com/eminyous/ocean.git
 The package provides multiple classes and functions to wrap the tree ensemble models from the `scikit-learn` library. A minimal example is provided below:
 
 ```python
-import numpy as np
+import gurobipy as gp
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.datasets import load_iris
 
@@ -27,7 +27,7 @@ from ocean.tree import parse_tree
 from ocean.model import Model
 
 data, target = load_iris(return_X_y=True, as_frame=True)
-data, mapper = parse_features(data)
+mapper, data = parse_features(data)
 
 X, y = data.to_numpy(), target.to_numpy()
 
@@ -37,13 +37,13 @@ rf = RandomForestClassifier(
     random_state=42,
 )
 rf.fit(X, y)
-trees = [parse_tree(estimator.tree_, mapper) for estimator in rf.estimators_]
+trees = [parse_tree(estimator.tree_, mapper=mapper) for estimator in rf.estimators_]
 
 model = Model(trees, mapper)
 
 objective = gp.LinExpr()
 
-for feature in model.features:
+for feature in model.features.values():
     if feature.is_one_hot_encoded:
         for code in feature.codes:
             objective += feature[code]
