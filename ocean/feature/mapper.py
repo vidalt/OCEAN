@@ -1,42 +1,48 @@
 from collections.abc import Hashable, Iterable, Iterator, Mapping
-
-import pandas as pd
+from typing import TYPE_CHECKING
 
 from .feature import Feature
 
+if TYPE_CHECKING:
+    import pandas as pd
+
 
 class FeatureMapper(Mapping[Hashable, Feature]):
-    _columns: pd.Index
+    _columns: "pd.Index[str] | pd.MultiIndex"
     _map: dict[Hashable, Feature]
 
+    _names: tuple[Hashable, ...] | None = None
     _codes: tuple[Hashable, ...] | None = None
-    _names: tuple[Hashable, ...]
 
     def __init__(
         self,
         names: Iterable[Hashable],
         features: Iterable[Feature],
-        columns: pd.Index,
+        columns: "pd.Index[str] | pd.MultiIndex",
     ) -> None:
         self._columns = columns
         self._map = dict(zip(names, features, strict=True))
-        self._names = tuple(columns.get_level_values(0))
 
     @property
-    def columns(self) -> pd.Index:
+    def columns(self) -> "pd.Index[str] | pd.MultiIndex":
         return self._columns
 
     @property
     def names(self) -> tuple[Hashable, ...]:
+        if self._names is None:
+            names: pd.Index[str] = self._columns.get_level_values(0)
+            self._names = tuple(names)
         return self._names
 
     @property
     def codes(self) -> tuple[Hashable, ...]:
         if self._codes is None:
-            if self._columns.nlevels == 1:
+            n_levels = 2
+            if self._columns.nlevels < n_levels:
                 msg = "No one-hot encoded features found"
                 raise ValueError(msg)
-            self._codes = tuple(self._columns.get_level_values(1))
+            codes: pd.Index[str] = self._columns.get_level_values(1)
+            self._codes = tuple(codes)
         return self._codes
 
     def __len__(self) -> int:

@@ -9,7 +9,7 @@ from .mapper import FeatureMapper
 N_BINARY: int = 2
 
 
-def _count_unique(series: pd.Series) -> int:
+def _count_unique(series: "pd.Series[Any]") -> int:
     return series.nunique()
 
 
@@ -28,19 +28,20 @@ def _parse(
     scale: bool = True,
 ) -> tuple[FeatureMapper, pd.DataFrame]:
     discrete = set(discretes)
-    frames: list[Any] = []
+    frames: list[pd.DataFrame | pd.Series[int] | pd.Series[float]] = []
     features: list[Feature] = []
     names: list[Hashable] = []
 
     for column in data.columns:
-        series = data[column].astype(object).rename("")
+        series: pd.Series[Any] = data[column].rename("")
         levels: tuple[float, ...] = ()
         codes: tuple[Hashable, ...] = ()
 
         if column in discrete:
-            frames.append(series.astype(float))
+            series = series.astype(float)
+            frames.append(series)
             ftype = Feature.Type.DISCRETE
-            levels = tuple(set(series.dropna().astype(float)))
+            levels = tuple(set(series.dropna()))
         elif series.nunique() == N_BINARY:
             frames.append(
                 pd.get_dummies(series, drop_first=True)
@@ -52,8 +53,7 @@ def _parse(
         elif pd.to_numeric(series, errors="coerce").notna().all():
             x = series.astype(float)
             if scale:
-                x = ((x - x.min()) / (x.max() - x.min())).astype(float)
-                x = (-0.5 + x).astype(float)
+                x = ((x - x.min()) / (x.max() - x.min()) - 0.5).astype(float)
             frames.append(x)
             ftype = Feature.Type.CONTINUOUS
             levels = (x.min() - 0.5, x.max() + 0.5)
@@ -65,10 +65,10 @@ def _parse(
         names.append(column)
         features.append(Feature(ftype=ftype, levels=levels, codes=codes))
 
-    preprocessed = pd.concat(frames, axis=1, keys=names)
-    columns = preprocessed.columns
+    proc = pd.concat(frames, axis=1, keys=names)
+    columns = proc.columns
     mapper = FeatureMapper(names=names, features=features, columns=columns)
-    return mapper, preprocessed
+    return mapper, proc
 
 
 def parse_features(
