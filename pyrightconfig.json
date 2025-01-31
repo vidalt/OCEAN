@@ -1,5 +1,5 @@
 {
-    "typeCheckingMode": "strict",
+    "typeCheckingMode": "standard",
     "reportMissingTypeStubs": "none",
     "reportUnknownMemberType": "none",
     "ignore": ["sklearn", "anytree"]

@@ -15,18 +15,19 @@ def _build_node(
     mapper: FeatureMapper,
 ) -> Node:
     idx = int(protocol.feature[node_id])
-    name, code = mapper.columns[idx]
-    code = code or None
+    name = mapper.names[idx]
     left_id, right_id = (
         int(protocol.left[node_id]),
         int(protocol.right[node_id]),
     )
+    threshold, code = None, None
     if mapper[name].is_numeric:
         threshold = float(protocol.threshold[node_id])
         if mapper[name].is_continuous:
             mapper[name].add(threshold)
-    else:
-        threshold = None
+    elif mapper[name].is_one_hot_encoded:
+        code = mapper.codes[idx]
+
     node = Node(node_id, feature=name, threshold=threshold, code=code)
     node.left = _parse_node(protocol, left_id, mapper=mapper)
     node.right = _parse_node(protocol, right_id, mapper=mapper)

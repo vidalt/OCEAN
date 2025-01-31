@@ -2,7 +2,6 @@ from collections.abc import Hashable
 from typing import Any
 
 import pandas as pd
-import pandera.typing as pat
 
 from .feature import Feature
 from .mapper import FeatureMapper
@@ -10,7 +9,7 @@ from .mapper import FeatureMapper
 N_BINARY: int = 2
 
 
-def _count_unique(series: pat.Series[Any]) -> int:
+def _count_unique(series: pd.Series) -> int:
     return series.nunique()
 
 
@@ -27,7 +26,6 @@ def _parse(
     *,
     discretes: tuple[Hashable, ...] = (),
     scale: bool = True,
-    none_column: str = "",
 ) -> tuple[FeatureMapper, pd.DataFrame]:
     discrete = set(discretes)
     frames: list[Any] = []
@@ -35,7 +33,7 @@ def _parse(
     names: list[Hashable] = []
 
     for column in data.columns:
-        series = data[column].astype(object).rename(none_column)
+        series = data[column].astype(object).rename("")
         levels: tuple[float, ...] = ()
         codes: tuple[Hashable, ...] = ()
 
@@ -47,7 +45,7 @@ def _parse(
             frames.append(
                 pd.get_dummies(series, drop_first=True)
                 .iloc[:, 0]
-                .rename(none_column)
+                .rename("")
                 .astype(int)
             )
             ftype = Feature.Type.BINARY
@@ -68,7 +66,7 @@ def _parse(
         features.append(Feature(ftype=ftype, levels=levels, codes=codes))
 
     preprocessed = pd.concat(frames, axis=1, keys=names)
-    columns = pd.MultiIndex.from_tuples(preprocessed.columns)
+    columns = preprocessed.columns
     mapper = FeatureMapper(names=names, features=features, columns=columns)
     return mapper, preprocessed
 
