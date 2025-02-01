@@ -23,7 +23,10 @@ class Ensemble(Sequence[Tree]):
     def __getitem__(self, i: int) -> Tree: ...
 
     @overload
-    def __getitem__(self, i: slice[int, int, int]) -> Sequence[Tree]: ...
+    def __getitem__(
+        self,
+        i: "slice[int | None, int | None, int | None]",
+    ) -> Sequence[Tree]: ...
 
     def __getitem__(self, i: int | slice) -> Tree | Sequence[Tree]:
         return self._trees[i]
