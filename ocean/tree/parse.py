@@ -1,6 +1,7 @@
 from ..feature import FeatureMapper
+from .node import Node
 from .protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
-from .tree import Node, Tree
+from .tree import Tree
 
 
 def _build_leaf(protocol: TreeProtocol, node_id: int) -> Node:

@@ -1,21 +1,37 @@
 from typing import Protocol
 
-import numpy as np
-from sklearn.tree._tree import Tree as SKLearnTree
+from ..typing import (
+    FloatArray,
+    FloatArray1D,
+    IntArray1D,
+    PositiveIntArray1D,
+    SKLearnTree,
+)
 
 
 class TreeProtocol(Protocol):
-    feature: np.ndarray[tuple[int], np.dtype[np.int32]]
-    threshold: np.ndarray[tuple[int], np.dtype[np.float64]]
-    left: np.ndarray[tuple[int], np.dtype[np.int32]]
-    right: np.ndarray[tuple[int], np.dtype[np.int32]]
-    value: np.ndarray[tuple[int, ...], np.dtype[np.float64]]
+    n_nodes: int
+    max_depth: int
+    feature: PositiveIntArray1D
+    threshold: FloatArray1D
+    left: IntArray1D
+    right: IntArray1D
+    value: FloatArray
 
 
 class SKLearnTreeProtocol(TreeProtocol):
     def __init__(self, tree: SKLearnTree) -> None:
-        self.feature = tree.feature  # pyright: ignore[reportAttributeAccessIssue]
-        self.threshold = tree.threshold  # pyright: ignore[reportAttributeAccessIssue]
-        self.left = tree.children_left  # pyright: ignore[reportAttributeAccessIssue]
-        self.right = tree.children_right  # pyright: ignore[reportAttributeAccessIssue]
+        self.n_nodes = tree.node_count
+        self.max_depth = tree.max_depth
+        self.feature = tree.feature
+        self.threshold = tree.threshold
+        self.left = tree.children_left
+        self.right = tree.children_right
         self.value = tree.value
+
+
+__all__ = [
+    "SKLearnTree",
+    "SKLearnTreeProtocol",
+    "TreeProtocol",
+]

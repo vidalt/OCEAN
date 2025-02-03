@@ -4,7 +4,7 @@ import gurobipy as gp
 import pandas as pd
 
 from ..feature import FeatureVar
-from ..typing import Array1D
+from ..typing import FloatArray1D
 
 
 class Solution:
@@ -49,7 +49,7 @@ class Solution:
         *,
         columns: "pd.Index[str] | pd.MultiIndex",
         attr: str = gp.GRB.Attr.X,
-    ) -> Array1D:
+    ) -> FloatArray1D:
         return (
             self.to_series(attr=attr)
             .loc[columns]

@@ -1,9 +1,8 @@
 from collections.abc import Hashable
 
-import numpy as np
 from anytree import NodeMixin
 
-from ..typing import Array
+from ..typing import FloatArray
 
 class Node(NodeMixin):
     def __init__(
@@ -11,7 +10,7 @@ class Node(NodeMixin):
         node_id: int,
         *,
         feature: Hashable | None = None,
-        value: np.ndarray[tuple[int, ...], np.dtype[np.float64]] | None = None,
+        value: FloatArray | None = None,
         parent: Node | None = None,
         threshold: float | None = None,
         code: Hashable | None = None,
@@ -21,7 +20,7 @@ class Node(NodeMixin):
     @property
     def feature(self) -> Hashable: ...
     @property
-    def value(self) -> Array: ...
+    def value(self) -> FloatArray: ...
     @property
     def threshold(self) -> float: ...
     @property
@@ -40,8 +39,6 @@ class Node(NodeMixin):
     def parent(self) -> Node: ...
     @parent.setter
     def parent(self, value: Node | None) -> None: ...
-    @parent.deleter
-    def parent(self) -> None: ...
     @property
     def children(self) -> tuple[Node, ...]: ...
     @children.setter
@@ -49,7 +46,7 @@ class Node(NodeMixin):
     @children.deleter
     def children(self) -> None: ...
     @property
-    def leaves(self) -> tuple[Node, ...]: ...
+    def leaves(self) -> tuple[Node, *tuple[Node, ...]]: ...
     @property
     def left(self) -> Node: ...
     @left.setter

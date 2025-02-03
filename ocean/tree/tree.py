@@ -16,12 +16,12 @@ class Tree:
         return self.root.size
 
     @property
-    def leaves(self) -> tuple[Node, ...]:
-        return self.root.leaves
-
-    @property
     def max_depth(self) -> int:
         return self.root.height
+
+    @property
+    def leaves(self) -> tuple[Node, *tuple[Node, ...]]:
+        return self.root.leaves
 
     @property
     def shape(self) -> tuple[int, ...]:

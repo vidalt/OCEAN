@@ -12,7 +12,9 @@ def test_ensemble() -> None:
     n_classes = 3
 
     data, y, mapper = generate_data(
-        seed=seed, n_samples=n_samples, n_classes=n_classes
+        seed=seed,
+        n_samples=n_samples,
+        n_classes=n_classes,
     )
 
     rf = RandomForestClassifier(random_state=seed, n_estimators=10)

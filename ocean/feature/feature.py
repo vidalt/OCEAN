@@ -3,7 +3,7 @@ from enum import Enum
 
 import numpy as np
 
-from ..typing import Array1D, Number
+from ..typing import FloatArray1D, Number
 
 
 class Feature:
@@ -14,7 +14,7 @@ class Feature:
         BINARY = "binary"
 
     _ftype: Type
-    _levels: Array1D
+    _levels: FloatArray1D
     _codes: tuple[Hashable, ...]
 
     def __init__(
@@ -53,7 +53,7 @@ class Feature:
         return self.is_continuous or self.is_discrete
 
     @property
-    def levels(self) -> Array1D:
+    def levels(self) -> FloatArray1D:
         if not self.is_numeric:
             msg = "Levels can only be accessed for numeric features."
             raise AttributeError(msg)

@@ -1,3 +1,6 @@
+import operator
+from functools import partial
+
 import gurobipy as gp
 import numpy as np
 import pytest
@@ -94,7 +97,7 @@ def _check_prediction(
     model: Model | None = None,
 ) -> None:
     x = solution.to_numpy(columns=mapper.columns)
-    prediction = clf.predict(x.reshape(1, -1))[0]
+    prediction = clf.predict(x.reshape(1, -1))[0]  # pyright: ignore[reportUnknownVariableType]
     assert prediction == m_class, (
         clf.predict_proba(x.reshape(1, -1))[0],
         (
@@ -127,8 +130,9 @@ def test_model_init() -> None:
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    trees_ = [est.tree_ for est in clf.estimators_]
-    trees = [parse_tree(tree, mapper=mapper) for tree in trees_]
+    f = partial(parse_tree, mapper=mapper)
+    g = operator.attrgetter("tree_")
+    trees = tuple(map(f, map(g, clf)))
     model = Model(
         trees=trees,
         features=mapper,
@@ -172,8 +176,9 @@ def test_model(
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    trees_ = [est.tree_ for est in clf.estimators_]
-    trees = [parse_tree(tree, mapper=mapper) for tree in trees_]
+    f = partial(parse_tree, mapper=mapper)
+    g = operator.attrgetter("tree_")
+    trees = tuple(map(f, map(g, clf)))
     weights = (np.ones(n_estimators, dtype=float) * 1e5).flatten()
     model = Model(
         trees=trees,
