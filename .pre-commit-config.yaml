@@ -21,11 +21,42 @@ repos:
 
 # Run mypy:
 # See https://github.com/pre-commit/mirrors-mypy
--   repo: local
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
     hooks:
     -   id: mypy
         name: mypy
         language: python
-        types_or: [python, pyi]
-        entry: mypy -v
-        files: (ocean|tests)/.*\.py$
+        entry: mypy
+        args: [--config-file=mypy.ini, ocean, tests]
+        pass_filenames: false
+        additional_dependencies: [
+            anytree,
+            gurobipy,
+            numpy,
+            pandas,
+            pandas-stubs,
+            pytest,
+            scikit-learn,
+            scipy,
+            scipy-stubs,
+        ]
+
+# Run pyright:
+# See: https://github.com/RobertCraigie/pyright-python
+-   repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.393
+    hooks:
+    -   id: pyright
+        name: pyright
+        additional_dependencies: [
+            anytree,
+            gurobipy,
+            numpy,
+            pandas,
+            pandas-stubs,
+            pytest,
+            scikit-learn,
+            scipy,
+            scipy-stubs,
+        ]

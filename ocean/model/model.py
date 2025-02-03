@@ -7,7 +7,7 @@ import numpy as np
 from ..base import BaseModel
 from ..feature import Feature, FeatureVar
 from ..tree import Tree, TreeVar
-from ..typing import Array1D
+from ..typing import FloatArray1D
 from .builder import ModelBuilder, ModelBuilderFactory
 from .solution import Solution
 
@@ -25,7 +25,7 @@ class Model(BaseModel):
     _trees: tuple[TreeVar, ...]
     _features: dict[Hashable, FeatureVar]
 
-    _weights: Array1D
+    _weights: FloatArray1D
 
     _scores: gp.tupledict[int, gp.Constr]
     _builder: ModelBuilder
@@ -39,7 +39,7 @@ class Model(BaseModel):
         self,
         trees: Iterable[Tree],
         features: Mapping[Hashable, Feature],
-        weights: Array1D | None = None,
+        weights: FloatArray1D | None = None,
         *,
         name: str = "OCEAN",
         env: gp.Env | None = None,
@@ -91,7 +91,7 @@ class Model(BaseModel):
     def function(self) -> gp.MLinExpr:
         return self.weighted_function(weights=self._weights)
 
-    def weighted_function(self, weights: Array1D) -> gp.MLinExpr:
+    def weighted_function(self, weights: FloatArray1D) -> gp.MLinExpr:
         function = gp.MLinExpr.zeros(self.shape)
         for t in range(self.n_trees):
             function += np.float64(weights[t]) * self._trees[t].value
@@ -134,7 +134,7 @@ class Model(BaseModel):
 
         self._features = dict(map(f, features.items()))
 
-    def _set_weights(self, weights: Array1D | None = None) -> None:
+    def _set_weights(self, weights: FloatArray1D | None = None) -> None:
         if weights is None:
             weights = np.ones(self.n_trees, dtype=np.float64)
 

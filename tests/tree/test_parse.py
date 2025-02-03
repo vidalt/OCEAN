@@ -1,3 +1,6 @@
+import operator
+from functools import partial
+
 import pytest
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
@@ -55,16 +58,17 @@ def test_parse_classifier(
     data, y, mapper = generate_data(seed, n_samples, n_classes)
     dt = DecisionTreeClassifier(random_state=seed, max_depth=max_depth)
     dt.fit(data.to_numpy(), y)
-    tree_ = dt.tree_
-    protocol = SKLearnTreeProtocol(tree_)
-    tree = parse_tree(tree_, mapper=mapper)
+    f = partial(parse_tree, mapper=mapper)
+    g = operator.attrgetter("tree_")
+    sklearn_tree = SKLearnTreeProtocol(g(dt))
+    tree = f(g(dt))
     assert tree is not None
     assert tree.root is not None
     assert tree.root.node_id == 0
-    assert tree.n_nodes == tree_.node_count
-    assert tree.max_depth == tree_.max_depth  # pyright: ignore[reportAttributeAccessIssue]
+    assert tree.n_nodes == sklearn_tree.n_nodes
+    assert tree.max_depth == sklearn_tree.max_depth
     assert tree.shape == (1, n_classes)
-    _check_tree(tree.root, protocol, mapper=mapper)
+    _check_tree(tree.root, sklearn_tree, mapper=mapper)
 
     with pytest.raises(ValueError, match=r"The depth must be non-negative."):
         tree.nodes_at(-1)
@@ -77,13 +81,14 @@ def test_parse_regressor(seed: int, n_samples: int, max_depth: int) -> None:
     data, y, mapper = generate_data(seed, n_samples, -1)
     dt = DecisionTreeRegressor(random_state=seed, max_depth=max_depth)
     dt.fit(data.to_numpy(), y)
-    tree_ = dt.tree_
-    protocol = SKLearnTreeProtocol(tree_)
-    tree = parse_tree(tree_, mapper=mapper)
+    f = partial(parse_tree, mapper=mapper)
+    g = operator.attrgetter("tree_")
+    sklearn_tree = SKLearnTreeProtocol(g(dt))
+    tree = f(g(dt))
     assert tree is not None
     assert tree.root is not None
     assert tree.root.node_id == 0
-    assert tree.n_nodes == tree_.node_count
-    assert tree.max_depth == tree_.max_depth  # pyright: ignore[reportAttributeAccessIssue]
+    assert tree.n_nodes == sklearn_tree.n_nodes
+    assert tree.max_depth == sklearn_tree.max_depth
     assert tree.shape == (1, 1)
-    _check_tree(tree.root, protocol, mapper=mapper)
+    _check_tree(tree.root, sklearn_tree, mapper=mapper)

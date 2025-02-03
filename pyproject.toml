@@ -26,35 +26,35 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy",
-    "gurobipy",
-    "scikit-learn",
-    "pandas",
     "anytree",
+    "gurobipy",
+    "numpy",
+    "pandas",
+    "scikit-learn",
 ]
 
 optional-dependencies.dev = [
     "coverage",
+    "mypy",
+    "pandas-stubs",
+    "pyright",
     "pytest",
     "pytest-cov",
     "ruff",
-    "tox",
-    "mypy",
-    "pandas-stubs",
     "scipy-stubs",
-    "pyright",
+    "tox",
 ]
 
 optional-dependencies.test = [
     "coverage",
+    "mypy",
+    "pandas-stubs",
+    "pyright",
     "pytest",
     "pytest-cov",
     "ruff",
-    "tox",
-    "mypy",
-    "pandas-stubs",
     "scipy-stubs",
-    "pyright",
+    "tox",
 ]
 
 urls.Homepage = "https://github.com/eminyous/ocean"

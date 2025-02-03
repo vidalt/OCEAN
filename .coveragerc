@@ -7,11 +7,11 @@ show_missing = True
 omit =
     *tests/*
     ocean/**/keeper.py
-exclude_lines = 
+exclude_lines =
     pragma: no cover
     raise NotImplementedError
     if __name__ == .__main__.:
     pass
 
-exclude_also = 
+exclude_also =
     ^\s*def _.*\(.*\):

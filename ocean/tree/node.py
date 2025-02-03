@@ -1,12 +1,13 @@
 from collections.abc import Hashable
 
-import numpy as np
 from anytree import NodeMixin
+
+from ..typing import FloatArray
 
 
 class Node(NodeMixin):
     _feature: Hashable | None
-    _value: np.ndarray[tuple[int, ...], np.dtype[np.float64]] | None
+    _value: FloatArray | None
     _threshold: float | None
     _code: Hashable | None
     _id: int
@@ -19,7 +20,7 @@ class Node(NodeMixin):
         node_id: int,
         *,
         feature: Hashable | None = None,
-        value: np.ndarray[tuple[int, ...], np.dtype[np.float64]] | None = None,
+        value: FloatArray | None = None,
         parent: "Node | None" = None,
         threshold: float | None = None,
         code: Hashable | None = None,
@@ -49,7 +50,7 @@ class Node(NodeMixin):
         return self._feature
 
     @property
-    def value(self) -> np.ndarray[tuple[int, ...], np.dtype[np.float64]]:
+    def value(self) -> FloatArray:
         if not self.is_leaf:
             msg = "The value is only available for leaf nodes."
             raise AttributeError(msg)

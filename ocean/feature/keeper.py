@@ -1,6 +1,6 @@
 from collections.abc import Hashable
 
-from ..typing import Array1D
+from ..typing import FloatArray1D
 from .feature import Feature
 
 
@@ -31,7 +31,7 @@ class FeatureKeeper:
         return self._feature.is_one_hot_encoded
 
     @property
-    def levels(self) -> Array1D:
+    def levels(self) -> FloatArray1D:
         return self._feature.levels
 
     @property
