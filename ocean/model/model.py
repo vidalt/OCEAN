@@ -17,6 +17,7 @@ class Model(BaseModel):
     FEATURE_VAR_FMT: str = "feature[{key}]"
 
     DEFAULT_EPSILON: float = 1e-6
+    DEFAULT_NUM_EPSILON: float = 1.0 / 16.0
 
     class Type(Enum):
         MIP = "MIP"
@@ -44,7 +45,7 @@ class Model(BaseModel):
         name: str = "OCEAN",
         env: gp.Env | None = None,
         epsilon: float = DEFAULT_EPSILON,
-        num_epsilon: float = ModelBuilderFactory.MIP.DEFAULT_EPSILON,
+        num_epsilon: float = DEFAULT_NUM_EPSILON,
         model_type: Type = Type.MIP,
         flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
     ) -> None:

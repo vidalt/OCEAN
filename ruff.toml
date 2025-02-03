@@ -44,9 +44,11 @@ ignore = [
     "COM812",
     "ISC001",
 ]
+
 preview = true
+
 [lint.pylint]
-max-args = 10
+max-args = 15
 
 [lint.per-file-ignores]
 "tests/**/*.py" = [
