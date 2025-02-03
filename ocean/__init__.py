@@ -1,3 +1,3 @@
-from . import feature, model, tree
+from . import ensemble, feature, model, tree
 
-__all__ = ["feature", "model", "tree"]
+__all__ = ["ensemble", "feature", "model", "tree"]
