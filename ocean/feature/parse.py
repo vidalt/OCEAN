@@ -67,15 +67,12 @@ def _parse(
 
     proc = pd.concat(frames, axis=1, keys=names)
     if proc.columns.nlevels == 1:
-        mapper = FeatureMapper(
-            names=names,
-            features=features,
-            columns=proc.columns,
-        )
-        return mapper, proc
+        columns = proc.columns
+        mapper = FeatureMapper(names=names, features=features, columns=columns)
+    else:
+        columns = pd.MultiIndex.from_tuples(proc.columns)
+        mapper = FeatureMapper(names=names, features=features, columns=columns)
 
-    columns = pd.MultiIndex.from_tuples(proc.columns)
-    mapper = FeatureMapper(names=names, features=features, columns=columns)
     return mapper, proc
 
 
