@@ -175,4 +175,4 @@ cython_debug/
 
 # Cache:
 *cache/
-examples/data/*
+examples/datasets/**/*.csv
