@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import gurobipy as gp
 import pandas as pd
-from datasets import load_adult, load_credit
+from datasets import load_adult, load_compas, load_credit
 from rich.progress import track
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -41,7 +41,7 @@ def parse_args() -> Args:
         default=100,
         dest="n_examples",
     )
-    parser.add_argument("--dataset", type=str, default="adult")
+    parser.add_argument("--dataset", type=str, default="compas")
     args = parser.parse_args()
     return Args(
         seed=args.seed,
@@ -57,6 +57,8 @@ def load(dataset: str):  # noqa: ANN201
         return load_credit()
     if dataset == "adult":
         return load_adult()
+    if dataset == "compas":
+        return load_compas()
     msg = f"Unknown dataset: {dataset}"
     raise ValueError(msg)
 
