@@ -16,7 +16,7 @@ from ocean.typing import FloatArray1D
 seed = 42
 n_estimators = 30
 max_depth = 5
-n_examples = 2 # <= 5997
+n_examples = 2  # <= 5997
 
 file = Path(__file__).parent / "data" / "default_credit_numerical.csv"
 target = "DEFAULT_PAYEMENT"
@@ -134,9 +134,9 @@ X_train, X_test, y_train, y_test = train_test_split(  # pyright: ignore[reportUn
 
 # Fit the Random Forest model
 print("Fitting a Random Forest model")  # noqa: T201
-rf = RandomForestClassifier(n_estimators=n_estimators, 
-                            random_state=seed, 
-                            max_depth=max_depth)
+rf = RandomForestClassifier(
+    n_estimators=n_estimators, random_state=seed, max_depth=max_depth
+)
 rf.fit(X_train, y_train)  # pyright: ignore[reportUnknownArgumentType]
 print("Model fitted")  # noqa: T201
 
