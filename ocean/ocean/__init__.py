@@ -1,3 +1,3 @@
-from .ocean import OCEAN
+from .ocean import MIPExplainer
 
-__all__ = ["OCEAN"]
+__all__ = ["MIPExplainer"]

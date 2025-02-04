@@ -4,8 +4,9 @@ from functools import partial
 import pytest
 from sklearn.tree import DecisionTreeClassifier
 
-from ocean.base import BaseModel
-from ocean.tree import Node, TreeVar, parse_tree
+from ocean.mip import TreeVar
+from ocean.mip.base import BaseModel
+from ocean.tree import Node, parse_tree
 from ocean.tree.protocol import SKLearnTreeProtocol
 
 from ..utils import ENV, generate_data

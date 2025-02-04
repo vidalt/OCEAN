@@ -4,12 +4,13 @@ from enum import Enum
 import gurobipy as gp
 import numpy as np
 
-from ..base import BaseModel
-from ..feature import Feature, FeatureVar
-from ..tree import Tree, TreeVar
+from ..feature import Feature
+from ..tree import Tree
 from ..typing import FloatArray1D
+from .base import BaseModel
 from .builder import ModelBuilder, ModelBuilderFactory
 from .solution import Solution
+from .variable import FeatureVar, TreeVar
 
 
 class Model(BaseModel):

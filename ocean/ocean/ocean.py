@@ -3,12 +3,11 @@ import pandas as pd
 
 from ..ensemble import Ensemble
 from ..feature import FeatureMapper
-from ..model import Model
-from ..tree import TreeVar
+from ..mip import Model, TreeVar
 from ..typing import BaseEnsemble, FloatArray1D
 
 
-class OCEAN(Model):
+class MIPExplainer(Model):
     _ensemble: Ensemble
     _mapper: FeatureMapper
 

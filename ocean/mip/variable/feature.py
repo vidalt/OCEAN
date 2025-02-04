@@ -3,9 +3,9 @@ from collections.abc import Hashable
 import gurobipy as gp
 import numpy as np
 
+from ...feature import Feature
+from ...feature.keeper import FeatureKeeper
 from ..base import BaseModel, Var
-from .feature import Feature
-from .keeper import FeatureKeeper
 
 
 class FeatureVar(Var, FeatureKeeper):

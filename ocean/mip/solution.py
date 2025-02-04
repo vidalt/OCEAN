@@ -3,8 +3,8 @@ from collections.abc import Hashable, Mapping
 import gurobipy as gp
 import pandas as pd
 
-from ..feature import FeatureVar
 from ..typing import FloatArray1D
+from .variable import FeatureVar
 
 
 class Solution:
