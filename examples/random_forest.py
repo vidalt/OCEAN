@@ -4,9 +4,7 @@ from pathlib import Path
 import gurobipy as gp
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import (
-    train_test_split,  # pyright: ignore[reportUnknownVariableType]
-)
+from sklearn.model_selection import train_test_split
 
 from ocean import MIPExplainer
 from ocean.feature import Feature, FeatureMapper
@@ -21,18 +19,17 @@ n_examples = 2  # <= 5997
 file = Path(__file__).parent / "data" / "default_credit_numerical.csv"
 target = "DEFAULT_PAYEMENT"
 
-print(f"Reading data from {file}")  # noqa: T201
+print(f"Reading data from {file}")
 data = pd.read_csv(file)
-X, y = (  # pyright: ignore[reportUnknownVariableType]
+X, y = (
     data.drop(columns=target).to_numpy(),
     data[target].astype(int).to_numpy(),
 )
-print("Data loaded")  # noqa: T201
+print("Data loaded")
 
 features: list[Feature] = []
 names: list[str] = []
 columns: "pd.Index[str] | pd.MultiIndex" = pd.Index([""])
-
 
 names.extend([
     "LIMIT_BAL",
@@ -122,10 +119,9 @@ columns = pd.MultiIndex.from_tuples([
     ("Pay_6", ""),
 ])
 
-
 mapper = FeatureMapper(names=names, features=features, columns=columns)
 
-X_train, X_test, y_train, y_test = train_test_split(  # pyright: ignore[reportUnknownVariableType]
+X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
     test_size=0.2,
@@ -133,15 +129,15 @@ X_train, X_test, y_train, y_test = train_test_split(  # pyright: ignore[reportUn
 )
 
 # Fit the Random Forest model
-print("Fitting a Random Forest model")  # noqa: T201
+print("Fitting a Random Forest model")
 rf = RandomForestClassifier(
     n_estimators=n_estimators, random_state=seed, max_depth=max_depth
 )
-rf.fit(X_train, y_train)  # pyright: ignore[reportUnknownArgumentType]
-print("Model fitted")  # noqa: T201
+rf.fit(X_train, y_train)
+print("Model fitted")
 
 # Evaluate the model
-print("Building the MIPExplainer")  # noqa: T201
+print("Building the MIPExplainer")
 env = gp.Env(empty=True)
 env.setParam("OutputFlag", 0)
 env.setParam("Seed", seed)
@@ -149,21 +145,21 @@ env.start()
 start = time.time()
 mip = MIPExplainer(rf, mapper=mapper, env=env)
 end = time.time()
-print("MIPExplainer built")  # noqa: T201
+print("MIPExplainer built")
 
 elapsed = end - start
 
 # Generate multiple queries:
 queries: list[tuple[FloatArray1D, int]] = []
 
-y_pred = rf.predict(X_test)  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+y_pred = rf.predict(X_test)
 
-print("Generating queries")  # noqa: T201
-for x, y_ in zip(X_test[:n_examples], y_pred[:n_examples], strict=True):  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
-    queries.append((x, 1 - y_))  # pyright: ignore[reportUnknownArgumentType]
-print("Queries generated")  # noqa: T201
+print("Generating queries")
+for x, y_ in zip(X_test[:n_examples], y_pred[:n_examples], strict=True):
+    queries.append((x, 1 - y_))
+print("Queries generated")
 
-print("Running queries")  # noqa: T201
+print("Running queries")
 times: list[float] = []
 for i, (x, class_) in enumerate(queries):
     start = time.time()
@@ -173,13 +169,13 @@ for i, (x, class_) in enumerate(queries):
     mip.clear_majority_class()
     mip.cleanup()
     end = time.time()
-    print(f"Query {i} completed in {end - start:.2f} seconds")  # noqa: T201
+    print(f"Query {i} completed in {end - start:.2f} seconds")
 
     times.append(end - start)
-print("Queries run")  # noqa: T201
+print("Queries run")
 
-print(f"Building the model took {elapsed:.2f} seconds")  # noqa: T201
-print(f"Average time per query: {sum(times) / len(times):.2f} seconds")  # noqa: T201
-print(f"Maximum time per query: {max(times):.2f} seconds")  # noqa: T201
-print(f"Minimum time per query: {min(times):.2f} seconds")  # noqa: T201
-print(f"Total number of queries: {len(queries)}")  # noqa: T201
+print(f"Building the model took {elapsed:.2f} seconds")
+print(f"Average time per query: {sum(times) / len(times):.2f} seconds")
+print(f"Maximum time per query: {max(times):.2f} seconds")
+print(f"Minimum time per query: {min(times):.2f} seconds")
+print(f"Total number of queries: {len(queries)}")

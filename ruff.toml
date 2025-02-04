@@ -58,6 +58,14 @@ max-args = 15
     "PLR2004", # Magic value comparison
     "S101", # Use of assert detected
 ]
+"examples/**/*.py" = [
+    "INP001", # No implicit namespace package
+    "PLR0913", # Too many arguments.
+    "PLR0917", # Too many positional arguments.
+    "PLR2004", # Magic value comparison
+    "S101", # Use of assert detected
+    "T",
+]
 
 [lint.isort]
 known-first-party = ["ocean", "tests"]
