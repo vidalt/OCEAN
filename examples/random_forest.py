@@ -14,7 +14,7 @@ from ocean.typing import FloatArray1D
 
 # Parameters
 seed = 42
-n_estimators = 30
+n_estimators = 100
 max_depth = 5
 n_examples = 2  # <= 5997
 
@@ -171,6 +171,7 @@ for i, (x, class_) in enumerate(queries):
     mip.set_majority_class(class_)
     mip.optimize()
     mip.clear_majority_class()
+    mip.cleanup()
     end = time.time()
     print(f"Query {i} completed in {end - start:.2f} seconds")  # noqa: T201
 
