@@ -31,7 +31,7 @@ class FlowBuilder(Protocol):
         raise NotImplementedError
 
 
-class Binary(FlowBuilder):
+class BinaryBuilder(FlowBuilder):
     def get(
         self,
         model: BaseModel,
@@ -47,7 +47,7 @@ class Binary(FlowBuilder):
         return model.addMVar(shape=n, vtype=vtype, name=name)
 
 
-class Continuous(FlowBuilder):
+class ContinuousBuilder(FlowBuilder):
     def get(
         self,
         model: BaseModel,
@@ -108,5 +108,5 @@ class Continuous(FlowBuilder):
 
 
 class FlowBuilderFactory:
-    Binary = Binary
-    Continuous = Continuous
+    Binary: type[BinaryBuilder] = BinaryBuilder
+    Continuous: type[ContinuousBuilder] = ContinuousBuilder
