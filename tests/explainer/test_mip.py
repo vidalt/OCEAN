@@ -2,7 +2,7 @@ import gurobipy as gp
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 
-from ocean.ocean import MIPExplainer
+from ocean.explainer import MIPExplainer
 
 from ..utils import ENV, generate_data
 
