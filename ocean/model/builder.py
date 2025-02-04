@@ -32,7 +32,7 @@ class ModelBuilder(Protocol):
         raise NotImplementedError
 
 
-class MIP(ModelBuilder):
+class MIPBuilder(ModelBuilder):
     DEFAULT_EPSILON = 1.0 / (2**5)
 
     _epsilon: float
@@ -225,17 +225,5 @@ class MIP(ModelBuilder):
         model.addConstr(x >= tree[node.right.node_id])
 
 
-class CP(ModelBuilder):
-    def build(
-        self,
-        model: BaseModel,
-        *,
-        trees: tuple[TreeVar, ...],
-        features: Mapping[Hashable, FeatureVar],
-    ) -> None:
-        pass
-
-
 class ModelBuilderFactory:
-    MIP = MIP
-    CP = CP
+    MIP: type[MIPBuilder] = MIPBuilder

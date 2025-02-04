@@ -21,7 +21,6 @@ class Model(BaseModel):
 
     class Type(Enum):
         MIP = "MIP"
-        CP = "CP"
 
     _trees: tuple[TreeVar, ...]
     _features: dict[Hashable, FeatureVar]
@@ -150,8 +149,6 @@ class Model(BaseModel):
             case Model.Type.MIP:
                 epsilon = self._num_epsilon
                 self._builder = ModelBuilderFactory.MIP(epsilon=epsilon)
-            case Model.Type.CP:
-                self._builder = ModelBuilderFactory.CP()
 
     def _set_solution(self) -> None:
         self._solution = Solution(features=self._features)
