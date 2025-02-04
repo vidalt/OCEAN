@@ -39,7 +39,7 @@ def load_credit(
     ]
     features = [
         Feature(ftype=Feature.Type.CONTINUOUS, levels=(10000 - 1, 1000000 + 1)),
-        Feature(ftype=Feature.Type.DISCRETE, levels=range(21, 80)),
+        Feature(ftype=Feature.Type.CONTINUOUS, levels=(20, 80)),
         Feature(
             ftype=Feature.Type.CONTINUOUS, levels=(-165580 - 1, 964511 + 1)
         ),
