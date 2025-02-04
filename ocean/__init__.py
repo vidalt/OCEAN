@@ -1,3 +1,4 @@
 from . import ensemble, feature, mip, tree
+from .ocean import MIPExplainer
 
-__all__ = ["ensemble", "feature", "mip", "tree"]
+__all__ = ["MIPExplainer", "ensemble", "feature", "mip", "tree"]
