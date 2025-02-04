@@ -57,6 +57,10 @@ optional-dependencies.test = [
     "tox",
 ]
 
+optional-dependencies.example = [
+    "rich",
+]
+
 urls.Homepage = "https://github.com/eminyous/ocean"
 urls.Repository = "https://github.com/eminyous/ocean"
 urls.Issues = "https://github.com/eminyous/ocean/issues"

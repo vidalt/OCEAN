@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import gurobipy as gp
 import pandas as pd
 from datasets import load_adult, load_credit
+from rich.progress import track
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
@@ -113,7 +114,11 @@ def main() -> None:  # noqa: PLR0914
 
     print("Running queries")
     times: list[float] = []
-    for i, (x, y_) in enumerate(queries):
+    for x, y_ in track(
+        queries,
+        total=len(queries),
+        description="Running queries",
+    ):
         start = time.time()
         mip.add_objective(x)
         mip.set_majority_class(y_)
@@ -121,7 +126,6 @@ def main() -> None:  # noqa: PLR0914
         mip.clear_majority_class()
         mip.cleanup()
         end = time.time()
-        print(f"Query {i} completed in {end - start:.2f} seconds")
 
         times.append(end - start)
     print("Queries run")
