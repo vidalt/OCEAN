@@ -7,8 +7,8 @@ import pytest
 from sklearn.ensemble import RandomForestClassifier
 
 from ocean.feature import FeatureMapper
-from ocean.model import Model, Solution
-from ocean.tree import Node, TreeVar, parse_tree
+from ocean.mip import Model, Solution, TreeVar
+from ocean.tree import Node, parse_tree
 
 from ..utils import ENV, generate_data
 

@@ -3,9 +3,9 @@ from typing import Protocol
 
 import numpy as np
 
+from ...tree.node import Node
 from ..base import BaseModel
-from ..feature import FeatureVar
-from ..tree import Node, TreeVar
+from ..variable import FeatureVar, TreeVar
 
 
 class ModelBuilder(Protocol):

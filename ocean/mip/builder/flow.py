@@ -2,8 +2,8 @@ from typing import Protocol
 
 import gurobipy as gp
 
+from ...tree.keeper import TreeKeeper
 from ..base import BaseModel
-from .keeper import TreeKeeper
 
 
 class FlowBuilder(Protocol):

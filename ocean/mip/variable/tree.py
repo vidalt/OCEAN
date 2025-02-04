@@ -3,10 +3,10 @@ from enum import Enum
 
 import gurobipy as gp
 
+from ...tree.keeper import TreeKeeper, TreeLike
+from ...tree.node import Node
 from ..base import BaseModel, Var
-from .builder import FlowBuilder, FlowBuilderFactory
-from .keeper import TreeKeeper, TreeLike
-from .node import Node
+from ..builder import FlowBuilder, FlowBuilderFactory
 
 
 class TreeVar(Var, TreeKeeper, Mapping[int, gp.Var]):

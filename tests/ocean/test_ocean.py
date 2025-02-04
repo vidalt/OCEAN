@@ -2,7 +2,7 @@ import gurobipy as gp
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 
-from ocean.ocean import OCEAN
+from ocean.ocean import MIPExplainer
 
 from ..utils import ENV, generate_data
 
@@ -26,11 +26,11 @@ def test_ocean(
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    model = OCEAN(
+    model = MIPExplainer(
         ensemble=clf,
         mapper=mapper,
         weights=None,
-        model_type=OCEAN.Type.MIP,
+        model_type=MIPExplainer.Type.MIP,
         env=ENV,
     )
 
