@@ -12,6 +12,12 @@ from ocean import MIPExplainer
 from ocean.feature import Feature, FeatureMapper
 from ocean.typing import FloatArray1D
 
+# Parameters
+seed = 42
+n_estimators = 30
+max_depth = 5
+n_examples = 2 # <= 5997
+
 file = Path(__file__).parent / "data" / "default_credit_numerical.csv"
 target = "DEFAULT_PAYEMENT"
 
@@ -123,12 +129,14 @@ X_train, X_test, y_train, y_test = train_test_split(  # pyright: ignore[reportUn
     X,
     y,
     test_size=0.2,
-    random_state=42,
+    random_state=seed,
 )
 
 # Fit the Random Forest model
 print("Fitting a Random Forest model")  # noqa: T201
-rf = RandomForestClassifier(n_estimators=5, random_state=42, max_depth=3)
+rf = RandomForestClassifier(n_estimators=n_estimators, 
+                            random_state=seed, 
+                            max_depth=max_depth)
 rf.fit(X_train, y_train)  # pyright: ignore[reportUnknownArgumentType]
 print("Model fitted")  # noqa: T201
 
@@ -136,6 +144,7 @@ print("Model fitted")  # noqa: T201
 print("Building the MIPExplainer")  # noqa: T201
 env = gp.Env(empty=True)
 env.setParam("OutputFlag", 0)
+env.setParam("Seed", seed)
 env.start()
 start = time.time()
 mip = MIPExplainer(rf, mapper=mapper, env=env)
@@ -150,24 +159,25 @@ queries: list[tuple[FloatArray1D, int]] = []
 y_pred = rf.predict(X_test)  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
 
 print("Generating queries")  # noqa: T201
-for x, y_ in zip(X_test, y_pred, strict=True):  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+for x, y_ in zip(X_test[:n_examples], y_pred[:n_examples], strict=True):  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
     queries.append((x, 1 - y_))  # pyright: ignore[reportUnknownArgumentType]
 print("Queries generated")  # noqa: T201
 
 print("Running queries")  # noqa: T201
 times: list[float] = []
-for x, class_ in queries:
+for i, (x, class_) in enumerate(queries):
     start = time.time()
     mip.add_objective(x)
     mip.set_majority_class(class_)
     mip.optimize()
     mip.clear_majority_class()
     end = time.time()
+    print(f"Query {i} completed in {end - start:.2f} seconds")  # noqa: T201
 
     times.append(end - start)
 print("Queries run")  # noqa: T201
 
-print(f"Buiding the model took {elapsed:.2f} seconds")  # noqa: T201
+print(f"Building the model took {elapsed:.2f} seconds")  # noqa: T201
 print(f"Average time per query: {sum(times) / len(times):.2f} seconds")  # noqa: T201
 print(f"Maximum time per query: {max(times):.2f} seconds")  # noqa: T201
 print(f"Minimum time per query: {min(times):.2f} seconds")  # noqa: T201
