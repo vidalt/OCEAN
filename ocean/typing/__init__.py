@@ -53,7 +53,7 @@ NodeIdArray1D = np.ndarray[tuple[int], NodeIdDtype]
 # Scikit-learn Tree alias:
 # This class is only used for type hinting purposes.
 class SKLearnTree(Protocol):
-    node_count: NonNegativeInt
+    node_count: PositiveInt
     max_depth: NonNegativeInt
     feature: NonNegativeIntArray1D
     threshold: FloatArray1D

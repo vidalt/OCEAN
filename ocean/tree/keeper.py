@@ -1,5 +1,7 @@
 from collections.abc import Iterator
 
+from pydantic import validate_call
+
 from ..typing import NonNegativeInt
 from .node import Node
 from .tree import Tree
@@ -24,7 +26,7 @@ class TreeKeeper:
         return self._tree.n_nodes
 
     @property
-    def leaves(self) -> tuple[Node, ...]:
+    def leaves(self) -> tuple[Node, *tuple[Node, ...]]:
         return self._tree.leaves
 
     @property
@@ -35,5 +37,6 @@ class TreeKeeper:
     def shape(self) -> tuple[NonNegativeInt, ...]:
         return self._tree.shape
 
-    def nodes_at(self, depth: int) -> Iterator[Node]:
+    @validate_call
+    def nodes_at(self, depth: NonNegativeInt) -> Iterator[Node]:
         return self._tree.nodes_at(depth=depth)

@@ -8,12 +8,13 @@ from ..typing import (
     NodeIdArray1D,
     NonNegativeInt,
     NonNegativeIntArray1D,
+    PositiveInt,
     SKLearnTree,
 )
 
 
 class TreeProtocol(Protocol):
-    n_nodes: NonNegativeInt
+    n_nodes: PositiveInt
     max_depth: NonNegativeInt
     feature: NonNegativeIntArray1D
     threshold: FloatArray1D

@@ -2,7 +2,7 @@ from collections.abc import Hashable
 
 from anytree import NodeMixin
 
-from ..typing import FloatArray, NonNegativeInt
+from ..typing import FloatArray, NonNegativeInt, PositiveInt
 
 class Node(NodeMixin):
     def __init__(
@@ -30,7 +30,7 @@ class Node(NodeMixin):
     @property
     def is_leaf(self) -> bool: ...
     @property
-    def size(self) -> NonNegativeInt: ...
+    def size(self) -> PositiveInt: ...
     @property
     def height(self) -> NonNegativeInt: ...
     @property
