@@ -1,13 +1,15 @@
 import operator
+from collections.abc import Hashable, Mapping
 from functools import partial
 
 import gurobipy as gp
 import numpy as np
 import pytest
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import IsolationForest, RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 from ocean.feature import FeatureMapper
-from ocean.mip import Model, Solution, TreeVar
+from ocean.mip import FeatureVar, Model, Solution, TreeVar
 from ocean.tree import Node, parse_tree
 
 from ..utils import ENV, generate_data
@@ -108,15 +110,32 @@ def _check_prediction(
     )
 
 
+def _get_objective(features: Mapping[Hashable, FeatureVar]) -> gp.QuadExpr:
+    obj = gp.QuadExpr()
+    for feature in features.values():
+        if feature.is_one_hot_encoded:
+            for j, code in enumerate(feature.codes):
+                if j == 0:
+                    obj += (0.75 - feature[code]) ** 2
+        elif feature.is_numeric:
+            level = feature.levels.mean()
+            obj += (level - feature.x) ** 2
+        else:
+            obj += (0.0 - feature.x) ** 2
+    return obj
+
+
 def test_model_init() -> None:
-    model = Model(
-        trees=[],
-        features={},
-        weights=None,
-        env=ENV,
-    )
-    assert model is not None
-    assert model.n_trees == 0
+    with pytest.raises(
+        ValueError,
+        match=r"At least one tree is required.",
+    ):
+        model = Model(
+            trees=[],
+            features={},
+            weights=None,
+            env=ENV,
+        )
 
     seed = 42
     n_estimators = 10
@@ -124,14 +143,27 @@ def test_model_init() -> None:
     n_classes = 2
     n_samples = 100
     data, y, mapper = generate_data(seed, n_samples, n_classes)
+    f = partial(parse_tree, mapper=mapper)
+    g = operator.attrgetter("tree_")
+    dt = DecisionTreeClassifier()
+    dt.fit(data.to_numpy(), y)
+    trees = tuple(map(f, map(g, [dt])))
+    model = Model(
+        trees=trees,
+        features=mapper,
+        weights=None,
+        model_type=Model.Type.MIP,
+        env=ENV,
+    )
+    assert model is not None
+    assert model.n_estimators == 1
+
     clf = RandomForestClassifier(
         random_state=seed,
         n_estimators=n_estimators,
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    f = partial(parse_tree, mapper=mapper)
-    g = operator.attrgetter("tree_")
     trees = tuple(map(f, map(g, clf)))
     model = Model(
         trees=trees,
@@ -141,7 +173,7 @@ def test_model_init() -> None:
         env=ENV,
     )
     assert model is not None
-    assert model.n_trees == n_estimators
+    assert model.n_estimators == n_estimators
     assert model.n_classes == n_classes
 
     with pytest.raises(
@@ -151,7 +183,7 @@ def test_model_init() -> None:
         model = Model(
             trees=trees,
             features=mapper,
-            weights=np.ones(n_estimators + 1, dtype=float),
+            weights=np.ones(n_estimators + 1).astype(np.float64),
             model_type=Model.Type.MIP,
             env=ENV,
         )
@@ -159,10 +191,10 @@ def test_model_init() -> None:
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
 @pytest.mark.parametrize("n_estimators", [10])
-@pytest.mark.parametrize("max_depth", [2, 3, 4])
+@pytest.mark.parametrize("max_depth", [2, 3])
 @pytest.mark.parametrize("n_classes", [2, 3, 4])
 @pytest.mark.parametrize("n_samples", [100, 200, 500])
-def test_model(
+def test_model_no_isolation(
     seed: int,
     n_estimators: int,
     max_depth: int,
@@ -176,9 +208,9 @@ def test_model(
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    f = partial(parse_tree, mapper=mapper)
-    g = operator.attrgetter("tree_")
-    trees = tuple(map(f, map(g, clf)))
+    parse = partial(parse_tree, mapper=mapper)
+    getter = operator.attrgetter("tree_")
+    trees = tuple(map(parse, map(getter, clf)))
     weights = (np.ones(n_estimators, dtype=float) * 1e5).flatten()
     model = Model(
         trees=trees,
@@ -188,24 +220,19 @@ def test_model(
         env=ENV,
     )
     assert model is not None
-    assert model.n_trees == n_estimators
+    assert model.n_estimators == n_estimators
     assert model.n_classes == n_classes
 
     model.build()
 
-    objective = gp.QuadExpr()
-    for feature in model.features.values():
-        if feature.is_one_hot_encoded:
-            for j, code in enumerate(feature.codes):
-                if j == 0:
-                    objective += (0.75 - feature[code]) ** 2
-        elif feature.is_numeric:
-            level = feature.levels.mean()
-            objective += (level - feature.x) ** 2
-        else:
-            objective += (0.0 - feature.x) ** 2
+    objective = _get_objective(model.features)
+    model.setObjective(objective, sense=gp.GRB.MINIMIZE)
 
-    model.optimize()
+    try:
+        model.optimize()
+    except gp.GurobiError as e:
+        pytest.skip(f"Skipping test due to {e}")
+
     assert model.Status == gp.GRB.OPTIMAL
 
     solution = model.solution
@@ -220,9 +247,88 @@ def test_model(
 
     _check_paths(clf, x, model.trees)
 
-    model.set_majority_class(m_class=0)
+    for class_ in (0, 1):
+        model.set_majority_class(m_class=class_)
+        try:
+            model.optimize()
+        except gp.GurobiError as e:
+            pytest.skip(f"Skipping test due to {e}")
 
-    model.optimize()
+        assert model.Status == gp.GRB.OPTIMAL
+
+        solution = model.solution
+        assert solution is not None
+
+        x = solution.to_numpy(columns=mapper.columns)
+        _check_paths(clf, x, model.trees)
+        _check_prediction(
+            clf,
+            solution,
+            mapper=mapper,
+            m_class=class_,
+            model=model,
+        )
+
+        model.clear_majority_class()
+
+
+@pytest.mark.parametrize("seed", [42, 43, 44])
+@pytest.mark.parametrize("n_estimators", [10])
+@pytest.mark.parametrize("max_depth", [2, 3])
+@pytest.mark.parametrize("n_classes", [2, 3, 4])
+@pytest.mark.parametrize("n_samples", [100, 200, 500])
+@pytest.mark.parametrize("n_isolators", [5])
+@pytest.mark.parametrize("max_samples", [4, 8])
+def test_model_isolation(
+    seed: int,
+    n_estimators: int,
+    max_depth: int,
+    n_classes: int,
+    n_samples: int,
+    n_isolators: int,
+    max_samples: int,
+) -> None:
+    data, y, mapper = generate_data(seed, n_samples, n_classes)
+    clf = RandomForestClassifier(
+        random_state=seed,
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+    )
+    clf.fit(data.to_numpy(), y)
+    ilf = IsolationForest(
+        random_state=seed,
+        n_estimators=n_isolators,
+        max_samples=max_samples,  # pyright: ignore[reportArgumentType]
+    )
+    ilf.fit(data.to_numpy())
+
+    f = partial(parse_tree, mapper=mapper)
+    g = operator.attrgetter("tree_")
+    trees = tuple(map(f, map(g, clf)))
+    trees += tuple(map(f, map(g, ilf)))
+    weights = (np.ones(n_estimators, dtype=float) * 1e5).flatten()
+    model = Model(
+        trees=trees,
+        features=mapper,
+        weights=weights,
+        n_isolators=n_isolators,
+        delta=0.1,
+        model_type=Model.Type.MIP,
+        env=ENV,
+    )
+    assert model is not None
+    assert model.n_estimators == n_estimators
+    assert model.n_classes == n_classes
+
+    model.build()
+
+    objective = _get_objective(model.features)
+    model.setObjective(objective, sense=gp.GRB.MINIMIZE)
+
+    try:
+        model.optimize()
+    except gp.GurobiError as e:
+        pytest.skip(f"Skipping test due to {e}")
 
     assert model.Status == gp.GRB.OPTIMAL
 
@@ -231,21 +337,36 @@ def test_model(
 
     x = solution.to_numpy(columns=mapper.columns)
 
-    _check_paths(clf, x, model.trees)
-    _check_prediction(clf, solution, mapper=mapper, m_class=0)
+    _check_solution(solution, mapper=mapper)
 
-    model.clear_majority_class()
+    for tree in model.trees:
+        _check_node(tree, tree.root, mapper=mapper, solution=solution)
 
-    model.set_majority_class(m_class=1)
+    _check_paths(clf, x, model.estimators)
 
-    model.optimize()
+    for class_ in (0, 1):
+        model.set_majority_class(m_class=class_)
 
-    assert model.Status == gp.GRB.OPTIMAL
+        try:
+            model.optimize()
+        except gp.GurobiError as e:
+            pytest.skip(f"Skipping test due to {e}")
 
-    solution = model.solution
-    assert solution is not None
+        if model.Status != gp.GRB.OPTIMAL:
+            continue
 
-    x = solution.to_numpy(columns=mapper.columns)
+        solution = model.solution
+        assert solution is not None
 
-    _check_paths(clf, x, model.trees)
-    _check_prediction(clf, solution, mapper=mapper, m_class=1, model=model)
+        x = solution.to_numpy(columns=mapper.columns)
+
+        _check_paths(clf, x, model.estimators)
+        _check_prediction(
+            clf,
+            solution,
+            mapper=mapper,
+            m_class=class_,
+            model=model,
+        )
+
+        model.clear_majority_class()

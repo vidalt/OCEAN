@@ -2,6 +2,7 @@ import operator
 from functools import partial
 
 import pytest
+from pydantic import ValidationError
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from ocean.feature import FeatureMapper
@@ -58,10 +59,10 @@ def test_parse_classifier(
     data, y, mapper = generate_data(seed, n_samples, n_classes)
     dt = DecisionTreeClassifier(random_state=seed, max_depth=max_depth)
     dt.fit(data.to_numpy(), y)
-    f = partial(parse_tree, mapper=mapper)
-    g = operator.attrgetter("tree_")
-    sklearn_tree = SKLearnTreeProtocol(g(dt))
-    tree = f(g(dt))
+    parse = partial(parse_tree, mapper=mapper)
+    getter = operator.attrgetter("tree_")
+    sklearn_tree = SKLearnTreeProtocol(getter(dt))
+    tree = parse(getter(dt))
     assert tree is not None
     assert tree.root is not None
     assert tree.root.node_id == 0
@@ -70,7 +71,7 @@ def test_parse_classifier(
     assert tree.shape == (1, n_classes)
     _check_tree(tree.root, sklearn_tree, mapper=mapper)
 
-    with pytest.raises(ValueError, match=r"The depth must be non-negative."):
+    with pytest.raises(ValidationError):
         tree.nodes_at(-1)
 
 
@@ -81,10 +82,10 @@ def test_parse_regressor(seed: int, n_samples: int, max_depth: int) -> None:
     data, y, mapper = generate_data(seed, n_samples, -1)
     dt = DecisionTreeRegressor(random_state=seed, max_depth=max_depth)
     dt.fit(data.to_numpy(), y)
-    f = partial(parse_tree, mapper=mapper)
-    g = operator.attrgetter("tree_")
-    sklearn_tree = SKLearnTreeProtocol(g(dt))
-    tree = f(g(dt))
+    parse = partial(parse_tree, mapper=mapper)
+    getter = operator.attrgetter("tree_")
+    sklearn_tree = SKLearnTreeProtocol(getter(dt))
+    tree = parse(getter(dt))
     assert tree is not None
     assert tree.root is not None
     assert tree.root.node_id == 0

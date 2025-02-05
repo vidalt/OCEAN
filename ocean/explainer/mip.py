@@ -1,24 +1,27 @@
+from functools import partial
+from itertools import chain
+
 import gurobipy as gp
 import pandas as pd
+from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
 from ..ensemble import Ensemble
 from ..feature import FeatureMapper
 from ..mip import Model, TreeVar
-from ..typing import BaseEnsemble, FloatArray1D
+from ..typing import FloatArray1D
 
 
 class MIPExplainer(Model):
-    _ensemble: Ensemble
     _mapper: FeatureMapper
-
     _garbage: list[gp.Var | gp.MVar | gp.Constr | gp.MConstr]
 
     def __init__(
         self,
-        ensemble: BaseEnsemble,
+        ensemble: RandomForestClassifier,
         *,
         mapper: FeatureMapper,
         weights: FloatArray1D | None = None,
+        isolation: IsolationForest | None = None,
         name: str = "OCEAN",
         env: gp.Env | None = None,
         epsilon: float = Model.DEFAULT_EPSILON,
@@ -27,12 +30,16 @@ class MIPExplainer(Model):
         flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
         self._mapper = mapper
-        self._ensemble = Ensemble(ensemble=ensemble, mapper=mapper)
+        ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
+        n_isolators = len(isolation) if isolation is not None else 0
+        func = partial(Ensemble, mapper=mapper)
+        trees = chain.from_iterable(map(func, ensembles))
         Model.__init__(
             self,
-            self._ensemble,
+            trees,
             mapper,
             weights=weights,
+            n_isolators=n_isolators,
             name=name,
             env=env,
             epsilon=epsilon,

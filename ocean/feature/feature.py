@@ -25,7 +25,7 @@ class Feature:
         codes: Iterable[Hashable] = (),
     ) -> None:
         self._ftype = ftype
-        self._levels = np.sort(list(set(levels))).flatten()
+        self._levels = np.sort(list(set(levels))).flatten().astype(np.float64)
         self._codes = tuple(set(codes))
 
     @property
@@ -80,4 +80,4 @@ class Feature:
             msg = "Levels cannot contain NaN values."
             raise ValueError(msg)
         lvls = list(set(self._levels) | set(levels))
-        self._levels = np.sort(lvls).flatten()
+        self._levels = np.sort(lvls).flatten().astype(np.float64)

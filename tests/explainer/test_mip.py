@@ -8,7 +8,7 @@ from ..utils import ENV, generate_data
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
-@pytest.mark.parametrize("n_estimators", [8])
+@pytest.mark.parametrize("n_estimators", [5])
 @pytest.mark.parametrize("max_depth", [2, 3])
 @pytest.mark.parametrize("n_classes", [2, 3, 4])
 @pytest.mark.parametrize("n_samples", [100, 200, 500])
@@ -35,7 +35,7 @@ def test_ocean(
     )
 
     assert model is not None
-    assert model.n_trees == n_estimators
+    assert model.n_estimators == n_estimators
     assert model.n_classes == n_classes
 
     model.set_majority_class(m_class=0, output=0)

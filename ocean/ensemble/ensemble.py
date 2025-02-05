@@ -5,7 +5,7 @@ from typing import overload
 
 from ..feature import FeatureMapper
 from ..tree import Tree, parse_tree
-from ..typing import BaseEnsemble
+from ..typing import BaseEnsemble, NonNegativeInt
 
 
 class Ensemble(Sequence[Tree]):
@@ -28,7 +28,7 @@ class Ensemble(Sequence[Tree]):
     def __getitem__(self, i: int | slice) -> Tree | Sequence[Tree]:
         return self._trees[i]
 
-    def __len__(self) -> int:
+    def __len__(self) -> NonNegativeInt:
         return len(self._trees)
 
     @staticmethod
@@ -37,6 +37,6 @@ class Ensemble(Sequence[Tree]):
         *,
         mapper: FeatureMapper,
     ) -> Iterable[Tree]:
-        f = partial(parse_tree, mapper=mapper)
-        g = operator.attrgetter("tree_")
-        return tuple(map(f, map(g, ensemble)))
+        parse = partial(parse_tree, mapper=mapper)
+        getter = operator.attrgetter("tree_")
+        return tuple(map(parse, map(getter, ensemble)))

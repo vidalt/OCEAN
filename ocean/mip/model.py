@@ -3,10 +3,17 @@ from enum import Enum
 
 import gurobipy as gp
 import numpy as np
+from pydantic import validate_call
 
 from ..feature import Feature
 from ..tree import Tree
-from ..typing import FloatArray1D
+from ..typing import (
+    FloatUnit,
+    FloatUnitHalfOpen,
+    NonNegativeFloatArray1D,
+    NonNegativeInt,
+    PositiveInt,
+)
 from .base import BaseModel
 from .builder import ModelBuilder, ModelBuilderFactory
 from .solution import Solution
@@ -17,22 +24,24 @@ class Model(BaseModel):
     TREE_VAR_FMT: str = "tree[{t}]"
     FEATURE_VAR_FMT: str = "feature[{key}]"
 
-    DEFAULT_EPSILON: float = 1e-6
-    DEFAULT_NUM_EPSILON: float = 1.0 / 16.0
+    DEFAULT_EPSILON: FloatUnit = 1e-6
+    DEFAULT_NUM_EPSILON: FloatUnit = 1.0 / 16.0
 
     class Type(Enum):
         MIP = "MIP"
 
-    _trees: tuple[TreeVar, ...]
-    _features: dict[Hashable, FeatureVar]
+    _trees: tuple[TreeVar, *tuple[TreeVar, ...]]
+    _n_isolators: NonNegativeInt
+    _weights: NonNegativeFloatArray1D
 
-    _weights: FloatArray1D
+    _features: dict[Hashable, FeatureVar]
 
     _scores: gp.tupledict[int, gp.Constr]
     _builder: ModelBuilder
 
-    _epsilon: float
-    _num_epsilon: float
+    _epsilon: FloatUnit
+    _delta: FloatUnitHalfOpen
+    _num_epsilon: FloatUnit
 
     _solution: Solution
 
@@ -40,27 +49,39 @@ class Model(BaseModel):
         self,
         trees: Iterable[Tree],
         features: Mapping[Hashable, Feature],
-        weights: FloatArray1D | None = None,
+        weights: NonNegativeFloatArray1D | None = None,
         *,
+        n_isolators: NonNegativeInt = 0,
         name: str = "OCEAN",
         env: gp.Env | None = None,
-        epsilon: float = DEFAULT_EPSILON,
-        num_epsilon: float = DEFAULT_NUM_EPSILON,
+        epsilon: FloatUnit = DEFAULT_EPSILON,
+        num_epsilon: FloatUnit = DEFAULT_NUM_EPSILON,
+        delta: FloatUnitHalfOpen = 0.0,
         model_type: Type = Type.MIP,
         flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
         super().__init__(name=name, env=env)
         self._set_trees(trees=trees, flow_type=flow_type)
+        self._n_isolators = n_isolators
         self._set_features(features=features)
         self._set_weights(weights=weights)
         self._scores = gp.tupledict()
         self._epsilon = epsilon
         self._num_epsilon = num_epsilon
+        self._delta = delta
         self._set_builder(model_type=model_type)
         self._set_solution()
 
     @property
-    def n_trees(self) -> int:
+    def n_estimators(self) -> PositiveInt:
+        return self.n_trees - self.n_isolators
+
+    @property
+    def n_isolators(self) -> NonNegativeInt:
+        return self._n_isolators
+
+    @property
+    def n_trees(self) -> PositiveInt:
         return len(self._trees)
 
     @property
@@ -68,11 +89,19 @@ class Model(BaseModel):
         return self._trees
 
     @property
-    def shape(self) -> tuple[int, ...]:
+    def estimators(self) -> tuple[TreeVar, *tuple[TreeVar, ...]]:
+        return self._trees[0], *self._trees[1 : self.n_estimators]
+
+    @property
+    def isolators(self) -> tuple[TreeVar, ...]:
+        return self._trees[self.n_estimators :]
+
+    @property
+    def shape(self) -> tuple[NonNegativeInt, ...]:
         return self._trees[0].shape
 
     @property
-    def n_classes(self) -> int:
+    def n_classes(self) -> NonNegativeInt:
         return self.shape[-1]
 
     @property
@@ -86,19 +115,29 @@ class Model(BaseModel):
     def build(self) -> None:
         self._build_trees()
         self._build_features()
+        self._build_isolation()
         self._builder.build(self, trees=self._trees, features=self._features)
 
     @property
     def function(self) -> gp.MLinExpr:
         return self.weighted_function(weights=self._weights)
 
-    def weighted_function(self, weights: FloatArray1D) -> gp.MLinExpr:
+    def weighted_function(
+        self,
+        weights: NonNegativeFloatArray1D,
+    ) -> gp.MLinExpr:
         function = gp.MLinExpr.zeros(self.shape)
-        for t in range(self.n_trees):
+        for t in range(self.n_estimators):
             function += np.float64(weights[t]) * self._trees[t].value
         return function
 
-    def set_majority_class(self, m_class: int, *, output: int = 0) -> None:
+    @validate_call
+    def set_majority_class(
+        self,
+        m_class: NonNegativeInt,
+        *,
+        output: NonNegativeInt = 0,
+    ) -> None:
         function = self.function
         for class_ in range(self.n_classes):
             if class_ == m_class:
@@ -120,26 +159,36 @@ class Model(BaseModel):
         *,
         flow_type: TreeVar.FlowType,
     ) -> None:
-        def f(tup: tuple[int, Tree]) -> TreeVar:
+        def create(tup: tuple[NonNegativeInt, Tree]) -> TreeVar:
             t, tree = tup
             name = self.TREE_VAR_FMT.format(t=t)
             return TreeVar(tree, name=name, flow_type=flow_type)
 
-        self._trees = tuple(map(f, enumerate(trees)))
+        tree_vars = tuple(map(create, enumerate(trees)))
+        if len(tree_vars) == 0:
+            msg = "At least one tree is required."
+            raise ValueError(msg)
+
+        self._trees = tree_vars[0], *tree_vars[1:]
 
     def _set_features(self, features: Mapping[Hashable, Feature]) -> None:
-        def f(tup: tuple[Hashable, Feature]) -> tuple[Hashable, FeatureVar]:
+        def create(
+            tup: tuple[Hashable, Feature],
+        ) -> tuple[Hashable, FeatureVar]:
             key, feature = tup
             name = self.FEATURE_VAR_FMT.format(key=key)
             return key, FeatureVar(feature, name=name)
 
-        self._features = dict(map(f, features.items()))
+        self._features = dict(map(create, features.items()))
 
-    def _set_weights(self, weights: FloatArray1D | None = None) -> None:
+    def _set_weights(
+        self,
+        weights: NonNegativeFloatArray1D | None = None,
+    ) -> None:
         if weights is None:
-            weights = np.ones(self.n_trees, dtype=np.float64)
+            weights = np.ones(self.n_estimators, dtype=np.float64)
 
-        if len(weights) != self.n_trees:
+        if len(weights) != self.n_estimators:
             msg = "The number of weights must match the number of trees."
             raise ValueError(msg)
 
@@ -173,3 +222,13 @@ class Model(BaseModel):
     def _build_features(self) -> None:
         for var in self._features.values():
             var.build(self)
+
+    def _build_isolation(self) -> None:
+        if self.n_isolators == 0:
+            return
+
+        expr = gp.LinExpr()
+        for tree in self.isolators:
+            for leaf in tree.leaves:
+                expr += leaf.depth * tree[leaf.node_id]
+        self.addConstr(expr >= self._delta * self.n_isolators)
