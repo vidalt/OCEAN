@@ -2,7 +2,7 @@ from collections.abc import Iterator
 
 from pydantic import validate_call
 
-from ..typing import NonNegativeInt
+from ..typing import NonNegativeInt, PositiveInt
 from .node import Node
 
 
@@ -15,7 +15,7 @@ class Tree:
         self._shape = root.leaves[0].value.shape
 
     @property
-    def n_nodes(self) -> NonNegativeInt:
+    def n_nodes(self) -> PositiveInt:
         return self.root.size
 
     @property
