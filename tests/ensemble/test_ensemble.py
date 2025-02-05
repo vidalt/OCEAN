@@ -41,7 +41,7 @@ def test_isolation_forest() -> None:
     )
 
     iforest = IsolationForest(random_state=seed, n_estimators=10)
-    iforest.fit(data)
+    iforest.fit(data.to_numpy())
 
     ensemble = Ensemble(iforest, mapper=mapper)
 

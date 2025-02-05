@@ -1,13 +1,9 @@
-import operator
-from functools import partial
-
 import pytest
 from sklearn.tree import DecisionTreeClassifier
 
 from ocean.mip import TreeVar
 from ocean.mip.base import BaseModel
 from ocean.tree import Node, parse_tree
-from ocean.tree.protocol import SKLearnTreeProtocol
 
 from ..utils import ENV, generate_data
 
@@ -35,16 +31,13 @@ def test_variable(
     data, y, mapper = generate_data(seed, n_samples, n_classes)
     dt = DecisionTreeClassifier(random_state=seed, max_depth=max_depth)
     dt.fit(data.to_numpy(), y)
-    f = partial(parse_tree, mapper=mapper)
-    g = operator.attrgetter("tree_")
-    sklearn_tree = SKLearnTreeProtocol(g(dt))
-    tree = f(g(dt))
+    tree = parse_tree(dt, mapper=mapper)
     tree_var = TreeVar(tree=tree, name="tree")
 
     assert tree_var.root.node_id == 0
-    assert tree_var.n_nodes == sklearn_tree.n_nodes
-    assert len(tree_var) == sklearn_tree.n_nodes
-    assert tuple(iter(tree_var)) == tuple(iter(range(sklearn_tree.n_nodes)))
+    assert tree_var.n_nodes == tree.n_nodes
+    assert len(tree_var) == tree.n_nodes
+    assert tuple(iter(tree_var)) == tuple(iter(range(tree.n_nodes)))
 
     model = BaseModel(env=ENV)
 

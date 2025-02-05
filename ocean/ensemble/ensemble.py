@@ -1,10 +1,8 @@
-import operator
-from collections.abc import Iterable, Sequence
-from functools import partial
+from collections.abc import Sequence
 from typing import overload
 
 from ..feature import FeatureMapper
-from ..tree import Tree, parse_tree
+from ..tree import Tree, parse_trees
 from ..typing import BaseEnsemble, NonNegativeInt
 
 
@@ -36,7 +34,5 @@ class Ensemble(Sequence[Tree]):
         ensemble: BaseEnsemble,
         *,
         mapper: FeatureMapper,
-    ) -> Iterable[Tree]:
-        parse = partial(parse_tree, mapper=mapper)
-        getter = operator.attrgetter("tree_")
-        return tuple(map(parse, map(getter, ensemble)))
+    ) -> tuple[Tree, ...]:
+        return tuple(parse_trees(ensemble, mapper=mapper))

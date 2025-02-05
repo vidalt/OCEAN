@@ -1,6 +1,4 @@
-import operator
 from collections.abc import Hashable, Mapping
-from functools import partial
 
 import gurobipy as gp
 import numpy as np
@@ -10,7 +8,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 from ocean.feature import FeatureMapper
 from ocean.mip import FeatureVar, Model, Solution, TreeVar
-from ocean.tree import Node, parse_tree
+from ocean.tree import Node, parse_trees
 
 from ..utils import ENV, generate_data
 
@@ -143,11 +141,9 @@ def test_model_init() -> None:
     n_classes = 2
     n_samples = 100
     data, y, mapper = generate_data(seed, n_samples, n_classes)
-    f = partial(parse_tree, mapper=mapper)
-    g = operator.attrgetter("tree_")
     dt = DecisionTreeClassifier()
     dt.fit(data.to_numpy(), y)
-    trees = tuple(map(f, map(g, [dt])))
+    trees = tuple(parse_trees([dt], mapper=mapper))
     model = Model(
         trees=trees,
         features=mapper,
@@ -164,7 +160,7 @@ def test_model_init() -> None:
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    trees = tuple(map(f, map(g, clf)))
+    trees = tuple(parse_trees(clf, mapper=mapper))
     model = Model(
         trees=trees,
         features=mapper,
@@ -208,9 +204,7 @@ def test_model_no_isolation(
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    parse = partial(parse_tree, mapper=mapper)
-    getter = operator.attrgetter("tree_")
-    trees = tuple(map(parse, map(getter, clf)))
+    trees = tuple(parse_trees(clf, mapper=mapper))
     weights = (np.ones(n_estimators, dtype=float) * 1e5).flatten()
     model = Model(
         trees=trees,
@@ -302,10 +296,8 @@ def test_model_isolation(
     )
     ilf.fit(data.to_numpy())
 
-    f = partial(parse_tree, mapper=mapper)
-    g = operator.attrgetter("tree_")
-    trees = tuple(map(f, map(g, clf)))
-    trees += tuple(map(f, map(g, ilf)))
+    trees = tuple(parse_trees(clf, mapper=mapper))
+    trees += tuple(parse_trees(ilf, mapper=mapper))
     weights = (np.ones(n_estimators, dtype=float) * 1e5).flatten()
     model = Model(
         trees=trees,

@@ -1,32 +1,31 @@
-import operator
-from functools import partial
-
 import pytest
 from pydantic import ValidationError
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from ocean.feature import FeatureMapper
 from ocean.tree import Node, parse_tree
-from ocean.tree.protocol import SKLearnTreeProtocol
+from ocean.typing import SKLearnTree
 
 from ..utils import generate_data
 
 
 def _check_tree(
     root: Node,
-    protocol: SKLearnTreeProtocol,
+    tree: SKLearnTree,
     *,
     mapper: FeatureMapper,
 ) -> None:
     def _dfs(node: Node) -> None:
         if node.is_leaf:
             node_id = node.node_id
-            assert protocol.left[node_id] == protocol.right[node_id] == -1
-            assert (node.value == protocol.value[node_id][0]).all()
+            left_id = tree.children_left[node_id]
+            right_id = tree.children_right[node_id]
+            assert left_id == right_id == -1
+            assert (node.value == tree.value[node_id][0]).all()
         else:
             node_id = node.node_id
-            left_id = protocol.left[node_id]
-            right_id = protocol.right[node_id]
+            left_id = tree.children_left[node_id]
+            right_id = tree.children_right[node_id]
             assert node.feature is not None
             assert node.feature in mapper
             assert node.left is not None
@@ -36,7 +35,7 @@ def _check_tree(
             assert len(node.children) == 2
             feature = mapper[node.feature]
             if feature.is_numeric:
-                assert node.threshold == protocol.threshold[node_id]
+                assert node.threshold == tree.threshold[node_id]
             if feature.is_one_hot_encoded:
                 assert node.code in feature.codes
 
@@ -59,17 +58,14 @@ def test_parse_classifier(
     data, y, mapper = generate_data(seed, n_samples, n_classes)
     dt = DecisionTreeClassifier(random_state=seed, max_depth=max_depth)
     dt.fit(data.to_numpy(), y)
-    parse = partial(parse_tree, mapper=mapper)
-    getter = operator.attrgetter("tree_")
-    sklearn_tree = SKLearnTreeProtocol(getter(dt))
-    tree = parse(getter(dt))
+    tree = parse_tree(dt, mapper=mapper)
     assert tree is not None
     assert tree.root is not None
     assert tree.root.node_id == 0
-    assert tree.n_nodes == sklearn_tree.n_nodes
-    assert tree.max_depth == sklearn_tree.max_depth
+    assert tree.n_nodes == dt.tree_.node_count
+    assert tree.max_depth == dt.tree_.max_depth  # pyright: ignore[reportAttributeAccessIssue]
     assert tree.shape == (1, n_classes)
-    _check_tree(tree.root, sklearn_tree, mapper=mapper)
+    _check_tree(tree.root, dt.tree_, mapper=mapper)  # pyright: ignore[reportArgumentType, reportUnknownArgumentType]
 
     with pytest.raises(ValidationError):
         tree.nodes_at(-1)
@@ -82,14 +78,11 @@ def test_parse_regressor(seed: int, n_samples: int, max_depth: int) -> None:
     data, y, mapper = generate_data(seed, n_samples, -1)
     dt = DecisionTreeRegressor(random_state=seed, max_depth=max_depth)
     dt.fit(data.to_numpy(), y)
-    parse = partial(parse_tree, mapper=mapper)
-    getter = operator.attrgetter("tree_")
-    sklearn_tree = SKLearnTreeProtocol(getter(dt))
-    tree = parse(getter(dt))
+    tree = parse_tree(dt, mapper=mapper)
     assert tree is not None
     assert tree.root is not None
     assert tree.root.node_id == 0
-    assert tree.n_nodes == sklearn_tree.n_nodes
-    assert tree.max_depth == sklearn_tree.max_depth
+    assert tree.n_nodes == dt.tree_.node_count
+    assert tree.max_depth == dt.tree_.max_depth  # pyright: ignore[reportAttributeAccessIssue]
     assert tree.shape == (1, 1)
-    _check_tree(tree.root, sklearn_tree, mapper=mapper)
+    _check_tree(tree.root, dt.tree_, mapper=mapper)  # pyright: ignore[reportArgumentType, reportUnknownArgumentType]
