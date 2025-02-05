@@ -66,15 +66,11 @@ class FeatureVar(Var, FeatureKeeper):
         return self._add_numeric(model, name)
 
     def _add_mu(self, model: BaseModel) -> gp.MVar:
-        mut = gp.GRB.BINARY if self.is_discrete else gp.GRB.CONTINUOUS
+        vtype = gp.GRB.CONTINUOUS if self.is_continuous else gp.GRB.BINARY
         n = len(self.levels) - 1
         name = f"{self._name}_mu"
-
-        if self.is_discrete:
-            mu = model.addMVar(shape=n, vtype=mut, name=name)
-        else:
-            lb, ub = 0.0, 1.0
-            mu = model.addMVar(shape=n, vtype=mut, lb=lb, ub=ub, name=name)
+        lb, ub = 0.0, 1.0
+        mu = model.addMVar(shape=n, vtype=vtype, lb=lb, ub=ub, name=name)
 
         for j in range(n - 1):
             model.addConstr(mu[j + 1] <= mu[j])
