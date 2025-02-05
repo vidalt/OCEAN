@@ -225,9 +225,9 @@ class TestModelInitWeightsNoIsolation:
         )
         trees = tuple(parse_trees(clf, mapper=mapper))
         generator = np.random.default_rng(seed)
-        shapes = (generator.integers(n_estimators + 1, 2 * n_estimators + 1),)
+        shapes = [generator.integers(n_estimators + 1, 2 * n_estimators + 1)]
         if n_estimators > 2:
-            shapes += (generator.integers(1, n_estimators - 1),)
+            shapes += [generator.integers(1, n_estimators - 1)]
         for shape in shapes:
             weights = generator.random(shape).flatten()
             msg = r"The number of weights must match the number of trees."
