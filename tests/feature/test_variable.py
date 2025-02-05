@@ -55,32 +55,32 @@ def test_discrete() -> None:
     objective = (var.x - 1.0) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 1.0
+    assert np.isclose(var.X, 1.0)
 
     objective = (var.x - 2.0) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 2.0
+    assert np.isclose(var.X, 2.0)
 
     objective = (var.x - 3.0) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 3.0
+    assert np.isclose(var.X, 3.0)
 
     objective = (var.x - 0.9) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 1.0
+    assert np.isclose(var.X, 1.0)
 
     objective = (var.x - 2.7) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 3.0
+    assert np.isclose(var.X, 3.0)
 
     objective = (var.x - 1.8) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 2.0
+    assert np.isclose(var.X, 2.0)
     assert var.mget(0).X == 1.0
     assert var.mget(1).X == 0.0
 
@@ -118,7 +118,7 @@ def test_continuous() -> None:
     model.setObjective(objective)
     model.optimize()
     assert np.isclose(var.X, 1.5)
-    assert var.mget(0).X >= var.mget(0).X >= var.mget(0).X
+    assert var.mget(0).X >= var.mget(1).X >= var.mget(2).X
 
     objective = (var.x - 2.30) ** 2
     model.setObjective(objective)
