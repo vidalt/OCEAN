@@ -36,6 +36,7 @@ repos:
             numpy,
             pandas,
             pandas-stubs,
+            pydantic,
             pytest,
             scikit-learn,
             scipy,
@@ -49,13 +50,16 @@ repos:
     hooks:
     -   id: pyright
         name: pyright
+        args: [ocean, tests]
         additional_dependencies: [
             anytree,
             gurobipy,
             numpy,
             pandas,
             pandas-stubs,
+            pydantic,
             pytest,
+            rich,
             scikit-learn,
             scipy,
             scipy-stubs,

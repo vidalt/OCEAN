@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 
+from ..typing import NonNegativeInt
 from .node import Node
 from .tree import Tree
 
@@ -19,7 +20,7 @@ class TreeKeeper:
         return self._tree.root
 
     @property
-    def n_nodes(self) -> int:
+    def n_nodes(self) -> NonNegativeInt:
         return self._tree.n_nodes
 
     @property
@@ -27,11 +28,11 @@ class TreeKeeper:
         return self._tree.leaves
 
     @property
-    def max_depth(self) -> int:
+    def max_depth(self) -> NonNegativeInt:
         return self._tree.max_depth
 
     @property
-    def shape(self) -> tuple[int, ...]:
+    def shape(self) -> tuple[NonNegativeInt, ...]:
         return self._tree.shape
 
     def nodes_at(self, depth: int) -> Iterator[Node]:

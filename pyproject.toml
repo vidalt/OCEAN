@@ -30,6 +30,7 @@ dependencies = [
     "gurobipy",
     "numpy",
     "pandas",
+    "pydantic",
     "scikit-learn",
 ]
 

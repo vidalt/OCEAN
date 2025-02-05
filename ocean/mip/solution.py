@@ -1,6 +1,7 @@
 from collections.abc import Hashable, Mapping
 
 import gurobipy as gp
+import numpy as np
 import pandas as pd
 
 from ..typing import FloatArray1D
@@ -56,5 +57,5 @@ class Solution:
             .to_frame()
             .T.to_numpy()
             .flatten()
-            .astype(float)
+            .astype(np.float64)
         )

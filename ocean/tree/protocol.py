@@ -1,21 +1,24 @@
 from typing import Protocol
 
+import numpy as np
+
 from ..typing import (
     FloatArray,
     FloatArray1D,
-    IntArray1D,
-    PositiveIntArray1D,
+    NodeIdArray1D,
+    NonNegativeInt,
+    NonNegativeIntArray1D,
     SKLearnTree,
 )
 
 
 class TreeProtocol(Protocol):
-    n_nodes: int
-    max_depth: int
-    feature: PositiveIntArray1D
+    n_nodes: NonNegativeInt
+    max_depth: NonNegativeInt
+    feature: NonNegativeIntArray1D
     threshold: FloatArray1D
-    left: IntArray1D
-    right: IntArray1D
+    left: NodeIdArray1D
+    right: NodeIdArray1D
     value: FloatArray
 
 
@@ -23,10 +26,10 @@ class SKLearnTreeProtocol(TreeProtocol):
     def __init__(self, tree: SKLearnTree) -> None:
         self.n_nodes = tree.node_count
         self.max_depth = tree.max_depth
-        self.feature = tree.feature
+        self.feature = tree.feature.astype(np.uint32)
         self.threshold = tree.threshold
-        self.left = tree.children_left
-        self.right = tree.children_right
+        self.left = tree.children_left.astype(np.int64)
+        self.right = tree.children_right.astype(np.int64)
         self.value = tree.value
 
 
