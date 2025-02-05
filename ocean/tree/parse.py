@@ -72,4 +72,4 @@ def parse_trees(
     mapper: FeatureMapper,
 ) -> Iterable[Tree]:
     parser = partial(parse_tree, mapper=mapper)
-    return map(parser, trees)
+    return tuple(map(parser, trees))
