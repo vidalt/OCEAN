@@ -1,4 +1,4 @@
-from . import ensemble, feature, mip, tree
+from . import datasets, ensemble, feature, mip, tree
 from .explainer import MIPExplainer
 
-__all__ = ["MIPExplainer", "ensemble", "feature", "mip", "tree"]
+__all__ = ["MIPExplainer", "datasets", "ensemble", "feature", "mip", "tree"]
