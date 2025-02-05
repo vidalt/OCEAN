@@ -24,7 +24,7 @@ class Model(BaseModel):
     TREE_VAR_FMT: str = "tree[{t}]"
     FEATURE_VAR_FMT: str = "feature[{key}]"
 
-    DEFAULT_EPSILON: FloatUnit = 1e-6
+    DEFAULT_EPSILON: FloatUnit = 1.0 / (2.0**16)
     DEFAULT_NUM_EPSILON: FloatUnit = 1.0 / 16.0
 
     class Type(Enum):
