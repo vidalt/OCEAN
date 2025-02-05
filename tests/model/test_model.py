@@ -4,7 +4,6 @@ import gurobipy as gp
 import numpy as np
 import pytest
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
 
 from ocean.feature import FeatureMapper
 from ocean.mip import FeatureVar, Model, Solution, TreeVar
@@ -123,70 +122,121 @@ def _get_objective(features: Mapping[Hashable, FeatureVar]) -> gp.QuadExpr:
     return obj
 
 
-def test_model_init() -> None:
-    with pytest.raises(
-        ValueError,
-        match=r"At least one tree is required.",
-    ):
-        model = Model(
-            trees=[],
-            features={},
-            weights=None,
-            env=ENV,
-        )
-
-    seed = 42
-    n_estimators = 10
-    max_depth = 4
-    n_classes = 2
-    n_samples = 100
+def _train_rf(
+    seed: int,
+    n_estimators: int,
+    max_depth: int,
+    n_samples: int,
+    n_classes: int,
+) -> tuple[RandomForestClassifier, FeatureMapper]:
     data, y, mapper = generate_data(seed, n_samples, n_classes)
-    dt = DecisionTreeClassifier()
-    dt.fit(data.to_numpy(), y)
-    trees = tuple(parse_trees([dt], mapper=mapper))
-    model = Model(
-        trees=trees,
-        features=mapper,
-        weights=None,
-        model_type=Model.Type.MIP,
-        env=ENV,
-    )
-    assert model is not None
-    assert model.n_estimators == 1
-
     clf = RandomForestClassifier(
         random_state=seed,
         n_estimators=n_estimators,
         max_depth=max_depth,
     )
     clf.fit(data.to_numpy(), y)
-    trees = tuple(parse_trees(clf, mapper=mapper))
-    model = Model(
-        trees=trees,
-        features=mapper,
-        weights=None,
-        model_type=Model.Type.MIP,
-        env=ENV,
-    )
-    assert model is not None
-    assert model.n_estimators == n_estimators
-    assert model.n_classes == n_classes
+    return clf, mapper
 
-    with pytest.raises(
-        ValueError,
-        match=r"The number of weights must match the number of trees.",
-    ):
-        model = Model(
-            trees=trees,
-            features=mapper,
-            weights=np.ones(n_estimators + 1).astype(np.float64),
-            model_type=Model.Type.MIP,
-            env=ENV,
-        )
+
+def test_model_init_with_no_trees() -> None:
+    msg = r"At least one tree is required."
+    with pytest.raises(ValueError, match=msg):
+        Model(trees=[], features={}, env=ENV)
+
+
+def test_model_init_with_no_features() -> None:
+    msg = r"At least one feature is required."
+    rf, mapper = _train_rf(42, 2, 2, 100, 2)
+    trees = tuple(parse_trees(rf, mapper=mapper))
+    with pytest.raises(ValueError, match=msg):
+        Model(trees=trees, features={}, env=ENV)
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
-@pytest.mark.parametrize("n_estimators", [10])
+@pytest.mark.parametrize("n_estimators", [1, 5, 10])
+@pytest.mark.parametrize("max_depth", [2, 3])
+@pytest.mark.parametrize("n_samples", [100, 200, 500])
+@pytest.mark.parametrize("n_classes", [2, 3, 4])
+class TestModelInitWeightsNoIsolation:
+    @staticmethod
+    def test_model_init_with_no_weights(
+        seed: int,
+        n_estimators: int,
+        max_depth: int,
+        n_samples: int,
+        n_classes: int,
+    ) -> None:
+        clf, mapper = _train_rf(
+            seed,
+            n_estimators,
+            max_depth,
+            n_samples,
+            n_classes,
+        )
+        trees = parse_trees(clf, mapper=mapper)
+        model = Model(trees=trees, features=mapper, env=ENV)
+        expected_weights = np.ones(n_estimators, dtype=float)
+        assert model is not None
+        assert model.n_estimators == n_estimators
+        assert model.n_classes == n_classes
+        assert model.weights.shape == expected_weights.shape
+        assert np.isclose(model.weights, expected_weights).all()
+
+    @staticmethod
+    def test_model_init_with_weights(
+        seed: int,
+        n_estimators: int,
+        max_depth: int,
+        n_samples: int,
+        n_classes: int,
+    ) -> None:
+        clf, mapper = _train_rf(
+            seed,
+            n_estimators,
+            max_depth,
+            n_samples,
+            n_classes,
+        )
+        trees = parse_trees(clf, mapper=mapper)
+        generator = np.random.default_rng(seed)
+        weights = generator.random(n_estimators).flatten()
+        model = Model(trees=trees, features=mapper, weights=weights, env=ENV)
+        assert model is not None
+        assert model.n_estimators == n_estimators
+        assert model.n_classes == n_classes
+        assert model.weights.shape == weights.shape
+        assert np.isclose(model.weights, weights).all()
+
+    @staticmethod
+    def test_model_init_with_invalid_weights(
+        seed: int,
+        n_estimators: int,
+        max_depth: int,
+        n_samples: int,
+        n_classes: int,
+    ) -> None:
+        clf, mapper = _train_rf(
+            seed,
+            n_estimators,
+            max_depth,
+            n_samples,
+            n_classes,
+        )
+        trees = tuple(parse_trees(clf, mapper=mapper))
+        generator = np.random.default_rng(seed)
+        shapes = (generator.integers(n_estimators + 1, 2 * n_estimators + 1),)
+        if n_estimators > 2:
+            shapes += (generator.integers(1, n_estimators - 1),)
+        for shape in shapes:
+            weights = generator.random(shape).flatten()
+            msg = r"The number of weights must match the number of trees."
+            with pytest.raises(ValueError, match=msg):
+                Model(trees=trees, features=mapper, weights=weights, env=ENV)
+
+
+@pytest.mark.parametrize("seed", [42, 43, 44])
+@pytest.mark.parametrize("n_estimators", [1])
 @pytest.mark.parametrize("max_depth", [2, 3])
 @pytest.mark.parametrize("n_classes", [2, 3, 4])
 @pytest.mark.parametrize("n_samples", [100, 200, 500])
@@ -205,7 +255,7 @@ def test_model_no_isolation(
     )
     clf.fit(data.to_numpy(), y)
     trees = tuple(parse_trees(clf, mapper=mapper))
-    weights = (np.ones(n_estimators, dtype=float) * 1e5).flatten()
+    weights = (np.ones(n_estimators, dtype=float)).flatten()
     model = Model(
         trees=trees,
         features=mapper,
@@ -240,8 +290,13 @@ def test_model_no_isolation(
         _check_node(tree, tree.root, mapper=mapper, solution=solution)
 
     _check_paths(clf, x, model.trees)
+    available_classes: set[int] = set()
+    for tree in model.trees:
+        for leaf in tree.leaves:
+            class_ = int(np.argmax(leaf.value[0]))
+            available_classes.add(class_)
 
-    for class_ in (0, 1):
+    for class_ in available_classes:
         model.set_majority_class(m_class=class_)
         try:
             model.optimize()

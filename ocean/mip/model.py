@@ -109,6 +109,10 @@ class Model(BaseModel):
         return self._features
 
     @property
+    def weights(self) -> NonNegativeFloatArray1D:
+        return self._weights
+
+    @property
     def solution(self) -> Solution:
         return self._solution
 
@@ -178,6 +182,10 @@ class Model(BaseModel):
             key, feature = tup
             name = self.FEATURE_VAR_FMT.format(key=key)
             return key, FeatureVar(feature, name=name)
+
+        if len(features) == 0:
+            msg = "At least one feature is required."
+            raise ValueError(msg)
 
         self._features = dict(map(create, features.items()))
 
