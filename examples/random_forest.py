@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 import gurobipy as gp
 import pandas as pd
-from datasets import load_adult, load_compas, load_credit
 from rich.progress import track
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 from ocean import MIPExplainer
+from ocean.datasets import load_adult, load_compas, load_credit
 
 if TYPE_CHECKING:
     from ocean.typing import FloatArray1D
@@ -41,7 +41,12 @@ def parse_args() -> Args:
         default=100,
         dest="n_examples",
     )
-    parser.add_argument("--dataset", type=str, default="compas")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["adult", "compas", "credit"],
+        default="compas",
+    )
     args = parser.parse_args()
     return Args(
         seed=args.seed,
