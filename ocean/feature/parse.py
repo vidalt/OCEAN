@@ -69,7 +69,7 @@ def _parse(
     mapping = dict(zip(keys, features, strict=True))
 
     if proc.columns.nlevels == 1:
-        columns = proc.columns
+        columns = pd.Index(proc.columns)
     else:
         columns = pd.MultiIndex.from_tuples(proc.columns)
 

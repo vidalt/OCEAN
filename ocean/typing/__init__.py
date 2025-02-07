@@ -21,8 +21,8 @@ NodeId = Annotated[np.int64, Field(ge=-1)]
 type Key = int | str
 
 # Index alias:
-type Index1L = pd.Index[str] | pd.Index[int]
-type Index = pd.Index[str] | pd.Index[int] | pd.MultiIndex
+type Index1L = pd.Index[Key]
+type Index = pd.Index[int] | pd.Index[str] | pd.MultiIndex
 
 # Arrays aliases
 
