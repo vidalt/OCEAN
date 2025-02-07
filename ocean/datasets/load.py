@@ -2,19 +2,15 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from ..feature import Feature, FeatureMapper
+from ..abc import Mapper
+from ..feature import Feature, parse_features
 
-Loaded = tuple[FeatureMapper, tuple[pd.DataFrame, "pd.Series[int]"]]
+Loaded = tuple[Mapper[Feature], tuple[pd.DataFrame, "pd.Series[int]"]]
 
 
 @dataclass
 class Loader:
     name: str
-    target: str
-    features: list[Feature]
-    names: list[str]
-    columns: "pd.Index[str] | pd.MultiIndex"
-
     URL: str = "https://www.github.com/eminyous/ocean-datasets/blob/main"
     path: str = ""
 
@@ -22,12 +18,17 @@ class Loader:
         self.path = f"{self.name}/{self.name}.csv"
 
     def load(self) -> Loaded:
-        mapper = FeatureMapper(self.names, self.features, self.columns)
         data = self.read(self.path)
-        X = data.drop(columns=[self.target])
-        y = data[self.target].astype(int)
-        return mapper, (X, y)
+        types: pd.Index[str] = data.columns.get_level_values(1)
+        columns: pd.Index[str] = data.columns.get_level_values(0)
+        data.columns = columns
+        targets = data.columns[types == "T"].to_list()
+        y = data[targets].iloc[:, 0].astype(int)
+        discretes = tuple(data.columns[types == "D"].to_list())
+        data = data.drop(columns=targets)
+        mapper, data = parse_features(data, discretes=discretes, scale=False)
+        return mapper, (data, y)
 
     def read(self, path: str) -> pd.DataFrame:
         url = f"{self.URL}/{path}?raw=true"
-        return pd.read_csv(url)
+        return pd.read_csv(url, header=[0, 1])

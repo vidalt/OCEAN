@@ -2,7 +2,8 @@ import gurobipy as gp
 import numpy as np
 import pandas as pd
 
-from ocean.feature import FeatureMapper, parse_features
+from ocean.abc import Mapper
+from ocean.feature import Feature, parse_features
 
 
 def generate_data(
@@ -12,7 +13,7 @@ def generate_data(
 ) -> tuple[
     pd.DataFrame,
     np.ndarray[tuple[int], np.dtype[np.int64 | np.float64]],
-    FeatureMapper,
+    Mapper[Feature],
 ]:
     generator = np.random.default_rng(seed)
 

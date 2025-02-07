@@ -1,7 +1,8 @@
 from collections.abc import Sequence
 from typing import overload
 
-from ..feature import FeatureMapper
+from ..abc import Mapper
+from ..feature import Feature
 from ..tree import Tree, parse_trees
 from ..typing import BaseEnsemble, NonNegativeInt
 
@@ -13,7 +14,7 @@ class Ensemble(Sequence[Tree]):
         self,
         ensemble: BaseEnsemble,
         *,
-        mapper: FeatureMapper,
+        mapper: Mapper[Feature],
     ) -> None:
         self._trees = tuple(self._parse_trees(ensemble, mapper=mapper))
 
@@ -33,6 +34,6 @@ class Ensemble(Sequence[Tree]):
     def _parse_trees(
         ensemble: BaseEnsemble,
         *,
-        mapper: FeatureMapper,
+        mapper: Mapper[Feature],
     ) -> tuple[Tree, ...]:
-        return tuple(parse_trees(ensemble, mapper=mapper))
+        return parse_trees(ensemble, mapper=mapper)

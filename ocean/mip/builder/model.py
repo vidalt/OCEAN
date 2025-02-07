@@ -1,8 +1,9 @@
-from collections.abc import Hashable, Mapping
+from collections.abc import Iterable
 from typing import Protocol
 
 import numpy as np
 
+from ...abc import Mapper
 from ...tree.node import Node
 from ..base import BaseModel
 from ..variable import FeatureVar, TreeVar
@@ -13,8 +14,8 @@ class ModelBuilder(Protocol):
         self,
         model: BaseModel,
         *,
-        trees: tuple[TreeVar, ...],
-        features: Mapping[Hashable, FeatureVar],
+        trees: Iterable[TreeVar],
+        mapper: Mapper[FeatureVar],
     ) -> None:
         """
         Build the model constraints for the given trees and features.
@@ -25,7 +26,7 @@ class ModelBuilder(Protocol):
             The model to which the constraints will be added.
         trees : tuple[TreeVar, ...]
             The tree variables for which the constraints will be built.
-        features : Mapping[Hashable, FeatureVar]
+        mapper : Mapper[FeatureVar]
             The feature variables for which the constraints will be built.
 
         """
@@ -44,20 +45,20 @@ class MIPBuilder(ModelBuilder):
         self,
         model: BaseModel,
         *,
-        trees: tuple[TreeVar, ...],
-        features: Mapping[Hashable, FeatureVar],
+        trees: Iterable[TreeVar],
+        mapper: Mapper[FeatureVar],
     ) -> None:
         for tree in trees:
-            self._build(model, tree=tree, features=features)
+            self._build(model, tree=tree, mapper=mapper)
 
     def _build(
         self,
         model: BaseModel,
         *,
         tree: TreeVar,
-        features: Mapping[Hashable, FeatureVar],
+        mapper: Mapper[FeatureVar],
     ) -> None:
-        self._propagate(model, tree=tree, node=tree.root, features=features)
+        self._propagate(model, tree=tree, node=tree.root, mapper=mapper)
 
     def _propagate(
         self,
@@ -65,14 +66,14 @@ class MIPBuilder(ModelBuilder):
         *,
         tree: TreeVar,
         node: Node,
-        features: Mapping[Hashable, FeatureVar],
+        mapper: Mapper[FeatureVar],
     ) -> None:
         if node.is_leaf:
             return
-        feature = features[node.feature]
+        feature = mapper[node.feature]
         self._expand(model, tree=tree, node=node, feature=feature)
-        self._propagate(model, tree=tree, node=node.left, features=features)
-        self._propagate(model, tree=tree, node=node.right, features=features)
+        self._propagate(model, tree=tree, node=node.left, mapper=mapper)
+        self._propagate(model, tree=tree, node=node.right, mapper=mapper)
 
     def _expand(
         self,

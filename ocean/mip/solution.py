@@ -1,61 +1,63 @@
-from collections.abc import Hashable, Mapping
-
-import gurobipy as gp
 import numpy as np
 import pandas as pd
 
-from ..typing import FloatArray1D
+from ..abc import Indexer, Mapper
+from ..typing import Array1D, Key, NonNegativeInt
 from .variable import FeatureVar
 
+type SolutionIndex = Key | tuple[Key, Key]
+type SolutionIndexer = Indexer[SolutionIndex, NonNegativeInt]
 
-class Solution:
-    _features: Mapping[Hashable, FeatureVar]
 
-    def __init__(self, features: Mapping[Hashable, FeatureVar]) -> None:
-        self._features = features
+class Solution(Mapper[FeatureVar]):
+    def __init__(self, mapper: Mapper[FeatureVar]) -> None:
+        super().__init__(mapper)
+        self._idx = self._add_indexer()
 
-    def to_series(self, *, attr: str = gp.GRB.Attr.X) -> "pd.Series[float]":
-        index = []
-        values: list[float] = []
+    @property
+    def idx(self) -> SolutionIndexer:
+        return self._idx
 
-        for name, feature in self._features.items():
+    def to_series(self) -> "pd.Series[float]":
+        def get(i: int) -> float:
+            name = self.names[i]
+            feature = self[name]
             if not feature.is_one_hot_encoded:
-                index.append(name)
-                value = getattr(feature, attr)
-                values.append(value)
+                return feature.X
+            code = self.codes[i]
+            return feature[code].X
 
-        series = pd.Series(values, index=index).astype(float)
+        values = [get(i) for i in range(self.n_columns)]
+        return pd.Series(values, index=self.columns)
 
-        index.clear()
-        values.clear()
-
-        for name, feature in self._features.items():
-            if not feature.is_one_hot_encoded:
-                continue
-
-            for code in feature.codes:
-                index.append((name, code))
-                value = getattr(feature[code], attr)
-                values.append(value)
-
-        encoded = pd.Series(values, index=index).astype(float)
-        if encoded.empty:
-            return series
-
-        series.index = pd.MultiIndex.from_product([series.index, [""]])
-        return pd.concat([series, encoded]).astype(float)
-
-    def to_numpy(
-        self,
-        *,
-        columns: "pd.Index[str] | pd.MultiIndex",
-        attr: str = gp.GRB.Attr.X,
-    ) -> FloatArray1D:
+    def to_numpy(self) -> Array1D:
         return (
-            self.to_series(attr=attr)
-            .loc[columns]
+            self.to_series()
             .to_frame()
-            .T.to_numpy()
+            .T[self.columns]
+            .to_numpy()
             .flatten()
             .astype(np.float64)
         )
+
+    def _add_indexer(self) -> SolutionIndexer:
+        def get(key: SolutionIndex) -> NonNegativeInt:
+            if key in self.names:
+                return self.names.index(key)
+            if not isinstance(key, tuple):
+                msg = f"Key {key} not found in names"
+                raise KeyError(msg)
+            name, code = key
+            if name not in self.names:
+                msg = f"Key {name} not found in names"
+                raise KeyError(msg)
+            names = np.array(self.names)
+            indices = tuple(map(int, np.where(names == name)[0]))
+            codes = tuple(self.codes[j] for j in indices)
+            if code not in codes:
+                msg = f"Key {code} not found in codes"
+                raise KeyError(msg)
+            idx = codes.index(code)
+            return indices[idx]
+
+        return Indexer(get)

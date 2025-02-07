@@ -1,10 +1,10 @@
-from collections.abc import Hashable
 from typing import Any
 
 import pandas as pd
 
+from ..abc import Mapper
+from ..typing import Key
 from .feature import Feature
-from .mapper import FeatureMapper
 
 N_BINARY: int = 2
 
@@ -24,18 +24,18 @@ def _remove_constant_columns(data: pd.DataFrame) -> pd.DataFrame:
 def _parse(
     data: pd.DataFrame,
     *,
-    discretes: tuple[Hashable, ...] = (),
+    discretes: tuple[Key, ...] = (),
     scale: bool = True,
-) -> tuple[FeatureMapper, pd.DataFrame]:
+) -> tuple[Mapper[Feature], pd.DataFrame]:
     discrete = set(discretes)
     frames: list[pd.DataFrame | pd.Series[int] | pd.Series[float]] = []
     features: list[Feature] = []
-    names: list[Hashable] = []
+    keys: list[Key] = []
 
     for column in data.columns:
         series: pd.Series[Any] = data[column].rename("")
         levels: tuple[float, ...] = ()
-        codes: tuple[Hashable, ...] = ()
+        codes: tuple[Key, ...] = ()
 
         if column in discrete:
             series = series.astype(float)
@@ -62,28 +62,29 @@ def _parse(
             ftype = Feature.Type.ONE_HOT_ENCODED
             codes = tuple(set(series))
 
-        names.append(column)
+        keys.append(column)
         features.append(Feature(ftype=ftype, levels=levels, codes=codes))
 
-    proc = pd.concat(frames, axis=1, keys=names)
+    proc = pd.concat(frames, axis=1, keys=keys)
+    mapping = dict(zip(keys, features, strict=True))
+
     if proc.columns.nlevels == 1:
         columns = proc.columns
-        mapper = FeatureMapper(names=names, features=features, columns=columns)
     else:
         columns = pd.MultiIndex.from_tuples(proc.columns)
-        mapper = FeatureMapper(names=names, features=features, columns=columns)
 
+    mapper = Mapper(mapping, columns=columns)
     return mapper, proc
 
 
 def parse_features(
     data: pd.DataFrame,
     *,
-    discretes: tuple[Hashable, ...] = (),
+    discretes: tuple[Key, ...] = (),
     drop_na: bool = True,
     drop_constant: bool = True,
     scale: bool = True,
-) -> tuple[FeatureMapper, pd.DataFrame]:
+) -> tuple[Mapper[Feature], pd.DataFrame]:
     """
     Preprocesses a DataFrame by validating, cleaning, and parsing features.
 
@@ -91,7 +92,7 @@ def parse_features(
     ----------
     data : pd.DataFrame
         The DataFrame to be processed.
-    discretes : tuple[Hashable, ...], optional
+    discretes : tuple[Key, ...], optional
         A tuple of column names that should be treated as discrete features.
         default is (). If None, no column is treated as discrete.
     drop_na : bool, optional
@@ -104,7 +105,7 @@ def parse_features(
 
     Returns
     -------
-        FeatureMapper
+        Mapper[Feature]
             A mapper that maps the DataFrame columns to the features.
         pd.DataFrame
             The processed DataFrame.

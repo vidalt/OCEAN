@@ -3,8 +3,8 @@ from typing import Protocol
 import numpy as np
 
 from ..typing import (
-    FloatArray,
-    FloatArray1D,
+    Array,
+    Array1D,
     NodeIdArray1D,
     NonNegativeInt,
     NonNegativeIntArray1D,
@@ -17,10 +17,10 @@ class TreeProtocol(Protocol):
     n_nodes: PositiveInt
     max_depth: NonNegativeInt
     feature: NonNegativeIntArray1D
-    threshold: FloatArray1D
+    threshold: Array1D
     left: NodeIdArray1D
     right: NodeIdArray1D
-    value: FloatArray
+    value: Array
 
 
 class SKLearnTreeProtocol(TreeProtocol):
