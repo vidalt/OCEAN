@@ -56,7 +56,7 @@ class TestNoIsolation:
 
         validate_solution(solution)
         validate_paths(*model.trees, solution=solution)
-        validate_sklearn_paths(clf, solution, model.trees)
+        validate_sklearn_paths(clf, solution, model.estimators)
 
     @staticmethod
     def test_set_majority_class(
@@ -97,7 +97,7 @@ class TestNoIsolation:
 
             validate_solution(solution)
             validate_paths(*model.trees, solution=solution)
-            validate_sklearn_paths(clf, solution, model.trees)
+            validate_sklearn_paths(clf, solution, model.estimators)
             validate_sklearn_pred(clf, solution, m_class=class_, model=model)
 
             model.clear_majority_class()
