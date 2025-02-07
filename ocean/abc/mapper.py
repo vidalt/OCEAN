@@ -94,7 +94,7 @@ class Mapper[T](Mapping[Key, T]):
         if isinstance(mapping, Mapper):
             columns = mapping.columns
         elif columns is None:
-            columns = pd.MultiIndex([])
+            columns = pd.Index([])
 
         return mapping, columns
 
