@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from enum import Enum
+from typing import Literal, overload
 
 import numpy as np
 
@@ -17,10 +18,29 @@ class Feature:
     _levels: Array1D
     _codes: tuple[Key, ...]
 
+    @overload
+    def __init__(self, ftype: Literal[Type.BINARY]) -> None: ...
+
+    @overload
     def __init__(
         self,
+        ftype: Literal[Type.CONTINUOUS, Type.DISCRETE],
         *,
-        ftype: Type = Type.BINARY,
+        levels: Iterable[Number] = (),
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        ftype: Literal[Type.ONE_HOT_ENCODED],
+        *,
+        codes: Iterable[Key] = (),
+    ) -> None: ...
+
+    def __init__(
+        self,
+        ftype: Type,
+        *,
         levels: Iterable[Number] = (),
         codes: Iterable[Key] = (),
     ) -> None:

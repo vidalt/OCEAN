@@ -40,8 +40,8 @@ def _parse(
         if column in discrete:
             series = series.astype(float)
             frames.append(series)
-            ftype = Feature.Type.DISCRETE
             levels = tuple(set(series.dropna()))
+            feature = Feature(Feature.Type.DISCRETE, levels=levels)
         elif series.nunique() == N_BINARY:
             frames.append(
                 pd.get_dummies(series, drop_first=True)
@@ -49,21 +49,21 @@ def _parse(
                 .rename("")
                 .astype(int)
             )
-            ftype = Feature.Type.BINARY
+            feature = Feature(Feature.Type.BINARY)
         elif pd.to_numeric(series, errors="coerce").notna().all():
             x = series.astype(float)
             if scale:
                 x = ((x - x.min()) / (x.max() - x.min()) - 0.5).astype(float)
             frames.append(x)
-            ftype = Feature.Type.CONTINUOUS
             levels = (x.min() - 0.5, x.max() + 0.5)
+            feature = Feature(Feature.Type.CONTINUOUS, levels=levels)
         else:
             frames.append(pd.get_dummies(series).astype(int))
-            ftype = Feature.Type.ONE_HOT_ENCODED
             codes = tuple(set(series))
+            feature = Feature(Feature.Type.ONE_HOT_ENCODED, codes=codes)
 
         keys.append(column)
-        features.append(Feature(ftype=ftype, levels=levels, codes=codes))
+        features.append(feature)
 
     proc = pd.concat(frames, axis=1, keys=keys)
     mapping = dict(zip(keys, features, strict=True))
