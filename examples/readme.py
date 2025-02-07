@@ -52,5 +52,5 @@ y_ = rf.predict(x_.reshape(1, -1))[0]
 model.set_majority_class(m_class=1 - y_)
 model.optimize()
 
-new_x = dict(model.solution.apply(get_value))
+new_x = dict(model.solution.reduce(get_value))
 print_dict(new_x)

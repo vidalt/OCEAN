@@ -67,10 +67,10 @@ def check_node(tree: TreeVar, node: Node, solution: Solution) -> None:
     name = node.feature
     if solution[name].is_one_hot_encoded:
         code = node.code
-        i = solution.idx[name, code]
+        i = solution.idx.get(name, code)
         value = x[i]
     else:
-        i = solution.idx[name]
+        i = solution.idx.get(name)
         value = x[i]
 
     if solution[name].is_numeric:
