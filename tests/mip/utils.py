@@ -178,6 +178,7 @@ def train_rf(
     return clf, mapper
 
 
+@overload
 def train_rf_isolation(
     seed: int,
     n_estimators: int,
@@ -186,7 +187,49 @@ def train_rf_isolation(
     max_samples: int,
     n_samples: int,
     n_classes: int,
-) -> tuple[RandomForestClassifier, IsolationForest, Mapper[Feature]]:
+    *,
+    return_data: Literal[False] = False,
+) -> tuple[RandomForestClassifier, IsolationForest, Mapper[Feature]]: ...
+
+
+@overload
+def train_rf_isolation(
+    seed: int,
+    n_estimators: int,
+    max_depth: int,
+    n_isolators: int,
+    max_samples: int,
+    n_samples: int,
+    n_classes: int,
+    *,
+    return_data: Literal[True],
+) -> tuple[
+    RandomForestClassifier,
+    IsolationForest,
+    Mapper[Feature],
+    pd.DataFrame,
+]: ...
+
+
+def train_rf_isolation(
+    seed: int,
+    n_estimators: int,
+    max_depth: int,
+    n_isolators: int,
+    max_samples: int,
+    n_samples: int,
+    n_classes: int,
+    *,
+    return_data: bool = False,
+) -> (
+    tuple[RandomForestClassifier, IsolationForest, Mapper[Feature]]
+    | tuple[
+        RandomForestClassifier,
+        IsolationForest,
+        Mapper[Feature],
+        pd.DataFrame,
+    ]
+):
     data, y, mapper = generate_data(seed, n_samples, n_classes)
     clf = RandomForestClassifier(
         random_state=seed,
@@ -200,6 +243,8 @@ def train_rf_isolation(
         max_samples=max_samples,  # pyright: ignore[reportArgumentType]
     )
     ilf.fit(data.to_numpy())
+    if return_data:
+        return clf, ilf, mapper, data
     return clf, ilf, mapper
 
 
