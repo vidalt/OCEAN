@@ -228,7 +228,7 @@ class Model(BaseModel):
             msg = "At least one feature is required."
             raise ValueError(msg)
 
-        self._mapper = mapper.transform(create)
+        self._mapper = mapper.apply(create)
 
     def _set_weights(self, weights: NonNegativeArray1D | None = None) -> None:
         if weights is None:
