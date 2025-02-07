@@ -1,19 +1,16 @@
-from .adult import AdultLoader
-from .compas import COMPASLoader
-from .credit import CreditLoader
-from .load import Loaded
+from .load import Loaded, Loader
 
 
 def load_credit() -> Loaded:
-    return CreditLoader().load()
+    return Loader("Credit").load()
 
 
 def load_adult() -> Loaded:
-    return AdultLoader().load()
+    return Loader("Adult").load()
 
 
 def load_compas() -> Loaded:
-    return COMPASLoader().load()
+    return Loader("COMPAS").load()
 
 
 __all__ = ["load_adult", "load_compas", "load_credit"]

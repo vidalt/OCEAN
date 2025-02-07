@@ -1,30 +1,28 @@
-from collections.abc import Hashable
-
 from anytree import NodeMixin
 
-from ..typing import FloatArray, NonNegativeInt, PositiveInt
+from ..typing import Array, Key, NonNegativeInt, PositiveInt
 
 class Node(NodeMixin):
     def __init__(
         self,
         node_id: NonNegativeInt,
         *,
-        feature: Hashable | None = None,
-        value: FloatArray | None = None,
+        feature: Key | None = None,
+        value: Array | None = None,
         parent: Node | None = None,
         threshold: float | None = None,
-        code: Hashable | None = None,
+        code: Key | None = None,
         left: Node | None = None,
         right: Node | None = None,
     ) -> None: ...
     @property
-    def feature(self) -> Hashable: ...
+    def feature(self) -> Key: ...
     @property
-    def value(self) -> FloatArray: ...
+    def value(self) -> Array: ...
     @property
     def threshold(self) -> float: ...
     @property
-    def code(self) -> Hashable: ...
+    def code(self) -> Key: ...
     @property
     def node_id(self) -> NonNegativeInt: ...
     @property

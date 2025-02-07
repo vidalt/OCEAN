@@ -1,29 +1,36 @@
-from collections.abc import Hashable, Mapping
+from collections import defaultdict
+from typing import TYPE_CHECKING, cast
 
 import gurobipy as gp
 import numpy as np
 import pytest
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
-from ocean.feature import FeatureMapper
+from ocean.abc import Mapper
+from ocean.feature import Feature
 from ocean.mip import FeatureVar, Model, Solution, TreeVar
 from ocean.tree import Node, parse_trees
 
 from ..utils import ENV, generate_data
 
+if TYPE_CHECKING:
+    import scipy.sparse as sp
 
-def _check_solution(
-    solution: Solution,
-    *,
-    mapper: FeatureMapper,
-) -> None:
-    series = solution.to_series()
-    for name, feature in mapper.items():
+    from ocean.typing import Key
+
+
+def _check_solution(solution: Solution) -> None:
+    x = solution.to_numpy()
+    n = solution.n_columns
+    codes: dict[Key, float] = defaultdict(float)
+    for i in range(n):
+        name = solution.names[i]
+        feature = solution[name]
+        value = x[i]
         if feature.is_one_hot_encoded:
-            assert series.xs(name, level=0).sum() == 1.0
-            continue
+            assert np.any(np.isclose(value, [0.0, 1.0]))
+            codes[name] += value
 
-        value = series.xs(name, level=0).to_numpy()[0]
         if feature.is_binary:
             assert np.any(np.isclose(value, [0.0, 1.0]))
         elif feature.is_numeric:
@@ -31,45 +38,41 @@ def _check_solution(
             if feature.is_discrete:
                 assert np.any(np.isclose(value, feature.levels))
 
+    for value in codes.values():
+        assert np.isclose(value, 1.0)
 
-def _check_node(
-    tree: TreeVar,
-    node: Node,
-    *,
-    mapper: FeatureMapper,
-    solution: Solution,
-) -> None:
+
+def _check_node(tree: TreeVar, node: Node, solution: Solution) -> None:
     if node.is_leaf:
         return
 
     left = node.left
     right = node.right
-    series = solution.to_series()
+    x = solution.to_numpy()
     next_node = left if tree[left.node_id].X == 1.0 else right
     assert tree[next_node.node_id].X == 1.0
 
-    feature = node.feature
-    if mapper[feature].is_one_hot_encoded:
+    name = node.feature
+    if solution[name].is_one_hot_encoded:
         code = node.code
-        value = series.xs((feature, code), level=(0, 1)).to_numpy()[0]
-        if value == 0.0:
+        i = solution.idx[name, code]
+        value = x[i]
+    else:
+        i = solution.idx[name]
+        value = x[i]
+
+    if solution[name].is_numeric:
+        threshold = node.threshold
+        if value <= threshold:
             assert tree[left.node_id].X == 1.0
         else:
             assert tree[right.node_id].X == 1.0
+    elif np.isclose(value, 0.0):
+        assert tree[left.node_id].X == 1.0
     else:
-        value = series.xs(feature, level=0).to_numpy()[0]
-        if mapper[feature].is_binary:
-            if value == 0.0:
-                assert tree[left.node_id].X == 1.0
-            else:
-                assert tree[right.node_id].X == 1.0
-        elif mapper[feature].is_numeric:
-            threshold = node.threshold
-            if value <= threshold:
-                assert tree[left.node_id].X == 1.0, f"{value} <= {threshold}"
-            else:
-                assert tree[right.node_id].X == 1.0, f"{value} > {threshold}"
-    _check_node(tree, next_node, mapper=mapper, solution=solution)
+        assert tree[right.node_id].X == 1.0
+
+    _check_node(tree, next_node, solution=solution)
 
 
 def _check_paths(
@@ -77,39 +80,38 @@ def _check_paths(
     X: np.ndarray[tuple[int], np.dtype[np.float64]],
     trees: tuple[TreeVar, ...],
 ) -> None:
-    paths = clf.decision_path(X.reshape(1, -1))  # pyright: ignore[reportUnknownVariableType]
+    x = X.reshape((1, -1))
+    ind, ptr = clf.decision_path(x)  # pyright: ignore[reportUnknownVariableType]
+    ind = cast("sp.csr_matrix", ind)
+    ptr = np.array(ptr, dtype=np.int64)
 
     for t, tree in enumerate(trees):
         # Get the leaf node from the tree
         node = tree.root
         while not node.is_leaf:
             node = node.left if tree[node.left.node_id].X == 1.0 else node.right
-            idx: np.float64 = paths[0][0, paths[1][t] + node.node_id]  # pyright: ignore[reportIndexIssue, reportUnknownVariableType]
-            assert idx == 1
+            is_path_valid: bool = bool(ind[0, ptr[t] + node.node_id])
+            assert is_path_valid
 
 
 def _check_prediction(
     clf: RandomForestClassifier,
     solution: Solution,
-    mapper: FeatureMapper,
     m_class: int,
-    model: Model | None = None,
+    model: Model,
 ) -> None:
-    x = solution.to_numpy(columns=mapper.columns)
-    prediction = clf.predict(x.reshape(1, -1))[0]  # pyright: ignore[reportUnknownVariableType]
-    assert prediction == m_class, (
-        clf.predict_proba(x.reshape(1, -1))[0],
-        (
-            model.function.getValue() / model.function.getValue().sum()
-            if model is not None
-            else None
-        ),
-    )
+    x = solution.to_numpy().reshape(1, -1)
+    prediction = np.asarray(clf.predict(x), dtype=np.int64)
+    function = np.asarray(model.function.getValue(), dtype=np.float64)
+    proba = function / np.sum(function)
+    expected_proba = np.asarray(clf.predict_proba(x), dtype=np.float64)
+    assert (prediction == m_class).all()
+    assert np.isclose(expected_proba.flatten(), proba).all()
 
 
-def _get_objective(features: Mapping[Hashable, FeatureVar]) -> gp.QuadExpr:
+def _get_objective(mapper: Mapper[FeatureVar]) -> gp.QuadExpr:
     obj = gp.QuadExpr()
-    for feature in features.values():
+    for feature in mapper.values():
         if feature.is_one_hot_encoded:
             for j, code in enumerate(feature.codes):
                 if j == 0:
@@ -128,7 +130,7 @@ def _train_rf(
     max_depth: int,
     n_samples: int,
     n_classes: int,
-) -> tuple[RandomForestClassifier, FeatureMapper]:
+) -> tuple[RandomForestClassifier, Mapper[Feature]]:
     data, y, mapper = generate_data(seed, n_samples, n_classes)
     clf = RandomForestClassifier(
         random_state=seed,
@@ -142,7 +144,7 @@ def _train_rf(
 def test_model_init_with_no_trees() -> None:
     msg = r"At least one tree is required."
     with pytest.raises(ValueError, match=msg):
-        Model(trees=[], features={}, env=ENV)
+        Model(trees=[], mapper=Mapper(), env=ENV)
 
 
 def test_model_init_with_no_features() -> None:
@@ -150,7 +152,7 @@ def test_model_init_with_no_features() -> None:
     rf, mapper = _train_rf(42, 2, 2, 100, 2)
     trees = tuple(parse_trees(rf, mapper=mapper))
     with pytest.raises(ValueError, match=msg):
-        Model(trees=trees, features={}, env=ENV)
+        Model(trees=trees, mapper=Mapper(), env=ENV)
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
@@ -175,7 +177,7 @@ class TestModelInitWeightsNoIsolation:
             n_classes,
         )
         trees = parse_trees(clf, mapper=mapper)
-        model = Model(trees=trees, features=mapper, env=ENV)
+        model = Model(trees=trees, mapper=mapper, env=ENV)
         expected_weights = np.ones(n_estimators, dtype=float)
         assert model is not None
         assert model.n_estimators == n_estimators
@@ -201,7 +203,7 @@ class TestModelInitWeightsNoIsolation:
         trees = parse_trees(clf, mapper=mapper)
         generator = np.random.default_rng(seed)
         weights = generator.random(n_estimators).flatten()
-        model = Model(trees=trees, features=mapper, weights=weights, env=ENV)
+        model = Model(trees=trees, mapper=mapper, weights=weights, env=ENV)
         assert model is not None
         assert model.n_estimators == n_estimators
         assert model.n_classes == n_classes
@@ -232,7 +234,7 @@ class TestModelInitWeightsNoIsolation:
             weights = generator.random(shape).flatten()
             msg = r"The number of weights must match the number of trees."
             with pytest.raises(ValueError, match=msg):
-                Model(trees=trees, features=mapper, weights=weights, env=ENV)
+                Model(trees=trees, mapper=mapper, weights=weights, env=ENV)
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
@@ -258,7 +260,7 @@ def test_model_no_isolation(
     weights = (np.ones(n_estimators, dtype=float)).flatten()
     model = Model(
         trees=trees,
-        features=mapper,
+        mapper=mapper,
         weights=weights,
         model_type=Model.Type.MIP,
         env=ENV,
@@ -269,7 +271,7 @@ def test_model_no_isolation(
 
     model.build()
 
-    objective = _get_objective(model.features)
+    objective = _get_objective(model.mapper)
     model.setObjective(objective, sense=gp.GRB.MINIMIZE)
 
     try:
@@ -282,12 +284,12 @@ def test_model_no_isolation(
     solution = model.solution
     assert solution is not None
 
-    x = solution.to_numpy(columns=mapper.columns)
+    x = solution.to_numpy()
 
-    _check_solution(solution, mapper=mapper)
+    _check_solution(solution)
 
     for tree in model.trees:
-        _check_node(tree, tree.root, mapper=mapper, solution=solution)
+        _check_node(tree, tree.root, solution=solution)
 
     _check_paths(clf, x, model.trees)
     available_classes: set[int] = set()
@@ -308,12 +310,11 @@ def test_model_no_isolation(
         solution = model.solution
         assert solution is not None
 
-        x = solution.to_numpy(columns=mapper.columns)
+        x = solution.to_numpy()
         _check_paths(clf, x, model.trees)
         _check_prediction(
             clf,
             solution,
-            mapper=mapper,
             m_class=class_,
             model=model,
         )
@@ -356,7 +357,7 @@ def test_model_isolation(
     weights = (np.ones(n_estimators, dtype=float) * 1e5).flatten()
     model = Model(
         trees=trees,
-        features=mapper,
+        mapper=mapper,
         weights=weights,
         n_isolators=n_isolators,
         delta=0.1,
@@ -369,7 +370,7 @@ def test_model_isolation(
 
     model.build()
 
-    objective = _get_objective(model.features)
+    objective = _get_objective(model.mapper)
     model.setObjective(objective, sense=gp.GRB.MINIMIZE)
 
     try:
@@ -382,12 +383,12 @@ def test_model_isolation(
     solution = model.solution
     assert solution is not None
 
-    x = solution.to_numpy(columns=mapper.columns)
+    x = solution.to_numpy()
 
-    _check_solution(solution, mapper=mapper)
+    _check_solution(solution)
 
     for tree in model.trees:
-        _check_node(tree, tree.root, mapper=mapper, solution=solution)
+        _check_node(tree, tree.root, solution=solution)
 
     _check_paths(clf, x, model.estimators)
 
@@ -405,13 +406,12 @@ def test_model_isolation(
         solution = model.solution
         assert solution is not None
 
-        x = solution.to_numpy(columns=mapper.columns)
+        x = solution.to_numpy()
 
         _check_paths(clf, x, model.estimators)
         _check_prediction(
             clf,
             solution,
-            mapper=mapper,
             m_class=class_,
             model=model,
         )

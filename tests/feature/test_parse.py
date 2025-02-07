@@ -1,7 +1,8 @@
 import pandas as pd
 import pytest
 
-from ocean.feature import Feature, FeatureMapper, parse_features
+from ocean.abc import Mapper
+from ocean.feature import Feature, parse_features
 
 DATA = pd.DataFrame({
     "a": [1.0, 2.0, 3.0, 2.0, 1.0],
@@ -30,7 +31,7 @@ n_features = 5
 
 def test_parse() -> None:
     mapper, data = parse_features(data=DATA)
-    assert isinstance(mapper, FeatureMapper)
+    assert isinstance(mapper, Mapper)
     assert isinstance(data, pd.DataFrame)
     assert data.shape == expected_shape
     assert set(mapper.columns) == expected_columns
@@ -50,7 +51,7 @@ def test_parse() -> None:
 
 def test_parse_valid() -> None:
     mapper, data = parse_features(data=DATA, discretes=discretes)
-    assert isinstance(mapper, FeatureMapper)
+    assert isinstance(mapper, Mapper)
     assert isinstance(data, pd.DataFrame)
     assert data.shape == (5, 7)
     assert set(mapper.columns) == expected_columns

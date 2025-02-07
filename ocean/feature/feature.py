@@ -1,9 +1,9 @@
-from collections.abc import Hashable, Iterable
+from collections.abc import Iterable
 from enum import Enum
 
 import numpy as np
 
-from ..typing import FloatArray1D, Number
+from ..typing import Array1D, Key, Number
 
 
 class Feature:
@@ -14,18 +14,19 @@ class Feature:
         BINARY = "binary"
 
     _ftype: Type
-    _levels: FloatArray1D
-    _codes: tuple[Hashable, ...]
+    _levels: Array1D
+    _codes: tuple[Key, ...]
 
     def __init__(
         self,
         *,
         ftype: Type = Type.BINARY,
         levels: Iterable[Number] = (),
-        codes: Iterable[Hashable] = (),
+        codes: Iterable[Key] = (),
     ) -> None:
         self._ftype = ftype
-        self._levels = np.sort(list(set(levels))).flatten().astype(np.float64)
+        lvls = list(set(levels))
+        self._levels = np.sort(lvls).flatten().astype(np.float64)
         self._codes = tuple(set(codes))
 
     @property
@@ -53,7 +54,7 @@ class Feature:
         return self.is_continuous or self.is_discrete
 
     @property
-    def levels(self) -> FloatArray1D:
+    def levels(self) -> Array1D:
         if not self.is_numeric:
             msg = "Levels can only be accessed for numeric features."
             raise AttributeError(msg)
@@ -63,7 +64,7 @@ class Feature:
         return self._levels
 
     @property
-    def codes(self) -> tuple[Hashable, ...]:
+    def codes(self) -> tuple[Key, ...]:
         if not self.is_one_hot_encoded:
             msg = "Codes can only be accessed for one-hot encoded features."
             raise AttributeError(msg)

@@ -1,15 +1,13 @@
-from collections.abc import Hashable
-
 from anytree import NodeMixin
 
-from ..typing import FloatArray, NonNegativeInt
+from ..typing import Array, Key, NonNegativeInt
 
 
 class Node(NodeMixin):
-    _feature: Hashable | None
-    _value: FloatArray | None
+    _feature: Key | None
+    _value: Array | None
     _threshold: float | None
-    _code: Hashable | None
+    _code: Key | None
     _id: int
 
     __left: "Node | None" = None
@@ -19,11 +17,11 @@ class Node(NodeMixin):
         self,
         node_id: NonNegativeInt,
         *,
-        feature: Hashable | None = None,
-        value: FloatArray | None = None,
+        feature: Key | None = None,
+        value: Array | None = None,
         parent: "Node | None" = None,
         threshold: float | None = None,
-        code: Hashable | None = None,
+        code: Key | None = None,
         left: "Node | None" = None,
         right: "Node | None" = None,
     ) -> None:
@@ -43,14 +41,19 @@ class Node(NodeMixin):
             self.right = right
 
     @property
-    def feature(self) -> Hashable:
+    def feature(self) -> Key:
         if self.is_leaf:
             msg = "The feature is only available for non-leaf nodes."
+            raise AttributeError(msg)
+        if self._feature is None:
+            msg = (
+                "Internal node does not have a feature. The tree is corrupted."
+            )
             raise AttributeError(msg)
         return self._feature
 
     @property
-    def value(self) -> FloatArray:
+    def value(self) -> Array:
         if not self.is_leaf:
             msg = "The value is only available for leaf nodes."
             raise AttributeError(msg)
@@ -70,7 +73,7 @@ class Node(NodeMixin):
         return self._threshold
 
     @property
-    def code(self) -> Hashable:
+    def code(self) -> Key:
         if self.is_leaf:
             msg = "The code is only available for non-leaf nodes."
             raise AttributeError(msg)

@@ -1,10 +1,9 @@
-from collections.abc import Hashable
-
 import gurobipy as gp
 import numpy as np
 
 from ...feature import Feature
 from ...feature.keeper import FeatureKeeper
+from ...typing import Key
 from ..base import BaseModel, Var
 
 
@@ -44,7 +43,7 @@ class FeatureVar(Var, FeatureKeeper):
         msg = "This feature does not support indexing"
         raise ValueError(msg)
 
-    def __getitem__(self, code: Hashable) -> gp.Var:
+    def __getitem__(self, code: Key) -> gp.Var:
         if not self.is_one_hot_encoded:
             msg = "Indexing is only supported for one-hot encoded features"
             raise ValueError(msg)

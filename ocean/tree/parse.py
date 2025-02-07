@@ -4,7 +4,8 @@ from functools import partial
 
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
-from ..feature import FeatureMapper
+from ..abc import Mapper
+from ..feature import Feature
 from ..typing import NonNegativeInt
 from .node import Node
 from .protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
@@ -22,9 +23,9 @@ def _build_node(
     tree: TreeProtocol,
     node_id: NonNegativeInt,
     *,
-    mapper: FeatureMapper,
+    mapper: Mapper[Feature],
 ) -> Node:
-    idx = tree.feature[node_id]
+    idx = int(tree.feature[node_id])
     name = mapper.names[idx]
     children = map(int, (tree.left[node_id], tree.right[node_id]))
     left_id, right_id = children
@@ -47,7 +48,7 @@ def _parse_node(
     tree: TreeProtocol,
     node_id: NonNegativeInt,
     *,
-    mapper: FeatureMapper,
+    mapper: Mapper[Feature],
 ) -> Node:
     left_id, right_id = map(int, (tree.left[node_id], tree.right[node_id]))
     if left_id == right_id:
@@ -55,13 +56,13 @@ def _parse_node(
     return _build_node(tree, node_id, mapper=mapper)
 
 
-def _parse_tree(sklearn_tree: SKLearnTree, *, mapper: FeatureMapper) -> Tree:
+def _parse_tree(sklearn_tree: SKLearnTree, *, mapper: Mapper[Feature]) -> Tree:
     tree = SKLearnTreeProtocol(sklearn_tree)
     root = _parse_node(tree, 0, mapper=mapper)
     return Tree(root=root)
 
 
-def parse_tree(tree: DecisionTree, *, mapper: FeatureMapper) -> Tree:
+def parse_tree(tree: DecisionTree, *, mapper: Mapper[Feature]) -> Tree:
     getter = operator.attrgetter("tree_")
     return _parse_tree(getter(tree), mapper=mapper)
 
@@ -69,7 +70,7 @@ def parse_tree(tree: DecisionTree, *, mapper: FeatureMapper) -> Tree:
 def parse_trees(
     trees: Iterable[DecisionTree],
     *,
-    mapper: FeatureMapper,
-) -> Iterable[Tree]:
+    mapper: Mapper[Feature],
+) -> tuple[Tree, ...]:
     parser = partial(parse_tree, mapper=mapper)
     return tuple(map(parser, trees))

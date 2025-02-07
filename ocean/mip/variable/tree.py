@@ -2,14 +2,16 @@ from collections.abc import Iterator, Mapping
 from enum import Enum
 
 import gurobipy as gp
+from pydantic import validate_call
 
 from ...tree.keeper import TreeKeeper, TreeLike
 from ...tree.node import Node
+from ...typing import NonNegativeInt
 from ..base import BaseModel, Var
 from ..builder import FlowBuilder, FlowBuilderFactory
 
 
-class TreeVar(Var, TreeKeeper, Mapping[int, gp.Var]):
+class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
     FLOW_VAR_NAME_FMT: str = "{name}_flow"
 
     _flow: gp.MVar
@@ -49,10 +51,11 @@ class TreeVar(Var, TreeKeeper, Mapping[int, gp.Var]):
     def __len__(self) -> int:
         return self.n_nodes
 
-    def __iter__(self) -> Iterator[int]:
+    def __iter__(self) -> Iterator[NonNegativeInt]:
         return iter(range(self.n_nodes))
 
-    def __getitem__(self, node_id: int) -> gp.Var:
+    @validate_call
+    def __getitem__(self, node_id: NonNegativeInt) -> gp.Var:
         return self._flow[node_id].item()
 
     def _set_builder(self, *, flow_type: FlowType) -> None:

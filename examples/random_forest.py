@@ -13,7 +13,7 @@ from ocean import MIPExplainer
 from ocean.datasets import load_adult, load_compas, load_credit
 
 if TYPE_CHECKING:
-    from ocean.typing import FloatArray1D
+    from ocean.typing import Array1D
 
 
 @dataclass
@@ -106,7 +106,7 @@ def main() -> None:  # noqa: PLR0914
     print(f"Building the model took {end - start:.2f} seconds")
 
     # Generate multiple queries:
-    queries: list[tuple[FloatArray1D, int]] = []
+    queries: list[tuple[Array1D, int]] = []
 
     y_pred = rf.predict(X_test)
 

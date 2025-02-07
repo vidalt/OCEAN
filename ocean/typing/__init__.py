@@ -1,6 +1,7 @@
 from typing import Annotated, Protocol
 
 import numpy as np
+import pandas as pd
 from pydantic import Field
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
@@ -9,11 +10,19 @@ BaseEnsemble = RandomForestClassifier | IsolationForest
 Number = float
 PositiveInt = Annotated[int, Field(ge=1)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
-NonNegativeFloat = Annotated[np.float64, Field(ge=0.0)]
-FloatUnit = Annotated[float, Field(gt=0.0, lt=1.0)]
-FloatUnitHalfOpen = Annotated[float, Field(ge=0.0, lt=1.0)]
+NonNegative = Annotated[np.float64, Field(ge=0.0)]
+Unit = Annotated[float, Field(gt=0.0, lt=1.0)]
+UnitO = Annotated[float, Field(ge=0.0, lt=1.0)]
 NodeId = Annotated[np.int64, Field(ge=-1)]
 
+# Key alias:
+# - This is used to represent the name of a feature
+#   or the code of a one-hot encoded feature.
+type Key = int | str
+
+# Index alias:
+type Index1L = pd.Index[Key]
+type Index = pd.Index[int] | pd.Index[str] | pd.MultiIndex
 
 # Arrays aliases
 
@@ -33,16 +42,16 @@ NonNegativeIntArray = np.ndarray[tuple[int, ...], NonNegativeIntDtype]
 
 # Float arrays:
 # 1D, 2D, and nD arrays of floats (64 bits).
-FloatDtype = np.dtype[np.float64]
-FloatArray1D = np.ndarray[tuple[int], FloatDtype]
-FloatArray2D = np.ndarray[tuple[int, int], FloatDtype]
-FloatArray = np.ndarray[tuple[int, ...], FloatDtype]
+Dtype = np.dtype[np.float64]
+Array1D = np.ndarray[tuple[int], Dtype]
+Array2D = np.ndarray[tuple[int, int], Dtype]
+Array = np.ndarray[tuple[int, ...], Dtype]
 
 # 1D, 2D, and nD arrays of non-negative floats (64 bits).
-NonNegativeFloatDtype = np.dtype[NonNegativeFloat]
-NonNegativeFloatArray1D = np.ndarray[tuple[int], NonNegativeFloatDtype]
-NonNegativeFloatArray2D = np.ndarray[tuple[int, int], NonNegativeFloatDtype]
-NonNegativeFloatArray = np.ndarray[tuple[int, ...], NonNegativeFloatDtype]
+NonNegativeDtype = np.dtype[NonNegative]
+NonNegativeArray1D = np.ndarray[tuple[int], NonNegativeDtype]
+NonNegativeArray2D = np.ndarray[tuple[int, int], NonNegativeDtype]
+NonNegativeArray = np.ndarray[tuple[int, ...], NonNegativeDtype]
 
 # NodeId arrays:
 # 1D:
@@ -56,29 +65,32 @@ class SKLearnTree(Protocol):
     node_count: PositiveInt
     max_depth: NonNegativeInt
     feature: NonNegativeIntArray1D
-    threshold: FloatArray1D
+    threshold: Array1D
     children_left: NodeIdArray1D
     children_right: NodeIdArray1D
-    value: FloatArray
+    value: Array
 
 
 __all__ = [
+    "Array",
+    "Array1D",
+    "Array2D",
     "BaseEnsemble",
-    "FloatArray",
-    "FloatArray1D",
-    "FloatArray2D",
-    "FloatDtype",
-    "FloatUnit",
-    "FloatUnitHalfOpen",
+    "Dtype",
+    "Index",
+    "Index1L",
     "IntArray",
     "IntArray1D",
     "IntArray2D",
     "IntDtype",
-    "NonNegativeFloatArray",
-    "NonNegativeFloatArray1D",
-    "NonNegativeFloatArray2D",
-    "NonNegativeFloatDtype",
-    "NonNegativeFloatDtype",
+    "Key",
+    "NodeId",
+    "NodeIdArray1D",
+    "NonNegativeArray",
+    "NonNegativeArray1D",
+    "NonNegativeArray2D",
+    "NonNegativeDtype",
+    "NonNegativeDtype",
     "NonNegativeInt",
     "NonNegativeIntArray",
     "NonNegativeIntArray1D",
@@ -86,4 +98,6 @@ __all__ = [
     "NonNegativeIntDtype",
     "Number",
     "PositiveInt",
+    "Unit",
+    "UnitO",
 ]

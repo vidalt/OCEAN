@@ -2,7 +2,8 @@ import pytest
 from pydantic import ValidationError
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
-from ocean.feature import FeatureMapper
+from ocean.abc import Mapper
+from ocean.feature import Feature
 from ocean.tree import Node, parse_tree
 from ocean.typing import SKLearnTree
 
@@ -13,7 +14,7 @@ def _check_tree(
     root: Node,
     tree: SKLearnTree,
     *,
-    mapper: FeatureMapper,
+    mapper: Mapper[Feature],
 ) -> None:
     def _dfs(node: Node) -> None:
         if node.is_leaf:
