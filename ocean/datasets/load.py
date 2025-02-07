@@ -25,8 +25,14 @@ class Loader:
         targets = data.columns[types == "T"].to_list()
         y = data[targets].iloc[:, 0].astype(int)
         discretes = tuple(data.columns[types == "D"].to_list())
+        encoded = tuple(data.columns[types == "E"].to_list())
         data = data.drop(columns=targets)
-        mapper, data = parse_features(data, discretes=discretes, scale=False)
+        mapper, data = parse_features(
+            data,
+            discretes=discretes,
+            encoded=encoded,
+            scale=False,
+        )
         return mapper, (data, y)
 
     def read(self, path: str) -> pd.DataFrame:

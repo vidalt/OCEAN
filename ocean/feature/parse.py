@@ -25,6 +25,7 @@ def _parse(
     data: pd.DataFrame,
     *,
     discretes: tuple[Key, ...] = (),
+    encoded: tuple[Key, ...] = (),
     scale: bool = True,
 ) -> tuple[Mapper[Feature], pd.DataFrame]:
     discrete = set(discretes)
@@ -42,6 +43,10 @@ def _parse(
             frames.append(series)
             levels = tuple(set(series.dropna()))
             feature = Feature(Feature.Type.DISCRETE, levels=levels)
+        elif column in encoded:
+            frames.append(pd.get_dummies(series).astype(int))
+            codes = tuple(set(series))
+            feature = Feature(Feature.Type.ONE_HOT_ENCODED, codes=codes)
         elif series.nunique() == N_BINARY:
             frames.append(
                 pd.get_dummies(series, drop_first=True)
@@ -81,6 +86,7 @@ def parse_features(
     data: pd.DataFrame,
     *,
     discretes: tuple[Key, ...] = (),
+    encoded: tuple[Key, ...] = (),
     drop_na: bool = True,
     drop_constant: bool = True,
     scale: bool = True,
@@ -95,6 +101,9 @@ def parse_features(
     discretes : tuple[Key, ...], optional
         A tuple of column names that should be treated as discrete features.
         default is (). If None, no column is treated as discrete.
+    encoded : tuple[Key, ...], optional
+        A tuple of column names that should be treated as one-hot encoded
+        features. default is ().
     drop_na : bool, optional
         Whether to drop columns with NaN values. default is True.
     drop_constant : bool, optional
@@ -126,4 +135,4 @@ def parse_features(
     if drop_constant:
         data = _remove_constant_columns(data)
 
-    return _parse(data, discretes=discretes, scale=scale)
+    return _parse(data, discretes=discretes, encoded=encoded, scale=scale)
