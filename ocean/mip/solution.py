@@ -1,8 +1,10 @@
+from collections.abc import Mapping
+
 import numpy as np
 import pandas as pd
 
 from ..abc import Mapper
-from ..typing import Array1D
+from ..typing import Array1D, Key
 from .variable import FeatureVar
 
 
@@ -28,3 +30,33 @@ class Solution(Mapper[FeatureVar]):
             .flatten()
             .astype(np.float64)
         )
+
+    def __repr__(self) -> str:
+        def get(v: FeatureVar) -> float | Key:
+            if not v.is_one_hot_encoded:
+                if v.is_binary:
+                    return int(v.X)
+
+                if np.isclose(v.X, 0.0):
+                    return 0.0
+                return v.X
+            for code in v.codes:
+                if v[code].X == 1:
+                    return code
+            msg = "Unreachable code"
+            raise ValueError(msg)
+
+        mapping = self.reduce(get)
+        prefix = f"{self.__class__.__name__}:\n"
+        root = self._repr(mapping)
+        suffix = ""
+
+        return prefix + root + suffix
+
+    @staticmethod
+    def _repr(mapping: Mapping[Key, float | Key]) -> str:
+        length = max(len(str(k)) for k in mapping)
+        lines = [
+            f"{str(k).ljust(length + 1)} : {v}" for k, v in mapping.items()
+        ]
+        return "\n".join(lines)
