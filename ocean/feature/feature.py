@@ -20,7 +20,7 @@ class Feature:
     def __init__(
         self,
         *,
-        ftype: Type = Type.BINARY,
+        ftype: Type,
         levels: Iterable[Number] = (),
         codes: Iterable[Key] = (),
     ) -> None:
