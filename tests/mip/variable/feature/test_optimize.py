@@ -17,17 +17,18 @@ def test_binary(seed: int) -> None:
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
 
+    v = var.xget()
     val = generator.uniform(0.0, 0.4)
-    objective = (var.x - val) ** 2
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 0.0
+    assert v.X == 0.0
 
     val = generator.uniform(0.6, 1.0)
-    objective = (var.x - val) ** 2
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var.X == 1.0
+    assert v.X == 1.0
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -46,17 +47,18 @@ def test_discrete(
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
 
+    v = var.xget()
     val = generator.choice(levels)
-    objective = (var.x - val) ** 2
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert np.isclose(var.X, val)
+    assert np.isclose(v.X, val)
 
     val = generator.uniform(float(levels.min()), float(levels.max()))
-    objective = (var.x - val) ** 2
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert np.isclose(var.X, levels[np.abs(levels - val).argmin()])
+    assert np.isclose(v.X, levels[np.abs(levels - val).argmin()])
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -70,27 +72,26 @@ def test_continuous(seed: int, n_levels: int, lower: int, upper: int) -> None:
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
 
-    val = generator.uniform(float(levels.min()), float(levels.max()))
-    objective = (var.x - val) ** 2
+    v = var.xget()
+    lb, ub = np.min(levels), np.max(levels)
+
+    val = generator.uniform(lb, ub)
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
     assert np.isclose(var.X, val)
 
-    val = generator.uniform(
-        float(levels.min()) - 1.0, float(levels.min()) - 0.5
-    )
-    objective = (var.x - val) ** 2
+    val = generator.uniform(lb - 1.0, lb - 0.5)
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert np.isclose(var.X, levels.min())
+    assert np.isclose(v.X, lb)
 
-    val = generator.uniform(
-        float(levels.max()) + 0.5, float(levels.max()) + 1.0
-    )
-    objective = (var.x - val) ** 2
+    val = generator.uniform(ub + 0.5, ub + 1.0)
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert np.isclose(var.X, levels.max())
+    assert np.isclose(v.X, ub)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -104,18 +105,19 @@ def test_one_hot_encoded(seed: int, n_codes: int) -> None:
     var.build(model)
 
     code = generator.choice(codes)
+    v = var.xget(code)
     val = generator.uniform(0.0, 0.4)
-    objective = (var[code] - val) ** 2
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var[code].X == 0.0
+    assert v.X == 0.0
 
-    assert sum(1 for code in var.codes if var[code].X == 1.0) == 1
+    assert sum(1 for code in var.codes if var.xget(code).X == 1.0) == 1.0
 
     val = generator.uniform(0.6, 1.0)
-    objective = (var[code] - val) ** 2
+    objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert var[code].X == 1.0
+    assert v.X == 1.0
 
-    assert sum(1 for code in var.codes if var[code].X == 1.0) == 1
+    assert sum(1 for code in var.codes if var.xget(code).X == 1.0) == 1.0
