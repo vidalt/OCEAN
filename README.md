@@ -22,7 +22,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
 from ocean.datasets import load_adult
-from ocean.explainer import MIPExplainer
+from ocean.explainer import MixedIntegerProgramExplainer
 
 # Load the adult dataset
 (data, target), mapper = load_adult()
@@ -39,7 +39,7 @@ rf.fit(data, target)
 y = int(rf.predict(x).item())
 
 # Explain the prediction using MIPEXplainer
-model = MIPExplainer(rf, mapper=mapper)
+model = MixedIntegerProgramExplainer(rf, mapper=mapper)
 x = x.flatten()
 explanation = model.explain(x, y=1 - y, norm=1)
 

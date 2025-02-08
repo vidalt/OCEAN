@@ -1,3 +1,3 @@
-from .mip import MIPExplainer
+from .mip import MixedIntegerProgramExplainer
 
-__all__ = ["MIPExplainer"]
+__all__ = ["MixedIntegerProgramExplainer"]

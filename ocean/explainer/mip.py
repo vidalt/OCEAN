@@ -11,7 +11,7 @@ from ..mip import Model, Solution, TreeVar
 from ..typing import Array1D, NonNegativeInt, PositiveInt
 
 
-class MIPExplainer(Model):
+class MixedIntegerProgramExplainer(Model):
     _garbage: list[gp.Var | gp.MVar | gp.Constr | gp.MConstr]
 
     def __init__(

@@ -9,7 +9,7 @@ from rich.progress import track
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-from ocean import MIPExplainer
+from ocean import MixedIntegerProgramExplainer
 from ocean.datasets import load_adult, load_compas, load_credit
 
 if TYPE_CHECKING:
@@ -100,7 +100,7 @@ def main() -> None:  # noqa: PLR0914
     env.setParam("Seed", args.seed)
     env.start()
     start = time.time()
-    mip = MIPExplainer(rf, mapper=mapper, env=env)
+    mip = MixedIntegerProgramExplainer(rf, mapper=mapper, env=env)
     end = time.time()
     print("MIPExplainer built")
     print(f"Building the model took {end - start:.2f} seconds")
