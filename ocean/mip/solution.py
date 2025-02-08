@@ -14,9 +14,9 @@ class Solution(Mapper[FeatureVar]):
             name = self.names[i]
             feature = self[name]
             if not feature.is_one_hot_encoded:
-                return feature.X
+                return feature.xget().X
             code = self.codes[i]
-            return feature[code].X
+            return feature.xget(code).X
 
         values = [get(i) for i in range(self.n_columns)]
         return pd.Series(values, index=self.columns)
@@ -33,18 +33,12 @@ class Solution(Mapper[FeatureVar]):
 
     def __repr__(self) -> str:
         def get(v: FeatureVar) -> float | Key:
-            if not v.is_one_hot_encoded:
-                if v.is_binary:
-                    return int(v.X)
-
-                if np.isclose(v.X, 0.0):
-                    return 0.0
-                return v.X
-            for code in v.codes:
-                if v[code].X == 1:
-                    return code
-            msg = "Unreachable code"
-            raise ValueError(msg)
+            if v.is_one_hot_encoded:
+                for code in v.codes:
+                    if np.isclose(v.xget(code).X, 1.0):
+                        return code
+            x = v.xget().X
+            return 0 if np.isclose(x, 0.0) else x
 
         mapping = self.reduce(get)
         prefix = f"{self.__class__.__name__}:\n"

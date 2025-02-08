@@ -79,7 +79,7 @@ def test_continuous(seed: int, n_levels: int, lower: int, upper: int) -> None:
     objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert np.isclose(var.X, val)
+    assert np.isclose(v.X, val)
 
     val = generator.uniform(lb - 1.0, lb - 0.5)
     objective = (v - val) ** 2
