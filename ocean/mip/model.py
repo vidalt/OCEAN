@@ -222,21 +222,21 @@ class Model(BaseModel, FeatureModel, TreeModel, GarbageModel):
     ) -> None:
         # Initialize the super models.
         BaseModel.__init__(self, name=name, env=env)
-        FeatureModel.__init__(self, mapper=mapper)
         TreeModel.__init__(
             self,
             trees=trees,
             n_isolators=n_isolators,
             flow_type=flow_type,
         )
+        FeatureModel.__init__(self, mapper=mapper)
         GarbageModel.__init__(self)
 
-        self._max_samples = max_samples
         self._set_weights(weights=weights)
-        self._scores = gp.tupledict()
+        self._max_samples = max_samples
         self._epsilon = epsilon
         self._num_epsilon = num_epsilon
         self._delta = delta
+        self._scores = gp.tupledict()
         self._set_builder(model_type=model_type)
 
     @property
