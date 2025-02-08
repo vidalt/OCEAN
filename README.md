@@ -25,7 +25,7 @@ from ocean.datasets import load_adult
 from ocean.explainer import MIPExplainer
 
 # Load the adult dataset
-mapper, (data, target) = load_adult()
+(data, target), mapper = load_adult()
 
 # Generate a random instance from the dataset.
 generator = np.random.default_rng(42)

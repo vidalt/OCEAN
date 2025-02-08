@@ -73,12 +73,12 @@ def main() -> None:  # noqa: PLR0914
 
     # Load the data
     print("Loading the data")
-    mapper, (X, y) = load(args.dataset)
+    (X, y), mapper = load(args.dataset)
     print("Data loaded")
 
     X_train, X_test, y_train, _ = train_test_split(
-        X.to_numpy(),
-        y.to_numpy().flatten(),
+        X,
+        y,
         test_size=0.2,
         random_state=args.seed,
     )
@@ -107,16 +107,12 @@ def main() -> None:  # noqa: PLR0914
 
     # Generate multiple queries:
     queries: list[tuple[Array1D, int]] = []
-
+    X_test = pd.DataFrame(X_test)
     y_pred = rf.predict(X_test)
 
     print("Generating queries")
-    for x, y_ in zip(
-        X_test[: min(args.n_examples, len(X_test))],
-        y_pred[: min(args.n_examples, len(X_test))],
-        strict=True,
-    ):
-        queries.append((x, 1 - y_))
+    for i in range(min(args.n_examples, len(X_test))):
+        queries.append((X_test.iloc[i].to_numpy().flatten(), 1 - y_pred[i]))  # noqa: PERF401
     print("Queries generated")
 
     print("Running queries")
