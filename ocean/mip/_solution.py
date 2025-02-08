@@ -1,24 +1,24 @@
 from collections.abc import Mapping
 
+import gurobipy as gp
 import numpy as np
 import pandas as pd
 
 from ..abc import Mapper
 from ..typing import Array1D, Key
-from .variable import FeatureVar
+from ._variable import FeatureVar
 
 
 class Solution(Mapper[FeatureVar]):
-    def to_series(self) -> "pd.Series[float]":
-        def get(i: int) -> float:
-            name = self.names[i]
-            feature = self[name]
-            if not feature.is_one_hot_encoded:
-                return feature.xget().X
+    def vget(self, i: int) -> gp.Var:
+        name = self.names[i]
+        if self[name].is_one_hot_encoded:
             code = self.codes[i]
-            return feature.xget(code).X
+            return self[name].xget(code)
+        return self[name].xget()
 
-        values = [get(i) for i in range(self.n_columns)]
+    def to_series(self) -> "pd.Series[float]":
+        values = [v.X for v in map(self.vget, range(self.n_columns))]
         return pd.Series(values, index=self.columns)
 
     def to_numpy(self) -> Array1D:

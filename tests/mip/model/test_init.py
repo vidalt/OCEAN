@@ -1,13 +1,9 @@
-from functools import partial
-from itertools import chain
-
 import numpy as np
 import pytest
 
 from ocean.abc import Mapper
-from ocean.ensemble import Ensemble
 from ocean.mip import Model
-from ocean.tree import parse_trees
+from ocean.tree import parse_ensembles, parse_trees
 
 from ...utils import ENV
 from ..utils import (
@@ -146,8 +142,7 @@ class TestIsolation:
             n_samples,
             n_classes,
         )
-        parser = partial(Ensemble, mapper=mapper)
-        trees = chain.from_iterable(map(parser, (clf, ilf)))
+        trees = parse_ensembles(clf, ilf, mapper=mapper)
         model = Model(
             trees=trees,
             mapper=mapper,
@@ -181,8 +176,7 @@ class TestIsolation:
             n_samples,
             n_classes,
         )
-        parser = partial(Ensemble, mapper=mapper)
-        trees = chain.from_iterable(map(parser, (clf, ilf)))
+        trees = parse_ensembles(clf, ilf, mapper=mapper)
         generator = np.random.default_rng(seed)
         weights = generator.random(n_estimators).flatten()
         model = Model(
@@ -218,9 +212,7 @@ class TestIsolation:
             n_samples,
             n_classes,
         )
-        parser = partial(Ensemble, mapper=mapper)
-        trees = tuple(chain.from_iterable(map(parser, (clf, ilf))))
-
+        trees = tuple(parse_ensembles(clf, ilf, mapper=mapper))
         generator = np.random.default_rng(seed)
         shapes = [generator.integers(n_estimators + 1, 2 * n_estimators + 1)]
         if n_estimators > 2:

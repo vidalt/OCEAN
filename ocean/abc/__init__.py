@@ -1,3 +1,3 @@
-from .mapper import Mapper
+from ._mapper import Mapper
 
 __all__ = ["Mapper"]

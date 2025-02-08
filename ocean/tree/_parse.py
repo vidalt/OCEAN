@@ -1,15 +1,16 @@
 import operator
 from collections.abc import Iterable
 from functools import partial
+from itertools import chain
 
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from ..abc import Mapper
 from ..feature import Feature
-from ..typing import NonNegativeInt
-from .node import Node
-from .protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
-from .tree import Tree
+from ..typing import BaseEnsemble, NonNegativeInt
+from ._node import Node
+from ._protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
+from ._tree import Tree
 
 type DecisionTree = DecisionTreeClassifier | DecisionTreeRegressor
 
@@ -82,3 +83,11 @@ def parse_trees(
 ) -> tuple[Tree, ...]:
     parser = partial(parse_tree, mapper=mapper)
     return tuple(map(parser, trees))
+
+
+def parse_ensembles(
+    *ensembles: BaseEnsemble,
+    mapper: Mapper[Feature],
+) -> tuple[Tree, ...]:
+    parser = partial(parse_trees, mapper=mapper)
+    return tuple(chain.from_iterable(map(parser, ensembles)))

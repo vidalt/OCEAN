@@ -1,13 +1,10 @@
-from functools import partial
-from itertools import chain
-
 import gurobipy as gp
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
 from ..abc import Mapper
-from ..ensemble import Ensemble
 from ..feature import Feature
 from ..mip import Model, Solution, TreeVar
+from ..tree import parse_ensembles
 from ..typing import Array1D, NonNegativeInt, PositiveInt
 
 
@@ -30,8 +27,7 @@ class MixedIntegerProgramExplainer(Model):
     ) -> None:
         ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
         n_isolators, max_samples = self._get_isolation_params(isolation)
-        parser = partial(Ensemble, mapper=mapper)
-        trees = chain.from_iterable(map(parser, ensembles))
+        trees = parse_ensembles(*ensembles, mapper=mapper)
         Model.__init__(
             self,
             trees,

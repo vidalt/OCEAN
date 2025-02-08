@@ -5,12 +5,12 @@ from functools import reduce
 import gurobipy as gp
 from pydantic import validate_call
 
-from ...tree.keeper import TreeKeeper, TreeLike
-from ...tree.node import Node
+from ...tree._keeper import TreeKeeper, TreeLike
+from ...tree._node import Node
 from ...typing import NonNegativeInt
-from ..base import BaseModel, Var
-from ..builder import FlowBuilder, FlowBuilderFactory
-from ..utils import average_length
+from .._base import BaseModel, Var
+from .._builder.flow import FlowBuilder, FlowBuilderFactory
+from .._utils import average_length
 
 
 class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):

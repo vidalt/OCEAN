@@ -1,5 +1,5 @@
-from .feature import Feature
-from .parse import parse_features
+from ._feature import Feature
+from ._parse import parse_features
 
 __all__ = [
     "Feature",
