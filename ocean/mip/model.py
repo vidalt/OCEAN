@@ -161,13 +161,17 @@ class Model(BaseModel):
     def function(self) -> gp.MLinExpr:
         return self.weighted_function(weights=self._weights)
 
-    def weighted_function(
-        self,
-        weights: NonNegativeArray1D,
-    ) -> gp.MLinExpr:
+    def vget(self, i: int) -> gp.Var:
+        name = self.mapper.names[i]
+        if not self.mapper[name].is_one_hot_encoded:
+            code = self.mapper.codes[i]
+            return self.mapper[name].xget(code)
+        return self.mapper[name].xget()
+
+    def weighted_function(self, weights: NonNegativeArray1D) -> gp.MLinExpr:
         function = gp.MLinExpr.zeros(self.shape)
-        for t in range(self.n_estimators):
-            function += np.float64(weights[t]) * self._trees[t].value
+        for t, tree in enumerate(self.estimators):
+            function += np.float64(weights[t]) * tree.value
         return function
 
     @validate_call
@@ -295,15 +299,8 @@ class Model(BaseModel):
         obj = gp.QuadExpr()
         n = self.mapper.n_columns
         for i in range(n):
-            value: np.float64 = x[i]
-            name = self.mapper.names[i]
-            var = self.mapper[name]
-            if not var.is_one_hot_encoded:
-                v = var.x
-            else:
-                code = self.mapper.codes[i]
-                v = var[code]
-            obj += (v - value) ** 2
+            v = self.vget(i)
+            obj += (v - x[i]) ** 2
         return obj
 
     def _add_l1(self, x: Array1D) -> gp.LinExpr:
@@ -311,16 +308,9 @@ class Model(BaseModel):
         u = self.addMVar(n, name="u")
         self._garbage.append(u)
         for i in range(n):
-            value: np.float64 = x[i]
-            name = self.mapper.names[i]
-            var = self.mapper[name]
-            if not var.is_one_hot_encoded:
-                v = var.x
-            else:
-                code = self.mapper.codes[i]
-                v = var[code]
+            v = self.vget(i)
             self._garbage.extend((
-                self.addConstr(u[i] >= v - value),
-                self.addConstr(u[i] >= -(v - value)),
+                self.addConstr(u[i] >= v - np.float64(x[i])),
+                self.addConstr(u[i] >= -(v - np.float64(x[i]))),
             ))
         return u.sum().item()
