@@ -11,6 +11,10 @@ class BaseModel(ABC, gp.Model):
     def __setattr__(self, name: str, value: int) -> None:
         object.__setattr__(self, name, value)
 
+    def build_vars(self, *variables: "Var") -> None:
+        for variable in variables:
+            variable.build(model=self)
+
 
 class Var(Protocol):
     _name: str

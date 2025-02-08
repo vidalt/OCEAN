@@ -2,9 +2,9 @@ import gurobipy as gp
 import numpy as np
 
 from ...feature import Feature
-from ...feature.keeper import FeatureKeeper
+from ...feature._keeper import FeatureKeeper
 from ...typing import Key
-from ..base import BaseModel, Var
+from .._base import BaseModel, Var
 
 
 class FeatureVar(Var, FeatureKeeper):

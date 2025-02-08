@@ -49,6 +49,7 @@ preview = true
 
 [lint.pylint]
 max-args = 15
+max-public-methods = 30
 
 [lint.per-file-ignores]
 "tests/**/*.py" = [

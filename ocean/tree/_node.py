@@ -8,7 +8,8 @@ class Node(NodeMixin):
     _value: Array | None
     _threshold: float | None
     _code: Key | None
-    _id: int
+    _id: NonNegativeInt
+    _n_samples: NonNegativeInt
 
     __left: "Node | None" = None
     __right: "Node | None" = None
@@ -22,6 +23,7 @@ class Node(NodeMixin):
         parent: "Node | None" = None,
         threshold: float | None = None,
         code: Key | None = None,
+        n_samples: NonNegativeInt = 0,
         left: "Node | None" = None,
         right: "Node | None" = None,
     ) -> None:
@@ -32,6 +34,7 @@ class Node(NodeMixin):
         self._threshold = threshold
         self._code = code
         self._id = node_id
+        self._n_samples = n_samples
 
         self.parent = parent
 
@@ -39,6 +42,10 @@ class Node(NodeMixin):
             self.left = left
         if right is not None:
             self.right = right
+
+    @property
+    def node_id(self) -> NonNegativeInt:
+        return self._id
 
     @property
     def feature(self) -> Key:
@@ -83,8 +90,8 @@ class Node(NodeMixin):
         return self._code
 
     @property
-    def node_id(self) -> NonNegativeInt:
-        return self._id
+    def n_samples(self) -> NonNegativeInt:
+        return self._n_samples
 
     @property
     def left(self) -> "Node":

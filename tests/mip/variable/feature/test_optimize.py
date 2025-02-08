@@ -2,8 +2,7 @@ import numpy as np
 import pytest
 
 from ocean.feature import Feature
-from ocean.mip import FeatureVar
-from ocean.mip.base import BaseModel
+from ocean.mip import BaseModel, FeatureVar
 
 from ....feature.utils import BOUNDS, CHOICES, N_CODES, N_LEVELS, SEEDS
 from ....utils import ENV

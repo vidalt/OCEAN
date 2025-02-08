@@ -4,9 +4,9 @@ from typing import Protocol
 import numpy as np
 
 from ...abc import Mapper
-from ...tree.node import Node
-from ..base import BaseModel
-from ..variable import FeatureVar, TreeVar
+from ...tree._node import Node
+from .._base import BaseModel
+from .._variable import FeatureVar, TreeVar
 
 
 class ModelBuilder(Protocol):
@@ -33,7 +33,7 @@ class ModelBuilder(Protocol):
         raise NotImplementedError
 
 
-class MIPBuilder(ModelBuilder):
+class MixedIntegerProgramBuilder(ModelBuilder):
     DEFAULT_EPSILON = 1.0 / (2**5)
 
     _epsilon: float
@@ -70,8 +70,8 @@ class MIPBuilder(ModelBuilder):
     ) -> None:
         if node.is_leaf:
             return
-        feature = mapper[node.feature]
-        self._expand(model, tree=tree, node=node, feature=feature)
+        var = mapper[node.feature]
+        self._expand(model, tree=tree, node=node, var=var)
         self._propagate(model, tree=tree, node=node.left, mapper=mapper)
         self._propagate(model, tree=tree, node=node.right, mapper=mapper)
 
@@ -81,16 +81,16 @@ class MIPBuilder(ModelBuilder):
         *,
         tree: TreeVar,
         node: Node,
-        feature: FeatureVar,
+        var: FeatureVar,
     ) -> None:
-        if feature.is_binary:
-            self._bset(model, tree=tree, node=node, feature=feature)
-        elif feature.is_continuous:
-            self._cset(model, tree=tree, node=node, feature=feature)
-        elif feature.is_discrete:
-            self._dset(model, tree=tree, node=node, feature=feature)
-        elif feature.is_one_hot_encoded:
-            self._eset(model, tree=tree, node=node, feature=feature)
+        if var.is_binary:
+            self._bset(model, tree=tree, node=node, var=var)
+        elif var.is_continuous:
+            self._cset(model, tree=tree, node=node, var=var)
+        elif var.is_discrete:
+            self._dset(model, tree=tree, node=node, var=var)
+        elif var.is_one_hot_encoded:
+            self._eset(model, tree=tree, node=node, var=var)
 
     @staticmethod
     def _bset(
@@ -98,14 +98,14 @@ class MIPBuilder(ModelBuilder):
         *,
         tree: TreeVar,
         node: Node,
-        feature: FeatureVar,
+        var: FeatureVar,
     ) -> None:
         # If x = 1.0, then the path in the tree should go to
         # the right of the node. Otherwise, the path in the
         # tree should go to the left of the node.
         #   :: x <= 1 - flow[node.left],
         #   :: x >= flow[node.right].
-        x = feature.xget()
+        x = var.xget()
         model.addConstr(x <= 1 - tree[node.left.node_id])
         model.addConstr(x >= tree[node.right.node_id])
 
@@ -115,7 +115,7 @@ class MIPBuilder(ModelBuilder):
         *,
         tree: TreeVar,
         node: Node,
-        feature: FeatureVar,
+        var: FeatureVar,
     ) -> None:
         # Find the index such that:
         #   ** levels[j - 1] < threshold <= levels[j].
@@ -141,25 +141,25 @@ class MIPBuilder(ModelBuilder):
 
         epsilon = self._epsilon
         threshold = node.threshold
-        j = int(np.searchsorted(feature.levels, threshold))
+        j = int(np.searchsorted(var.levels, threshold))
 
         if j == 0:  # pragma: no cover
             model.addConstr(tree[node.left.node_id] == 0.0)
             return
 
-        if j == feature.levels.size:  # pragma: no cover
+        if j == var.levels.size:  # pragma: no cover
             model.addConstr(tree[node.right.node_id] == 0.0)
             return
 
-        if not np.isclose(threshold, feature.levels[j]):  # pragma: no cover
+        if not np.isclose(threshold, var.levels[j]):  # pragma: no cover
             msg = "Threshold is not in the levels"
             raise ValueError(msg)
 
-        mu = feature.mget(j - 1)
+        mu = var.mget(j - 1)
         model.addConstr(mu <= 1 - epsilon * tree[node.left.node_id])
         model.addConstr(mu >= tree[node.right.node_id])
 
-        mu = feature.mget(j)
+        mu = var.mget(j)
         model.addConstr(mu <= 1 - tree[node.left.node_id])
         model.addConstr(mu >= epsilon * tree[node.right.node_id])
 
@@ -169,7 +169,7 @@ class MIPBuilder(ModelBuilder):
         *,
         tree: TreeVar,
         node: Node,
-        feature: FeatureVar,
+        var: FeatureVar,
     ) -> None:
         # Find the index such that:
         #   ** levels[j - 1] <= threshold < levels[j].
@@ -193,17 +193,17 @@ class MIPBuilder(ModelBuilder):
         #   :: mu[j-1] >= tree[node.right].
 
         threshold = node.threshold
-        j = int(np.searchsorted(feature.levels, threshold, side="right"))
+        j = int(np.searchsorted(var.levels, threshold, side="right"))
 
         if j == 0:  # pragma: no cover
             model.addConstr(tree[node.left.node_id] == 0.0)
             return
 
-        if j == feature.levels.size:  # pragma: no cover
+        if j == var.levels.size:  # pragma: no cover
             model.addConstr(tree[node.right.node_id] == 0.0)
             return
 
-        mu = feature.mget(j - 1)
+        mu = var.mget(j - 1)
         model.addConstr(mu <= 1 - tree[node.left.node_id])
         model.addConstr(mu >= tree[node.right.node_id])
 
@@ -213,7 +213,7 @@ class MIPBuilder(ModelBuilder):
         *,
         tree: TreeVar,
         node: Node,
-        feature: FeatureVar,
+        var: FeatureVar,
     ) -> None:
         # If x[code] = 1.0, then the path in the tree should go to
         # the right of the node. Otherwise, the path in the tree
@@ -221,10 +221,10 @@ class MIPBuilder(ModelBuilder):
         #   :: x[code] >= 1 - flow[node.left],
         #   :: x[code] >= flow[node.right].
 
-        x = feature.xget(node.code)
+        x = var.xget(node.code)
         model.addConstr(x <= 1 - tree[node.left.node_id])
         model.addConstr(x >= tree[node.right.node_id])
 
 
 class ModelBuilderFactory:
-    MIP: type[MIPBuilder] = MIPBuilder
+    MIP: type[MixedIntegerProgramBuilder] = MixedIntegerProgramBuilder

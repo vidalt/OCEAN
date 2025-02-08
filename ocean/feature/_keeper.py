@@ -1,5 +1,5 @@
 from ..typing import Array1D, Key
-from .feature import Feature
+from ._feature import Feature
 
 
 class FeatureKeeper:

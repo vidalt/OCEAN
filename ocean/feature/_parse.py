@@ -4,7 +4,7 @@ import pandas as pd
 
 from ..abc import Mapper
 from ..typing import Key
-from .feature import Feature
+from ._feature import Feature
 
 N_BINARY: int = 2
 

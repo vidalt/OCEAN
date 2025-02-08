@@ -1,22 +1,17 @@
-from functools import partial
-from itertools import chain
-
 import gurobipy as gp
-from sklearn.ensemble import IsolationForest, RandomForestClassifier
+from sklearn.ensemble import IsolationForest
 
 from ..abc import Mapper
-from ..ensemble import Ensemble
 from ..feature import Feature
 from ..mip import Model, Solution, TreeVar
-from ..typing import Array1D, NonNegativeInt, PositiveInt
+from ..tree import parse_ensembles
+from ..typing import Array1D, ExplainableEnsemble, NonNegativeInt, PositiveInt
 
 
 class MixedIntegerProgramExplainer(Model):
-    _garbage: list[gp.Var | gp.MVar | gp.Constr | gp.MConstr]
-
     def __init__(
         self,
-        ensemble: RandomForestClassifier,
+        ensemble: ExplainableEnsemble,
         *,
         mapper: Mapper[Feature],
         weights: Array1D | None = None,
@@ -29,15 +24,15 @@ class MixedIntegerProgramExplainer(Model):
         flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
         ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
-        n_isolators = len(isolation) if isolation is not None else 0
-        parser = partial(Ensemble, mapper=mapper)
-        trees = chain.from_iterable(map(parser, ensembles))
+        n_isolators, max_samples = self._get_isolation_params(isolation)
+        trees = parse_ensembles(*ensembles, mapper=mapper)
         Model.__init__(
             self,
             trees,
             mapper=mapper,
             weights=weights,
             n_isolators=n_isolators,
+            max_samples=max_samples,
             name=name,
             env=env,
             epsilon=epsilon,
@@ -61,3 +56,11 @@ class MixedIntegerProgramExplainer(Model):
             msg = "No solution found. Please check the model constraints."
             raise RuntimeError(msg)
         return self.solution
+
+    @staticmethod
+    def _get_isolation_params(
+        isolation: IsolationForest | None,
+    ) -> tuple[NonNegativeInt, NonNegativeInt]:
+        if isolation is not None:
+            return len(isolation), int(isolation.max_samples_)  # pyright: ignore[reportUnknownArgumentType]
+        return 0, 0

@@ -5,7 +5,8 @@ import pandas as pd
 from pydantic import Field
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
-BaseEnsemble = RandomForestClassifier | IsolationForest
+type ExplainableEnsemble = RandomForestClassifier
+type ParsableEnsemble = ExplainableEnsemble | IsolationForest
 
 Number = float
 PositiveInt = Annotated[int, Field(ge=1)]
@@ -68,6 +69,7 @@ class SKLearnTree(Protocol):
     threshold: Array1D
     children_left: NodeIdArray1D
     children_right: NodeIdArray1D
+    n_node_samples: NonNegativeIntArray1D
     value: Array
 
 
@@ -75,7 +77,6 @@ __all__ = [
     "Array",
     "Array1D",
     "Array2D",
-    "BaseEnsemble",
     "Dtype",
     "Index",
     "Index1L",
@@ -97,6 +98,7 @@ __all__ = [
     "NonNegativeIntArray2D",
     "NonNegativeIntDtype",
     "Number",
+    "ParsableEnsemble",
     "PositiveInt",
     "Unit",
     "UnitO",

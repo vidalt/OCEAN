@@ -3,8 +3,8 @@ from collections.abc import Iterator
 from pydantic import validate_call
 
 from ..typing import NonNegativeInt
-from .node import Node
-from .tree import Tree
+from ._node import Node
+from ._tree import Tree
 
 TreeLike = Tree | Node
 

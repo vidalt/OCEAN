@@ -172,7 +172,7 @@ def train_rf(
         n_estimators=n_estimators,
         max_depth=max_depth,
     )
-    clf.fit(data.to_numpy(), y)
+    clf.fit(data, y)
     if return_data:
         return clf, mapper, data
     return clf, mapper
@@ -236,13 +236,13 @@ def train_rf_isolation(
         n_estimators=n_estimators,
         max_depth=max_depth,
     )
-    clf.fit(data.to_numpy(), y)
+    clf.fit(data, y)
     ilf = IsolationForest(
         random_state=seed,
         n_estimators=n_isolators,
         max_samples=max_samples,  # pyright: ignore[reportArgumentType]
     )
-    ilf.fit(data.to_numpy())
+    ilf.fit(data)
     if return_data:
         return clf, ilf, mapper, data
     return clf, ilf, mapper

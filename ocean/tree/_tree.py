@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from pydantic import validate_call
 
 from ..typing import NonNegativeInt, PositiveInt
-from .node import Node
+from ._node import Node
 
 
 class Tree:

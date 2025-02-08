@@ -1,22 +1,24 @@
 import operator
 from collections.abc import Iterable
 from functools import partial
+from itertools import chain
 
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from ..abc import Mapper
 from ..feature import Feature
-from ..typing import NonNegativeInt
-from .node import Node
-from .protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
-from .tree import Tree
+from ..typing import NonNegativeInt, ParsableEnsemble
+from ._node import Node
+from ._protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
+from ._tree import Tree
 
 type DecisionTree = DecisionTreeClassifier | DecisionTreeRegressor
 
 
 def _build_leaf(tree: TreeProtocol, node_id: NonNegativeInt) -> Node:
     value = tree.value[node_id, :]
-    return Node(node_id, value=value)
+    n_samples = int(tree.n_samples[node_id])
+    return Node(node_id, n_samples=n_samples, value=value)
 
 
 def _build_node(
@@ -30,6 +32,7 @@ def _build_node(
     children = map(int, (tree.left[node_id], tree.right[node_id]))
     left_id, right_id = children
     threshold, code = None, None
+    n_samples = int(tree.n_samples[node_id])
 
     if mapper[name].is_numeric:
         threshold = float(tree.threshold[node_id])
@@ -38,7 +41,13 @@ def _build_node(
     elif mapper[name].is_one_hot_encoded:
         code = mapper.codes[idx]
 
-    node = Node(node_id, feature=name, threshold=threshold, code=code)
+    node = Node(
+        node_id,
+        feature=name,
+        threshold=threshold,
+        code=code,
+        n_samples=n_samples,
+    )
     node.left = _parse_node(tree, left_id, mapper=mapper)
     node.right = _parse_node(tree, right_id, mapper=mapper)
     return node
@@ -74,3 +83,11 @@ def parse_trees(
 ) -> tuple[Tree, ...]:
     parser = partial(parse_tree, mapper=mapper)
     return tuple(map(parser, trees))
+
+
+def parse_ensembles(
+    *ensembles: ParsableEnsemble,
+    mapper: Mapper[Feature],
+) -> tuple[Tree, ...]:
+    parser = partial(parse_trees, mapper=mapper)
+    return tuple(chain.from_iterable(map(parser, ensembles)))

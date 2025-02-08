@@ -1,6 +1,6 @@
 from functools import partial
 
-from .load import Loader
+from ._load import Loader
 
 loader = Loader()
 
