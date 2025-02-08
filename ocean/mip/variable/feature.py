@@ -53,7 +53,7 @@ class FeatureVar(Var, FeatureKeeper):
     def mget(self, key: int) -> gp.Var:
         if self.is_numeric:
             return self._mu[key].item()
-        msg = "This feature does not support indexing"
+        msg = "The 'mget' method is only supported for numeric features"
         raise ValueError(msg)
 
     def __getitem__(self, code: Key) -> gp.Var:
