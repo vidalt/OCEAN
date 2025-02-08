@@ -7,8 +7,8 @@ from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from ..abc import Mapper
 from ..ensemble import Ensemble
 from ..feature import Feature
-from ..mip import Model, TreeVar
-from ..typing import Array1D, PositiveInt
+from ..mip import Model, Solution, TreeVar
+from ..typing import Array1D, NonNegativeInt, PositiveInt
 
 
 class MIPExplainer(Model):
@@ -47,10 +47,17 @@ class MIPExplainer(Model):
         )
         self.build()
 
-    def explain(self, x: Array1D, *, norm: PositiveInt) -> Array1D:
+    def explain(
+        self,
+        x: Array1D,
+        *,
+        y: NonNegativeInt,
+        norm: PositiveInt,
+    ) -> Solution:
         self.add_objective(x, norm=norm)
+        self.set_majority_class(y=y)
         self.optimize()
         if self.SolCount == 0:
             msg = "No solution found. Please check the model constraints."
             raise RuntimeError(msg)
-        return self.solution.to_numpy()
+        return self.solution

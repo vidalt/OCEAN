@@ -173,24 +173,19 @@ class Model(BaseModel):
     @validate_call
     def set_majority_class(
         self,
-        m_class: NonNegativeInt,
+        y: NonNegativeInt,
         *,
-        output: NonNegativeInt = 0,
+        o: NonNegativeInt = 0,
     ) -> None:
-        if m_class >= self.n_classes:
-            msg = f"Expected class < {self.n_classes}, got {m_class}"
+        if y >= self.n_classes:
+            msg = f"Expected class < {self.n_classes}, got {y}"
             raise ValueError(msg)
 
         function = self.function
-        for class_ in range(self.n_classes):
-            if class_ == m_class:
+        for c in range(self.n_classes):
+            if c == y:
                 continue
-            self._set_majority_class(
-                m_class=m_class,
-                function=function,
-                class_=class_,
-                output=output,
-            )
+            self._set_majority_class(y=y, f=function, c=c, o=o)
 
     def clear_majority_class(self) -> None:
         self.remove(self._scores)
@@ -254,19 +249,19 @@ class Model(BaseModel):
 
     def _set_majority_class(
         self,
-        m_class: NonNegativeInt,
+        y: NonNegativeInt,
         *,
-        function: gp.MLinExpr,
-        class_: NonNegativeInt,
-        output: NonNegativeInt,
+        f: gp.MLinExpr,
+        c: NonNegativeInt,
+        o: NonNegativeInt,
     ) -> None:
-        rhs = self._epsilon if class_ < m_class else 0.0
-        e = (function[output, m_class] - function[output, class_]).item() >= rhs
-        self._scores[class_] = self.addConstr(e)
+        rhs = self._epsilon if c < y else 0.0
+        e = (f[o, y] - f[o, c]).item() >= rhs
+        self._scores[c] = self.addConstr(e)
 
     def _build_trees(self) -> None:
-        for var in self._trees:
-            var.build(self)
+        for tree in self.trees:
+            tree.build(self)
 
     def _build_features(self) -> None:
         for var in self.mapper.values():
@@ -304,11 +299,11 @@ class Model(BaseModel):
             name = self.mapper.names[i]
             var = self.mapper[name]
             if not var.is_one_hot_encoded:
-                x_var = var.x
+                v = var.x
             else:
                 code = self.mapper.codes[i]
-                x_var = var[code]
-            obj += (x_var - value) ** 2
+                v = var[code]
+            obj += (v - value) ** 2
         return obj
 
     def _add_l1(self, x: Array1D) -> gp.LinExpr:
@@ -320,12 +315,12 @@ class Model(BaseModel):
             name = self.mapper.names[i]
             var = self.mapper[name]
             if not var.is_one_hot_encoded:
-                x_var = var.x
+                v = var.x
             else:
                 code = self.mapper.codes[i]
-                x_var = var[code]
+                v = var[code]
             self._garbage.extend((
-                self.addConstr(u[i] >= x_var - value),
-                self.addConstr(u[i] >= -(x_var - value)),
+                self.addConstr(u[i] >= v - value),
+                self.addConstr(u[i] >= -(v - value)),
             ))
         return u.sum().item()

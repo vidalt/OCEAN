@@ -38,7 +38,7 @@ def test_ocean(
     assert model.n_estimators == n_estimators
     assert model.n_classes == n_classes
 
-    model.set_majority_class(m_class=0, output=0)
+    model.set_majority_class(y=0, o=0)
     x = data.iloc[0, :].to_numpy().astype(float).flatten()  # pyright: ignore[reportUnknownVariableType]
     model.add_objective(x, norm=2)  # pyright: ignore[reportArgumentType]
 

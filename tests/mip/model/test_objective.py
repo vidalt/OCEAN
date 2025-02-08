@@ -117,7 +117,7 @@ class TestNoIsolation:
 
         n_skipped = 0
         for class_ in classes:
-            model.set_majority_class(m_class=class_)
+            model.set_majority_class(y=class_)
 
             model.add_objective(x=x, norm=norm)
 
