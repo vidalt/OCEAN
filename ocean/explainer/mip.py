@@ -29,7 +29,7 @@ class MixedIntegerProgramExplainer(Model):
         flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
         ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
-        n_isolators = len(isolation) if isolation is not None else 0
+        n_isolators, max_samples = self._get_isolation_params(isolation)
         parser = partial(Ensemble, mapper=mapper)
         trees = chain.from_iterable(map(parser, ensembles))
         Model.__init__(
@@ -38,6 +38,7 @@ class MixedIntegerProgramExplainer(Model):
             mapper=mapper,
             weights=weights,
             n_isolators=n_isolators,
+            max_samples=max_samples,
             name=name,
             env=env,
             epsilon=epsilon,
@@ -61,3 +62,11 @@ class MixedIntegerProgramExplainer(Model):
             msg = "No solution found. Please check the model constraints."
             raise RuntimeError(msg)
         return self.solution
+
+    @staticmethod
+    def _get_isolation_params(
+        isolation: IsolationForest | None,
+    ) -> tuple[NonNegativeInt, NonNegativeInt]:
+        if isolation is not None:
+            return len(isolation), int(isolation.max_samples_)  # pyright: ignore[reportUnknownArgumentType]
+        return 0, 0

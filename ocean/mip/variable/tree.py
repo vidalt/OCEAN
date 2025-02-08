@@ -1,5 +1,6 @@
 from collections.abc import Iterator, Mapping
 from enum import Enum
+from functools import reduce
 
 import gurobipy as gp
 from pydantic import validate_call
@@ -9,6 +10,7 @@ from ...tree.node import Node
 from ...typing import NonNegativeInt
 from ..base import BaseModel, Var
 from ..builder import FlowBuilder, FlowBuilderFactory
+from ..utils import average_length
 
 
 class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
@@ -16,6 +18,7 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
 
     _flow: gp.MVar
     _value: gp.MLinExpr
+    _length: gp.LinExpr
     _builder: FlowBuilder
 
     class FlowType(Enum):
@@ -37,6 +40,10 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
     def value(self) -> gp.MLinExpr:
         return self._value
 
+    @property
+    def length(self) -> gp.LinExpr:
+        return self._length
+
     def build(self, model: BaseModel) -> None:
         name = self.FLOW_VAR_NAME_FMT.format(name=self._name)
         self._flow = self._builder.get(model=model, tree=self, name=name)
@@ -47,6 +54,9 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
 
         # Set Value
         self._value = self._get_value()
+
+        # Set Average Path Length
+        self._length = self._get_length()
 
     def __len__(self) -> int:
         return self.n_nodes
@@ -78,6 +88,13 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
 
     def _get_value(self) -> gp.MLinExpr:
         value = gp.MLinExpr.zeros(self.shape)
-        for node in self.leaves:
-            value += self._flow[node.node_id] * node.value
+        for leaf in self.leaves:
+            value += self._flow[leaf.node_id] * leaf.value
         return value
+
+    def _get_length(self) -> gp.LinExpr:
+        def reducer(acc: gp.LinExpr, node: Node) -> gp.LinExpr:
+            length = node.depth + average_length(node.n_samples)
+            return acc + length * self[node.node_id]
+
+        return reduce(reducer, self.leaves, gp.LinExpr())
