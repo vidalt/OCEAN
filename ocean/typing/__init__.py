@@ -5,7 +5,8 @@ import pandas as pd
 from pydantic import Field
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
-type BaseEnsemble = RandomForestClassifier | IsolationForest
+type ExplainableEnsemble = RandomForestClassifier
+type ParsableEnsemble = RandomForestClassifier | IsolationForest
 
 Number = float
 PositiveInt = Annotated[int, Field(ge=1)]
@@ -76,7 +77,6 @@ __all__ = [
     "Array",
     "Array1D",
     "Array2D",
-    "BaseEnsemble",
     "Dtype",
     "Index",
     "Index1L",
@@ -98,6 +98,7 @@ __all__ = [
     "NonNegativeIntArray2D",
     "NonNegativeIntDtype",
     "Number",
+    "ParsableEnsemble",
     "PositiveInt",
     "Unit",
     "UnitO",

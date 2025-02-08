@@ -7,7 +7,7 @@ from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from ..abc import Mapper
 from ..feature import Feature
-from ..typing import BaseEnsemble, NonNegativeInt
+from ..typing import NonNegativeInt, ParsableEnsemble
 from ._node import Node
 from ._protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
 from ._tree import Tree
@@ -86,7 +86,7 @@ def parse_trees(
 
 
 def parse_ensembles(
-    *ensembles: BaseEnsemble,
+    *ensembles: ParsableEnsemble,
     mapper: Mapper[Feature],
 ) -> tuple[Tree, ...]:
     parser = partial(parse_trees, mapper=mapper)
