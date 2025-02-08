@@ -163,7 +163,7 @@ class Model(BaseModel):
 
     def vget(self, i: int) -> gp.Var:
         name = self.mapper.names[i]
-        if not self.mapper[name].is_one_hot_encoded:
+        if self.mapper[name].is_one_hot_encoded:
             code = self.mapper.codes[i]
             return self.mapper[name].xget(code)
         return self.mapper[name].xget()
