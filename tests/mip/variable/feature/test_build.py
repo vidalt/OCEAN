@@ -16,15 +16,16 @@ def test_binary() -> None:
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
     model.update()
-    assert isinstance(var.x, gp.Var)
-    assert var.x.VType == gp.GRB.BINARY
-    msg = r"This feature does not support indexing"
+    v = var.xget()
+    assert isinstance(v, gp.Var)
+    assert v.VType == gp.GRB.BINARY
+    msg = r"The 'mget' method is only supported for numeric features"
     with pytest.raises(ValueError, match=msg):
-        var.mget(0)
+        _ = var.mget(0)
 
-    msg = r"Indexing is only supported for one-hot encoded features"
+    msg = r"Get by code is only supported for one-hot encoded features"
     with pytest.raises(ValueError, match=msg):
-        _ = var[0]
+        _ = var.xget("a")
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -38,16 +39,18 @@ def test_discrete(seed: int, n_levels: int, lower: int, upper: int) -> None:
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
     model.update()
-    assert isinstance(var.x, gp.Var)
-    assert var.x.VType == gp.GRB.CONTINUOUS
+    v = var.xget()
+    assert isinstance(v, gp.Var)
+    assert v.VType == gp.GRB.CONTINUOUS
     n = len(var.levels)
     for i in range(n - 1):
-        assert isinstance(var.mget(i), gp.Var)
-        assert var.mget(i).VType == gp.GRB.BINARY
+        mu = var.mget(i)
+        assert isinstance(mu, gp.Var)
+        assert mu.VType == gp.GRB.BINARY
 
-    msg = r"Indexing is only supported for one-hot encoded features"
+    msg = r"Get by code is only supported for one-hot encoded features"
     with pytest.raises(ValueError, match=msg):
-        _ = var[0]
+        _ = var.xget("a")
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -61,18 +64,20 @@ def test_continuous(seed: int, n_levels: int, lower: int, upper: int) -> None:
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
     model.update()
-    assert isinstance(var.x, gp.Var)
-    assert var.x.VType == gp.GRB.CONTINUOUS
+    v = var.xget()
+    assert isinstance(v, gp.Var)
+    assert v.VType == gp.GRB.CONTINUOUS
     n = len(var.levels)
     for i in range(n - 1):
-        assert isinstance(var.mget(i), gp.Var)
-        assert var.mget(i).VType == gp.GRB.CONTINUOUS
-        assert var.mget(i).LB == 0.0
-        assert var.mget(i).UB == 1.0
+        mu = var.mget(i)
+        assert isinstance(mu, gp.Var)
+        assert mu.VType == gp.GRB.CONTINUOUS
+        assert mu.LB == 0.0
+        assert mu.UB == 1.0
 
-    msg = r"Indexing is only supported for one-hot encoded features"
+    msg = r"Get by code is only supported for one-hot encoded features"
     with pytest.raises(ValueError, match=msg):
-        _ = var[0]
+        _ = var.xget("a")
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -86,14 +91,20 @@ def test_one_hot_encoded(seed: int, n_codes: int) -> None:
     var.build(model)
     model.update()
 
-    msg = "This feature does not support indexing"
+    msg = r"The 'mget' method is only supported for numeric features"
     with pytest.raises(ValueError, match=msg):
-        var.mget(0)
+        _ = var.mget(0)
 
-    msg = "x property is not available for one-hot encoded features"
+    msg = r"Code is required for one-hot encoded features get"
     with pytest.raises(ValueError, match=msg):
-        _ = var.x
+        _ = var.xget()
 
     for code in var.codes:
-        assert isinstance(var[code], gp.Var)
-        assert var[code].VType == gp.GRB.BINARY
+        v = var.xget(code)
+        assert isinstance(v, gp.Var)
+        assert v.VType == gp.GRB.BINARY
+
+    code = "none"
+    msg = r"Code 'none' not found in the feature codes"
+    with pytest.raises(ValueError, match=msg):
+        _ = var.xget(code)

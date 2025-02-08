@@ -1,24 +1,38 @@
 from dataclasses import dataclass
+from typing import Literal, overload
 
 import pandas as pd
 
 from ..abc import Mapper
 from ..feature import Feature, parse_features
 
-Loaded = tuple[Mapper[Feature], tuple[pd.DataFrame, "pd.Series[int]"]]
+Dataset = tuple[pd.DataFrame, "pd.Series[int]"]
+Loaded = tuple[Dataset, Mapper[Feature]]
 
 
 @dataclass
 class Loader:
-    name: str
     URL: str = "https://www.github.com/eminyous/ocean-datasets/blob/main"
-    path: str = ""
 
-    def __post_init__(self) -> None:
-        self.path = f"{self.name}/{self.name}.csv"
+    @overload
+    def load(
+        self,
+        name: str,
+        *,
+        return_mapper: Literal[True] = True,
+    ) -> Loaded: ...
 
-    def load(self) -> Loaded:
-        data = self.read(self.path)
+    @overload
+    def load(self, name: str, *, return_mapper: Literal[False]) -> Dataset: ...
+
+    def load(
+        self,
+        name: str,
+        *,
+        return_mapper: bool = True,
+    ) -> Dataset | Loaded:
+        path = f"{name}/{name}.csv"
+        data = self.read(path)
         types: pd.Index[str] = data.columns.get_level_values(1)
         columns: pd.Index[str] = data.columns.get_level_values(0)
         data.columns = columns
@@ -33,7 +47,10 @@ class Loader:
             encoded=encoded,
             scale=False,
         )
-        return mapper, (data, y)
+
+        if return_mapper:
+            return (data, y), mapper
+        return data, y
 
     def read(self, path: str) -> pd.DataFrame:
         url = f"{self.URL}/{path}?raw=true"

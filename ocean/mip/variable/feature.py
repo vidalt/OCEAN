@@ -17,40 +17,35 @@ class FeatureVar(Var, FeatureKeeper):
         Var.__init__(self, name=name)
         FeatureKeeper.__init__(self, feature=feature)
 
-    @property
-    def x(self) -> gp.Var:
+    def build(self, model: BaseModel) -> None:
+        x = self._add_x(model)
+
+        if self.is_numeric:
+            mu = self._set_mu(model)
+            model.addConstr(x.item() == self.weighted_x(mu=mu))
+            self._mu = mu
+        elif self.is_one_hot_encoded:
+            model.addConstr(x.sum().item() == 1.0)
+
+        self._x = x
+
+    def xget(self, code: Key | None = None) -> gp.Var:
         if self.is_one_hot_encoded:
-            msg = "x property is not available for one-hot encoded features"
+            return self._xget_one_hot_encoded(code)
+
+        if code is not None:
+            msg = "Get by code is only supported for one-hot encoded features"
             raise ValueError(msg)
+
         return self._x.item()
 
-    @property
-    def X(self) -> float:
-        return self.x.X
-
-    def build(self, model: BaseModel) -> None:
-        self._x = self._add(model)
-
-        if self.is_numeric:
-            self._mu = self._add_mu(model)
-            model.addConstr(self._x.item() == self._xget())
-        elif self.is_one_hot_encoded:
-            model.addConstr(self._x.sum() == 1.0)
-
     def mget(self, key: int) -> gp.Var:
-        if self.is_numeric:
-            return self._mu[key].item()
-        msg = "This feature does not support indexing"
-        raise ValueError(msg)
-
-    def __getitem__(self, code: Key) -> gp.Var:
-        if not self.is_one_hot_encoded:
-            msg = "Indexing is only supported for one-hot encoded features"
+        if not self.is_numeric:
+            msg = "The 'mget' method is only supported for numeric features"
             raise ValueError(msg)
-        i = self.codes.index(code)
-        return self._x[i].item()
+        return self._mu[key].item()
 
-    def _add(self, model: BaseModel) -> gp.MVar:
+    def _add_x(self, model: BaseModel) -> gp.MVar:
         name = self.X_VAR_NAME_FMT.format(name=self._name)
 
         # Case when the feature is one-hot encoded.
@@ -64,7 +59,7 @@ class FeatureVar(Var, FeatureKeeper):
         # Case when the feature is continuous or discrete.
         return self._add_numeric(model, name)
 
-    def _add_mu(self, model: BaseModel) -> gp.MVar:
+    def _set_mu(self, model: BaseModel) -> gp.MVar:
         vtype = gp.GRB.CONTINUOUS if self.is_continuous else gp.GRB.BINARY
         n = len(self.levels) - 1
         name = f"{self._name}_mu"
@@ -93,9 +88,16 @@ class FeatureVar(Var, FeatureKeeper):
         lb = -gp.GRB.INFINITY
         return model.addMVar(shape=1, vtype=vtype, lb=lb, name=name)
 
-    def _xget(self) -> gp.LinExpr:
-        mu = self._mu
-        levels = self.levels
-        diff = np.diff(levels)
-        level = float(levels[0])
-        return level + (mu * diff).sum().item()
+    def weighted_x(self, mu: gp.MVar) -> gp.LinExpr:
+        diff = np.diff(self.levels).astype(np.float64).flatten()
+        return (np.min(self.levels) + (mu * diff).sum()).item()
+
+    def _xget_one_hot_encoded(self, code: Key | None) -> gp.Var:
+        if code is None:
+            msg = "Code is required for one-hot encoded features get"
+            raise ValueError(msg)
+        if code not in self.codes:
+            msg = f"Code '{code}' not found in the feature codes"
+            raise ValueError(msg)
+        j = self.codes.index(code)
+        return self._x[j].item()

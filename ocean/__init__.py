@@ -1,4 +1,11 @@
 from . import datasets, ensemble, feature, mip, tree
-from .explainer import MIPExplainer
+from .explainer import MixedIntegerProgramExplainer
 
-__all__ = ["MIPExplainer", "datasets", "ensemble", "feature", "mip", "tree"]
+__all__ = [
+    "MixedIntegerProgramExplainer",
+    "datasets",
+    "ensemble",
+    "feature",
+    "mip",
+    "tree",
+]

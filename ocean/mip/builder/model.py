@@ -105,7 +105,7 @@ class MIPBuilder(ModelBuilder):
         # tree should go to the left of the node.
         #   :: x <= 1 - flow[node.left],
         #   :: x >= flow[node.right].
-        x = feature.x
+        x = feature.xget()
         model.addConstr(x <= 1 - tree[node.left.node_id])
         model.addConstr(x >= tree[node.right.node_id])
 
@@ -221,7 +221,7 @@ class MIPBuilder(ModelBuilder):
         #   :: x[code] >= 1 - flow[node.left],
         #   :: x[code] >= flow[node.right].
 
-        x = feature[node.code]
+        x = feature.xget(node.code)
         model.addConstr(x <= 1 - tree[node.left.node_id])
         model.addConstr(x >= tree[node.right.node_id])
 

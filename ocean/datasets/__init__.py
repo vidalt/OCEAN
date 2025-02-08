@@ -1,16 +1,13 @@
-from .load import Loaded, Loader
+from functools import partial
+
+from .load import Loader
+
+loader = Loader()
 
 
-def load_credit() -> Loaded:
-    return Loader("Credit").load()
-
-
-def load_adult() -> Loaded:
-    return Loader("Adult").load()
-
-
-def load_compas() -> Loaded:
-    return Loader("COMPAS").load()
+load_credit = partial(loader.load, name="Credit")
+load_adult = partial(loader.load, name="Adult")
+load_compas = partial(loader.load, name="COMPAS")
 
 
 __all__ = ["load_adult", "load_compas", "load_credit"]
