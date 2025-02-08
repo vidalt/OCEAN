@@ -68,6 +68,7 @@ class SKLearnTree(Protocol):
     threshold: Array1D
     children_left: NodeIdArray1D
     children_right: NodeIdArray1D
+    n_node_samples: NonNegativeIntArray1D
     value: Array
 
 

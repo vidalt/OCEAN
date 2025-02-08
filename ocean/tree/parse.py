@@ -16,7 +16,8 @@ type DecisionTree = DecisionTreeClassifier | DecisionTreeRegressor
 
 def _build_leaf(tree: TreeProtocol, node_id: NonNegativeInt) -> Node:
     value = tree.value[node_id, :]
-    return Node(node_id, value=value)
+    n_samples = int(tree.n_samples[node_id])
+    return Node(node_id, n_samples=n_samples, value=value)
 
 
 def _build_node(
@@ -30,6 +31,7 @@ def _build_node(
     children = map(int, (tree.left[node_id], tree.right[node_id]))
     left_id, right_id = children
     threshold, code = None, None
+    n_samples = int(tree.n_samples[node_id])
 
     if mapper[name].is_numeric:
         threshold = float(tree.threshold[node_id])
@@ -38,7 +40,13 @@ def _build_node(
     elif mapper[name].is_one_hot_encoded:
         code = mapper.codes[idx]
 
-    node = Node(node_id, feature=name, threshold=threshold, code=code)
+    node = Node(
+        node_id,
+        feature=name,
+        threshold=threshold,
+        code=code,
+        n_samples=n_samples,
+    )
     node.left = _parse_node(tree, left_id, mapper=mapper)
     node.right = _parse_node(tree, right_id, mapper=mapper)
     return node

@@ -18,6 +18,7 @@ class TreeProtocol(Protocol):
     max_depth: NonNegativeInt
     feature: NonNegativeIntArray1D
     threshold: Array1D
+    n_samples: NonNegativeIntArray1D
     left: NodeIdArray1D
     right: NodeIdArray1D
     value: Array
@@ -31,6 +32,7 @@ class SKLearnTreeProtocol(TreeProtocol):
         self.threshold = tree.threshold
         self.left = tree.children_left.astype(np.int64)
         self.right = tree.children_right.astype(np.int64)
+        self.n_samples = tree.n_node_samples
         self.value = tree.value
 
 
