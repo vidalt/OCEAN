@@ -81,7 +81,7 @@ class TestNoIsolation:
         model = Model(trees=trees, mapper=mapper, env=ENV)
         model.build()
 
-        predictions = np.array(clf.predict(data.to_numpy()), dtype=np.int64)
+        predictions = np.array(clf.predict(data), dtype=np.int64)
         classes = set(map(int, predictions.flatten()))
 
         n_skipped = 0
@@ -189,7 +189,7 @@ class TestIsolation:
         )
         model.build()
 
-        predictions = np.array(clf.predict(data.to_numpy()), dtype=np.int64)
+        predictions = np.array(clf.predict(data), dtype=np.int64)
         classes = set(map(int, predictions.flatten()))
 
         n_skipped = 0
