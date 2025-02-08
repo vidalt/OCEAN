@@ -9,8 +9,6 @@ from ..typing import Array1D, ExplainableEnsemble, NonNegativeInt, PositiveInt
 
 
 class MixedIntegerProgramExplainer(Model):
-    _garbage: list[gp.Var | gp.MVar | gp.Constr | gp.MConstr]
-
     def __init__(
         self,
         ensemble: ExplainableEnsemble,
