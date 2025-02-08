@@ -29,13 +29,26 @@ class FeatureVar(Var, FeatureKeeper):
         return self.x.X
 
     def build(self, model: BaseModel) -> None:
-        self._x = self._add(model)
+        x = self._add_x(model)
 
         if self.is_numeric:
-            self._mu = self._add_mu(model)
-            model.addConstr(self._x.item() == self._xget())
+            mu = self._set_mu(model)
+            model.addConstr(x.item() == self._weighted(mu=mu))
+            self._mu = mu
         elif self.is_one_hot_encoded:
-            model.addConstr(self._x.sum() == 1.0)
+            model.addConstr(x.sum().item() == 1.0)
+
+        self._x = x
+
+    def xget(self, code: Key | None = None) -> gp.Var:
+        if self.is_one_hot_encoded:
+            return self._xget_one_hot_encoded(code)
+
+        if code is not None:
+            msg = "Get by code is only supported for one-hot encoded features"
+            raise ValueError(msg)
+
+        return self._x.item()
 
     def mget(self, key: int) -> gp.Var:
         if self.is_numeric:
@@ -50,7 +63,7 @@ class FeatureVar(Var, FeatureKeeper):
         i = self.codes.index(code)
         return self._x[i].item()
 
-    def _add(self, model: BaseModel) -> gp.MVar:
+    def _add_x(self, model: BaseModel) -> gp.MVar:
         name = self.X_VAR_NAME_FMT.format(name=self._name)
 
         # Case when the feature is one-hot encoded.
@@ -64,7 +77,7 @@ class FeatureVar(Var, FeatureKeeper):
         # Case when the feature is continuous or discrete.
         return self._add_numeric(model, name)
 
-    def _add_mu(self, model: BaseModel) -> gp.MVar:
+    def _set_mu(self, model: BaseModel) -> gp.MVar:
         vtype = gp.GRB.CONTINUOUS if self.is_continuous else gp.GRB.BINARY
         n = len(self.levels) - 1
         name = f"{self._name}_mu"
@@ -93,9 +106,16 @@ class FeatureVar(Var, FeatureKeeper):
         lb = -gp.GRB.INFINITY
         return model.addMVar(shape=1, vtype=vtype, lb=lb, name=name)
 
-    def _xget(self) -> gp.LinExpr:
-        mu = self._mu
-        levels = self.levels
-        diff = np.diff(levels)
-        level = float(levels[0])
-        return level + (mu * diff).sum().item()
+    def _weighted(self, mu: gp.MVar) -> gp.LinExpr:
+        diff = np.diff(self.levels)
+        return (np.min(self.levels) + (mu * diff).sum()).item()
+
+    def _xget_one_hot_encoded(self, code: Key | None) -> gp.Var:
+        if code is None:
+            msg = "Code is required for one-hot encoded features get"
+            raise ValueError(msg)
+        if code not in self.codes:
+            msg = f"Code '{code}' not found in the feature codes"
+            raise ValueError(msg)
+        j = self.codes.index(code)
+        return self._x[j].item()
