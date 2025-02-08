@@ -6,7 +6,7 @@ from pydantic import Field
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
 type ExplainableEnsemble = RandomForestClassifier
-type ParsableEnsemble = RandomForestClassifier | IsolationForest
+type ParsableEnsemble = ExplainableEnsemble | IsolationForest
 
 Number = float
 PositiveInt = Annotated[int, Field(ge=1)]

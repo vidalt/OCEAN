@@ -1,11 +1,11 @@
 import gurobipy as gp
-from sklearn.ensemble import IsolationForest, RandomForestClassifier
+from sklearn.ensemble import IsolationForest
 
 from ..abc import Mapper
 from ..feature import Feature
 from ..mip import Model, Solution, TreeVar
 from ..tree import parse_ensembles
-from ..typing import Array1D, NonNegativeInt, PositiveInt
+from ..typing import Array1D, ExplainableEnsemble, NonNegativeInt, PositiveInt
 
 
 class MixedIntegerProgramExplainer(Model):
@@ -13,7 +13,7 @@ class MixedIntegerProgramExplainer(Model):
 
     def __init__(
         self,
-        ensemble: RandomForestClassifier,
+        ensemble: ExplainableEnsemble,
         *,
         mapper: Mapper[Feature],
         weights: Array1D | None = None,
