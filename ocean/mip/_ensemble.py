@@ -40,7 +40,7 @@ class Ensemble:
         self._set_trees(trees=trees, flow_type=flow_type)
         self._n_isolators = n_isolators
         self._max_samples = max_samples
-        self._set_weights(weights)
+        self._set_weights(weights=weights)
 
     def build_trees(self, model: BaseModel) -> None:
         model.build_vars(*self.trees)
