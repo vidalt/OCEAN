@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from typing import Annotated, Protocol
 
 import numpy as np
@@ -71,6 +72,23 @@ class SKLearnTree(Protocol):
     children_right: NodeIdArray1D
     n_node_samples: NonNegativeIntArray1D
     value: Array
+
+
+class BaseExplanation(Protocol):
+    @property
+    def x(self) -> Array1D: ...
+    @property
+    def value(self) -> Mapping[Key, Key | Number]: ...
+
+
+class BaseExplainer(Protocol):
+    def explain(
+        self,
+        x: Array1D,
+        *,
+        y: NonNegativeInt,
+        norm: PositiveInt,
+    ) -> BaseExplanation: ...
 
 
 __all__ = [

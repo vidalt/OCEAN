@@ -4,13 +4,19 @@ from sklearn.ensemble import IsolationForest
 from ..abc import Mapper
 from ..feature import Feature
 from ..tree import parse_ensembles
-from ..typing import Array1D, ExplainableEnsemble, NonNegativeInt, PositiveInt
+from ..typing import (
+    Array1D,
+    BaseExplainer,
+    ExplainableEnsemble,
+    NonNegativeInt,
+    PositiveInt,
+)
 from ._explanation import Explanation
 from ._model import Model
 from ._variables import TreeVar
 
 
-class Explainer(Model):
+class Explainer(Model, BaseExplainer):
     def __init__(
         self,
         ensemble: ExplainableEnsemble,

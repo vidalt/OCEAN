@@ -5,11 +5,11 @@ import numpy as np
 import pandas as pd
 
 from ..abc import Mapper
-from ..typing import Array1D, Key
+from ..typing import Array1D, BaseExplanation, Key, Number
 from ._variables import FeatureVar
 
 
-class Explanation(Mapper[FeatureVar]):
+class Explanation(Mapper[FeatureVar], BaseExplanation):
     def vget(self, i: int) -> gp.Var:
         name = self.names[i]
         if self[name].is_one_hot_encoded:
@@ -36,8 +36,8 @@ class Explanation(Mapper[FeatureVar]):
         return self.to_numpy()
 
     @property
-    def value(self) -> Mapping[Key, float | Key]:
-        def get(v: FeatureVar) -> float | Key:
+    def value(self) -> Mapping[Key, Key | Number]:
+        def get(v: FeatureVar) -> Key | Number:
             if v.is_one_hot_encoded:
                 for code in v.codes:
                     if np.isclose(v.xget(code).X, 1.0):
