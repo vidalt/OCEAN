@@ -6,8 +6,8 @@ from ..feature import Feature
 from ..tree import parse_ensembles
 from ..typing import (
     Array1D,
+    BaseExplainableEnsemble,
     BaseExplainer,
-    ExplainableEnsemble,
     NonNegativeInt,
     PositiveInt,
 )
@@ -19,7 +19,7 @@ from ._variables import TreeVar
 class Explainer(Model, BaseExplainer):
     def __init__(
         self,
-        ensemble: ExplainableEnsemble,
+        ensemble: BaseExplainableEnsemble,
         *,
         mapper: Mapper[Feature],
         weights: Array1D | None = None,
