@@ -3,12 +3,14 @@ from sklearn.ensemble import IsolationForest
 
 from ..abc import Mapper
 from ..feature import Feature
-from ..mip import MixedIntegerProgramExplanation, Model, TreeVar
 from ..tree import parse_ensembles
 from ..typing import Array1D, ExplainableEnsemble, NonNegativeInt, PositiveInt
+from ._explanation import Explanation
+from ._model import Model
+from ._variables import TreeVar
 
 
-class MixedIntegerProgramExplainer(Model):
+class Explainer(Model):
     def __init__(
         self,
         ensemble: ExplainableEnsemble,
@@ -48,7 +50,7 @@ class MixedIntegerProgramExplainer(Model):
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
-    ) -> MixedIntegerProgramExplanation:
+    ) -> Explanation:
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
         self.optimize()

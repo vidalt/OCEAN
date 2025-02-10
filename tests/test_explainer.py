@@ -4,7 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 
 from ocean import MixedIntegerProgramExplainer
 
-from ..utils import ENV, generate_data
+from .utils import ENV, generate_data
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
