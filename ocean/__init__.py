@@ -1,5 +1,5 @@
 from . import abc, datasets, feature, mip, tree
-from .explainers import MixedIntegerProgramExplainer
+from ._explainers import MixedIntegerProgramExplainer
 
 __all__ = [
     "MixedIntegerProgramExplainer",
