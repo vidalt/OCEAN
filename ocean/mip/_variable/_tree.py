@@ -9,7 +9,7 @@ from ...tree._keeper import TreeKeeper, TreeLike
 from ...tree._node import Node
 from ...typing import NonNegativeInt
 from .._base import BaseModel, Var
-from .._builder.flow import FlowBuilder, FlowBuilderFactory
+from .._builders.flow import FlowBuilder, FlowBuilderFactory
 from .._utils import average_length
 
 

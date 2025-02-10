@@ -15,7 +15,7 @@ from ..typing import (
     Unit,
 )
 from ._base import BaseModel
-from ._builder.model import ModelBuilder, ModelBuilderFactory
+from ._builders.model import ModelBuilder, ModelBuilderFactory
 from ._ensemble import Ensemble
 from ._feature import FeatureBuilder
 from ._garbage import GarbageManager
