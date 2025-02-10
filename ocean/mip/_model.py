@@ -17,14 +17,14 @@ from ..typing import (
 from ._base import BaseModel
 from ._builders.model import ModelBuilder, ModelBuilderFactory
 from ._ensemble import Ensemble
-from ._feature import FeatureBuilder
 from ._garbage import GarbageManager
+from ._managers import FeatureManager
 from ._typing import Objective
 from ._utils import average_length
 from ._variables import TreeVar
 
 
-class Model(BaseModel, FeatureBuilder, Ensemble, GarbageManager):
+class Model(BaseModel, FeatureManager, Ensemble, GarbageManager):
     DEFAULT_EPSILON: Unit = 1.0 / (2.0**16)
     DEFAULT_NUM_EPSILON: Unit = 1.0 / (2.0**6)
 
@@ -68,7 +68,7 @@ class Model(BaseModel, FeatureBuilder, Ensemble, GarbageManager):
             max_samples=max_samples,
             flow_type=flow_type,
         )
-        FeatureBuilder.__init__(self, mapper=mapper)
+        FeatureManager.__init__(self, mapper=mapper)
         GarbageManager.__init__(self)
 
         self._set_weights(weights=weights)

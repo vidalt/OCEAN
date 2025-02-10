@@ -1,17 +1,17 @@
 import gurobipy as gp
 
-from ..abc import Mapper
-from ..feature import Feature
-from ..typing import (
+from ...abc import Mapper
+from ...feature import Feature
+from ...typing import (
     Key,
     PositiveInt,
 )
-from ._base import BaseModel
-from ._explanation import MixedIntegerProgramExplanation
-from ._variables import FeatureVar
+from .._base import BaseModel
+from .._explanation import MixedIntegerProgramExplanation
+from .._variables import FeatureVar
 
 
-class FeatureBuilder:
+class FeatureManager:
     FEATURE_VAR_FMT: str = "feature[{key}]"
 
     _mapper: MixedIntegerProgramExplanation
