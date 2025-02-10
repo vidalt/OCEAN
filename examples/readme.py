@@ -1,8 +1,8 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
+from ocean import MixedIntegerProgramExplainer
 from ocean.datasets import load_adult
-from ocean.explainer import MixedIntegerProgramExplainer
 
 # Load the adult dataset
 (data, target), mapper = load_adult()

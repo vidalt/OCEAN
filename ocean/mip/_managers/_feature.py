@@ -1,22 +1,20 @@
 import gurobipy as gp
 
-from ..abc import Mapper
-from ..feature import Feature
-from ..typing import (
+from ...abc import Mapper
+from ...feature import Feature
+from ...typing import (
     Key,
     PositiveInt,
 )
-from ._base import BaseModel
-from ._solution import Solution
-from ._variable import FeatureVar
+from .._base import BaseModel
+from .._explanation import Explanation
+from .._variables import FeatureVar
 
 
-class FeatureBuilder:
+class FeatureManager:
     FEATURE_VAR_FMT: str = "feature[{key}]"
 
-    # Mapper for the features in the model.
-    # this also is the solution of the model.
-    _mapper: Solution
+    _mapper: Explanation
 
     def __init__(self, mapper: Mapper[Feature]) -> None:
         self._set_mapper(mapper)
@@ -33,11 +31,11 @@ class FeatureBuilder:
         return len(self.mapper)
 
     @property
-    def mapper(self) -> Solution:
+    def mapper(self) -> Explanation:
         return self._mapper
 
     @property
-    def solution(self) -> Solution:
+    def explanation(self) -> Explanation:
         return self.mapper
 
     def vget(self, i: int) -> gp.Var:
@@ -52,4 +50,4 @@ class FeatureBuilder:
             msg = "At least one feature is required."
             raise ValueError(msg)
 
-        self._mapper = Solution(mapper.apply(create))
+        self._mapper = Explanation(mapper.apply(create))

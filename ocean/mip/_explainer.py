@@ -3,15 +3,23 @@ from sklearn.ensemble import IsolationForest
 
 from ..abc import Mapper
 from ..feature import Feature
-from ..mip import Model, Solution, TreeVar
 from ..tree import parse_ensembles
-from ..typing import Array1D, ExplainableEnsemble, NonNegativeInt, PositiveInt
+from ..typing import (
+    Array1D,
+    BaseExplainableEnsemble,
+    BaseExplainer,
+    NonNegativeInt,
+    PositiveInt,
+)
+from ._explanation import Explanation
+from ._model import Model
+from ._variables import TreeVar
 
 
-class MixedIntegerProgramExplainer(Model):
+class Explainer(Model, BaseExplainer):
     def __init__(
         self,
-        ensemble: ExplainableEnsemble,
+        ensemble: BaseExplainableEnsemble,
         *,
         mapper: Mapper[Feature],
         weights: Array1D | None = None,
@@ -48,14 +56,14 @@ class MixedIntegerProgramExplainer(Model):
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
-    ) -> Solution:
+    ) -> Explanation:
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
         self.optimize()
         if self.SolCount == 0:
             msg = "No solution found. Please check the model constraints."
             raise RuntimeError(msg)
-        return self.solution
+        return self.explanation
 
     @staticmethod
     def _get_isolation_params(

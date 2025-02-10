@@ -55,11 +55,11 @@ class TestNoIsolation:
 
         assert model.Status == gp.GRB.OPTIMAL
 
-        solution = model.solution
+        explanation = model.explanation
 
-        validate_solution(solution)
-        validate_paths(*model.trees, solution=solution)
-        validate_sklearn_paths(clf, solution, model.estimators)
+        validate_solution(explanation)
+        validate_paths(*model.trees, explanation=explanation)
+        validate_sklearn_paths(clf, explanation, model.estimators)
 
     @staticmethod
     def test_set_majority_class(
@@ -96,12 +96,12 @@ class TestNoIsolation:
 
             assert model.Status == gp.GRB.OPTIMAL
 
-            solution = model.solution
+            explanation = model.explanation
 
-            validate_solution(solution)
-            validate_paths(*model.trees, solution=solution)
-            validate_sklearn_paths(clf, solution, model.estimators)
-            validate_sklearn_pred(clf, solution, m_class=class_, model=model)
+            validate_solution(explanation)
+            validate_paths(*model.trees, explanation=explanation)
+            validate_sklearn_paths(clf, explanation, model.estimators)
+            validate_sklearn_pred(clf, explanation, m_class=class_, model=model)
 
             model.clear_majority_class()
 
@@ -154,11 +154,11 @@ class TestIsolation:
 
         assert model.Status == gp.GRB.OPTIMAL
 
-        solution = model.solution
+        explanation = model.explanation
 
-        validate_solution(solution)
-        validate_paths(*model.trees, solution=solution)
-        validate_sklearn_paths(clf, solution, model.estimators)
+        validate_solution(explanation)
+        validate_paths(*model.trees, explanation=explanation)
+        validate_sklearn_paths(clf, explanation, model.estimators)
 
     @staticmethod
     def test_set_majority_class(
@@ -204,12 +204,12 @@ class TestIsolation:
 
             assert model.Status == gp.GRB.OPTIMAL
 
-            solution = model.solution
+            explanation = model.explanation
 
-            validate_solution(solution)
-            validate_paths(*model.trees, solution=solution)
-            validate_sklearn_paths(clf, solution, model.estimators)
-            validate_sklearn_pred(clf, solution, m_class=class_, model=model)
+            validate_solution(explanation)
+            validate_paths(*model.trees, explanation=explanation)
+            validate_sklearn_paths(clf, explanation, model.estimators)
+            validate_sklearn_pred(clf, explanation, m_class=class_, model=model)
 
             model.clear_majority_class()
 

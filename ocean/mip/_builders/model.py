@@ -6,7 +6,7 @@ import numpy as np
 from ...abc import Mapper
 from ...tree._node import Node
 from .._base import BaseModel
-from .._variable import FeatureVar, TreeVar
+from .._variables import FeatureVar, TreeVar
 
 
 class ModelBuilder(Protocol):

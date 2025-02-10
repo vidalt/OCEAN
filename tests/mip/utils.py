@@ -7,7 +7,7 @@ from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
 from ocean.abc import Mapper
 from ocean.feature import Feature
-from ocean.mip import Model, Solution, TreeVar
+from ocean.mip import Explanation, Model, TreeVar
 from ocean.tree import Node
 from ocean.typing import Array1D, NonNegativeInt
 
@@ -19,25 +19,25 @@ if TYPE_CHECKING:
     from ocean.typing import Key
 
 
-def check_solution(x: Array1D, solution: Solution) -> None:
-    n = solution.n_columns
-    x_sol = solution.to_numpy()
+def check_solution(x: Array1D, explanation: Explanation) -> None:
+    n = explanation.n_columns
+    x_sol = explanation.x
     for i in range(n):
-        name = solution.names[i]
+        name = explanation.names[i]
         # For now we only check the non continuous features
         # as the continuous features are epsilon away from
-        # the solution
-        if not solution[name].is_continuous:
+        # the explanation
+        if not explanation[name].is_continuous:
             assert np.isclose(x[i], x_sol[i])
 
 
-def validate_solution(solution: Solution) -> None:
-    x = solution.to_numpy()
-    n = solution.n_columns
+def validate_solution(explanation: Explanation) -> None:
+    x = explanation.x
+    n = explanation.n_columns
     codes: dict[Key, float] = defaultdict(float)
     for i in range(n):
-        name = solution.names[i]
-        feature = solution[name]
+        name = explanation.names[i]
+        feature = explanation[name]
         value = x[i]
         if feature.is_one_hot_encoded:
             assert np.any(np.isclose(value, [0.0, 1.0]))
@@ -54,26 +54,26 @@ def validate_solution(solution: Solution) -> None:
         assert np.isclose(value, 1.0)
 
 
-def check_node(tree: TreeVar, node: Node, solution: Solution) -> None:
+def check_node(tree: TreeVar, node: Node, explanation: Explanation) -> None:
     if node.is_leaf:
         return
 
     left = node.left
     right = node.right
-    x = solution.to_numpy()
+    x = explanation.x
     next_node = left if tree[left.node_id].X == 1.0 else right
     assert tree[next_node.node_id].X == 1.0
 
     name = node.feature
-    if solution[name].is_one_hot_encoded:
+    if explanation[name].is_one_hot_encoded:
         code = node.code
-        i = solution.idx.get(name, code)
+        i = explanation.idx.get(name, code)
         value = x[i]
     else:
-        i = solution.idx.get(name)
+        i = explanation.idx.get(name)
         value = x[i]
 
-    if solution[name].is_numeric:
+    if explanation[name].is_numeric:
         threshold = node.threshold
         if value <= threshold:
             assert tree[left.node_id].X == 1.0
@@ -84,24 +84,24 @@ def check_node(tree: TreeVar, node: Node, solution: Solution) -> None:
     else:
         assert tree[right.node_id].X == 1.0
 
-    check_node(tree, next_node, solution=solution)
+    check_node(tree, next_node, explanation=explanation)
 
 
-def validate_path(tree: TreeVar, solution: Solution) -> None:
-    check_node(tree, tree.root, solution=solution)
+def validate_path(tree: TreeVar, explanation: Explanation) -> None:
+    check_node(tree, tree.root, explanation=explanation)
 
 
-def validate_paths(*trees: TreeVar, solution: Solution) -> None:
+def validate_paths(*trees: TreeVar, explanation: Explanation) -> None:
     for tree in trees:
-        validate_path(tree, solution)
+        validate_path(tree, explanation)
 
 
 def validate_sklearn_paths(
     clf: RandomForestClassifier,
-    solution: Solution,
+    explanation: Explanation,
     trees: tuple[TreeVar, ...],
 ) -> None:
-    x = solution.to_numpy().reshape(1, -1)
+    x = explanation.x.reshape(1, -1)
     ind, ptr = clf.decision_path(x)  # pyright: ignore[reportUnknownVariableType]
     ind = cast("sp.csr_matrix", ind)
     ptr = np.array(ptr, dtype=np.int64)
@@ -117,11 +117,11 @@ def validate_sklearn_paths(
 
 def validate_sklearn_pred(
     clf: RandomForestClassifier,
-    solution: Solution,
+    explanation: Explanation,
     m_class: NonNegativeInt,
     model: Model,
 ) -> None:
-    x = solution.to_numpy().reshape(1, -1)
+    x = explanation.x.reshape(1, -1)
     prediction = np.asarray(clf.predict(x), dtype=np.int64)
     function = np.asarray(model.function.getValue(), dtype=np.float64)
     proba = function / np.sum(function)

@@ -1,6 +1,14 @@
 from ._base import BaseModel
+from ._explainer import Explainer
+from ._explanation import Explanation
 from ._model import Model
-from ._solution import Solution
-from ._variable import FeatureVar, TreeVar
+from ._variables import FeatureVar, TreeVar
 
-__all__ = ["BaseModel", "FeatureVar", "Model", "Solution", "TreeVar"]
+__all__ = [
+    "BaseModel",
+    "Explainer",
+    "Explanation",
+    "FeatureVar",
+    "Model",
+    "TreeVar",
+]

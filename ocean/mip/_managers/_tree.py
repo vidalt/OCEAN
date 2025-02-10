@@ -3,17 +3,17 @@ from collections.abc import Iterable
 import gurobipy as gp
 import numpy as np
 
-from ..tree import Tree
-from ..typing import (
+from ...tree import Tree
+from ...typing import (
     NonNegativeArray1D,
     NonNegativeInt,
     PositiveInt,
 )
-from ._base import BaseModel
-from ._variable import TreeVar
+from .._base import BaseModel
+from .._variables import TreeVar
 
 
-class Ensemble:
+class TreeManager:
     TREE_VAR_FMT: str = "tree[{t}]"
 
     # Tree variables in the ensemble.

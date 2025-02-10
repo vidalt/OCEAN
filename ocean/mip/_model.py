@@ -15,16 +15,14 @@ from ..typing import (
     Unit,
 )
 from ._base import BaseModel
-from ._builder.model import ModelBuilder, ModelBuilderFactory
-from ._ensemble import Ensemble
-from ._feature import FeatureBuilder
-from ._garbage import GarbageManager
+from ._builders.model import ModelBuilder, ModelBuilderFactory
+from ._managers import FeatureManager, GarbageManager, TreeManager
 from ._typing import Objective
 from ._utils import average_length
-from ._variable import TreeVar
+from ._variables import TreeVar
 
 
-class Model(BaseModel, FeatureBuilder, Ensemble, GarbageManager):
+class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
     DEFAULT_EPSILON: Unit = 1.0 / (2.0**16)
     DEFAULT_NUM_EPSILON: Unit = 1.0 / (2.0**6)
 
@@ -60,7 +58,7 @@ class Model(BaseModel, FeatureBuilder, Ensemble, GarbageManager):
     ) -> None:
         # Initialize the super models.
         BaseModel.__init__(self, name=name, env=env)
-        Ensemble.__init__(
+        TreeManager.__init__(
             self,
             trees=trees,
             weights=weights,
@@ -68,7 +66,7 @@ class Model(BaseModel, FeatureBuilder, Ensemble, GarbageManager):
             max_samples=max_samples,
             flow_type=flow_type,
         )
-        FeatureBuilder.__init__(self, mapper=mapper)
+        FeatureManager.__init__(self, mapper=mapper)
         GarbageManager.__init__(self)
 
         self._set_weights(weights=weights)
@@ -113,8 +111,7 @@ class Model(BaseModel, FeatureBuilder, Ensemble, GarbageManager):
 
     def cleanup(self) -> None:
         self.clear_majority_class()
-        self.remove(self._garbage)
-        GarbageManager.cleanup(self)
+        self.remove_garbage(self)
 
     def _set_builder(self, model_type: Type) -> None:
         match model_type:

@@ -71,12 +71,12 @@ class TestNoIsolation:
 
             assert model.Status == gp.GRB.OPTIMAL
 
-            solution = model.solution
+            explanation = model.explanation
 
-            validate_solution(solution)
-            validate_paths(*model.trees, solution=solution)
-            validate_sklearn_paths(clf, solution, model.trees)
-            check_solution(x, solution)
+            validate_solution(explanation)
+            validate_paths(*model.trees, explanation=explanation)
+            validate_sklearn_paths(clf, explanation, model.trees)
+            check_solution(x, explanation)
 
             model.cleanup()
 
@@ -129,14 +129,14 @@ class TestNoIsolation:
 
             assert model.Status == gp.GRB.OPTIMAL
 
-            solution = model.solution
+            explanation = model.explanation
 
-            validate_solution(solution)
-            validate_paths(*model.trees, solution=solution)
-            validate_sklearn_paths(clf, solution, model.trees)
-            validate_sklearn_pred(clf, solution, m_class=class_, model=model)
+            validate_solution(explanation)
+            validate_paths(*model.trees, explanation=explanation)
+            validate_sklearn_paths(clf, explanation, model.trees)
+            validate_sklearn_pred(clf, explanation, m_class=class_, model=model)
             if class_ == y:
-                check_solution(x, solution)
+                check_solution(x, explanation)
 
             model.clear_majority_class()
             model.cleanup()
