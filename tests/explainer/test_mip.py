@@ -2,7 +2,7 @@ import gurobipy as gp
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 
-from ocean.explainer import MixedIntegerProgramExplainer
+from ocean.explainers import MixedIntegerProgramExplainer
 
 from ..utils import ENV, generate_data
 
