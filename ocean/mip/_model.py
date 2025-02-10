@@ -16,8 +16,7 @@ from ..typing import (
 )
 from ._base import BaseModel
 from ._builders.model import ModelBuilder, ModelBuilderFactory
-from ._garbage import GarbageManager
-from ._managers import FeatureManager, TreeManager
+from ._managers import FeatureManager, GarbageManager, TreeManager
 from ._typing import Objective
 from ._utils import average_length
 from ._variables import TreeVar
@@ -112,8 +111,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     def cleanup(self) -> None:
         self.clear_majority_class()
-        self.remove(self._garbage)
-        GarbageManager.cleanup(self)
+        self.remove_garbage(self)
 
     def _set_builder(self, model_type: Type) -> None:
         match model_type:
