@@ -7,7 +7,7 @@ from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
 from ocean.abc import Mapper
 from ocean.feature import Feature
-from ocean.mip import Model, Solution, TreeVar
+from ocean.mip import MixedIntegerProgramExplanation, Model, TreeVar
 from ocean.tree import Node
 from ocean.typing import Array1D, NonNegativeInt
 
@@ -19,7 +19,9 @@ if TYPE_CHECKING:
     from ocean.typing import Key
 
 
-def check_solution(x: Array1D, solution: Solution) -> None:
+def check_solution(
+    x: Array1D, solution: MixedIntegerProgramExplanation
+) -> None:
     n = solution.n_columns
     x_sol = solution.to_numpy()
     for i in range(n):
@@ -31,7 +33,7 @@ def check_solution(x: Array1D, solution: Solution) -> None:
             assert np.isclose(x[i], x_sol[i])
 
 
-def validate_solution(solution: Solution) -> None:
+def validate_solution(solution: MixedIntegerProgramExplanation) -> None:
     x = solution.to_numpy()
     n = solution.n_columns
     codes: dict[Key, float] = defaultdict(float)
@@ -54,7 +56,9 @@ def validate_solution(solution: Solution) -> None:
         assert np.isclose(value, 1.0)
 
 
-def check_node(tree: TreeVar, node: Node, solution: Solution) -> None:
+def check_node(
+    tree: TreeVar, node: Node, solution: MixedIntegerProgramExplanation
+) -> None:
     if node.is_leaf:
         return
 
@@ -87,18 +91,22 @@ def check_node(tree: TreeVar, node: Node, solution: Solution) -> None:
     check_node(tree, next_node, solution=solution)
 
 
-def validate_path(tree: TreeVar, solution: Solution) -> None:
+def validate_path(
+    tree: TreeVar, solution: MixedIntegerProgramExplanation
+) -> None:
     check_node(tree, tree.root, solution=solution)
 
 
-def validate_paths(*trees: TreeVar, solution: Solution) -> None:
+def validate_paths(
+    *trees: TreeVar, solution: MixedIntegerProgramExplanation
+) -> None:
     for tree in trees:
         validate_path(tree, solution)
 
 
 def validate_sklearn_paths(
     clf: RandomForestClassifier,
-    solution: Solution,
+    solution: MixedIntegerProgramExplanation,
     trees: tuple[TreeVar, ...],
 ) -> None:
     x = solution.to_numpy().reshape(1, -1)
@@ -117,7 +125,7 @@ def validate_sklearn_paths(
 
 def validate_sklearn_pred(
     clf: RandomForestClassifier,
-    solution: Solution,
+    solution: MixedIntegerProgramExplanation,
     m_class: NonNegativeInt,
     model: Model,
 ) -> None:

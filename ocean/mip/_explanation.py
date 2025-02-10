@@ -9,7 +9,7 @@ from ..typing import Array1D, Key
 from ._variable import FeatureVar
 
 
-class Solution(Mapper[FeatureVar]):
+class MixedIntegerProgramExplanation(Mapper[FeatureVar]):
     def vget(self, i: int) -> gp.Var:
         name = self.names[i]
         if self[name].is_one_hot_encoded:

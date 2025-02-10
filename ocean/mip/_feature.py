@@ -7,16 +7,14 @@ from ..typing import (
     PositiveInt,
 )
 from ._base import BaseModel
-from ._solution import Solution
+from ._explanation import MixedIntegerProgramExplanation
 from ._variable import FeatureVar
 
 
 class FeatureBuilder:
     FEATURE_VAR_FMT: str = "feature[{key}]"
 
-    # Mapper for the features in the model.
-    # this also is the solution of the model.
-    _mapper: Solution
+    _mapper: MixedIntegerProgramExplanation
 
     def __init__(self, mapper: Mapper[Feature]) -> None:
         self._set_mapper(mapper)
@@ -33,11 +31,11 @@ class FeatureBuilder:
         return len(self.mapper)
 
     @property
-    def mapper(self) -> Solution:
+    def mapper(self) -> MixedIntegerProgramExplanation:
         return self._mapper
 
     @property
-    def solution(self) -> Solution:
+    def explanation(self) -> MixedIntegerProgramExplanation:
         return self.mapper
 
     def vget(self, i: int) -> gp.Var:
@@ -52,4 +50,4 @@ class FeatureBuilder:
             msg = "At least one feature is required."
             raise ValueError(msg)
 
-        self._mapper = Solution(mapper.apply(create))
+        self._mapper = MixedIntegerProgramExplanation(mapper.apply(create))
