@@ -1,5 +1,3 @@
-from collections.abc import Mapping
-
 import gurobipy as gp
 import numpy as np
 import pandas as pd
@@ -46,11 +44,3 @@ class MixedIntegerProgramExplanation(Mapper[FeatureVar]):
         suffix = ""
 
         return prefix + root + suffix
-
-    @staticmethod
-    def _repr(mapping: Mapping[Key, float | Key]) -> str:
-        length = max(len(str(k)) for k in mapping)
-        lines = [
-            f"{str(k).ljust(length + 1)} : {v}" for k, v in mapping.items()
-        ]
-        return "\n".join(lines)

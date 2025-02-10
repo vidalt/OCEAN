@@ -208,3 +208,11 @@ class Mapper[V: Value](Mapping[Key, V]):
         codes = tuple(self.codes[j] for j in indices)
         i = codes.index(code)
         return indices[i]
+
+    @staticmethod
+    def _repr(mapping: Mapping[Key, float | Key]) -> str:
+        length = max(len(str(k)) for k in mapping)
+        lines = [
+            f"{str(k).ljust(length + 1)} : {v}" for k, v in mapping.items()
+        ]
+        return "\n".join(lines)
