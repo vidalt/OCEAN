@@ -10,7 +10,7 @@ from ..typing import (
     PositiveInt,
 )
 from ._base import BaseModel
-from ._variable import TreeVar
+from ._variables import TreeVar
 
 
 class Ensemble:

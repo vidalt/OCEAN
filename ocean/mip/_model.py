@@ -21,7 +21,7 @@ from ._feature import FeatureBuilder
 from ._garbage import GarbageManager
 from ._typing import Objective
 from ._utils import average_length
-from ._variable import TreeVar
+from ._variables import TreeVar
 
 
 class Model(BaseModel, FeatureBuilder, Ensemble, GarbageManager):

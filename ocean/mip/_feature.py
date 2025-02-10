@@ -8,7 +8,7 @@ from ..typing import (
 )
 from ._base import BaseModel
 from ._explanation import MixedIntegerProgramExplanation
-from ._variable import FeatureVar
+from ._variables import FeatureVar
 
 
 class FeatureBuilder:

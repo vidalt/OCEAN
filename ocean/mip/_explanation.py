@@ -6,7 +6,7 @@ import pandas as pd
 
 from ..abc import Mapper
 from ..typing import Array1D, Key
-from ._variable import FeatureVar
+from ._variables import FeatureVar
 
 
 class MixedIntegerProgramExplanation(Mapper[FeatureVar]):
