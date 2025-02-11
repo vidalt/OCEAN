@@ -10,7 +10,7 @@ It is based on the paper *Optimal Counterfactual Explanations in Tree Ensemble* 
 This project requires the gurobi solver. You can request for a free academic license [here](https://www.gurobi.com/academia/academic-program-and-licenses/). Once you have installed gurobi, you can install the package with the following command:
 
 ```bash
-pip install git+https://github.com/eminyous/ocean.git
+pip install oceanpy
 ```
 
 ## Usage
