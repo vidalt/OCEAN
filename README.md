@@ -45,9 +45,11 @@ explanation = model.explain(x, y=1 - y, norm=1)
 # Show the explanation
 print(explanation)
 ```
+
 Expected output:
-```
-Solution:
+
+```plaintext
+Explanation:
 Age              : 39.0
 CapitalGain      : 2174.0
 CapitalLoss      : 0

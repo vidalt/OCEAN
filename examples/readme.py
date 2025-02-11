@@ -7,9 +7,8 @@ from ocean.datasets import load_adult
 # Load the adult dataset
 (data, target), mapper = load_adult()
 
-# Generate a random instance from the dataset.
-generator = np.random.default_rng(42)
-x = generator.choice(data, size=1)
+# Select an instance to explain from the dataset
+x = np.array(data[0:1])
 
 # Train a random forest classifier
 rf = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=42)
