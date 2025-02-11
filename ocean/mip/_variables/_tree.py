@@ -1,6 +1,5 @@
 from collections.abc import Iterator, Mapping
 from enum import Enum
-from functools import reduce
 
 import gurobipy as gp
 from pydantic import validate_call
@@ -10,7 +9,6 @@ from ...tree._node import Node
 from ...typing import NonNegativeInt
 from .._base import BaseModel, Var
 from .._builders.flow import FlowBuilder, FlowBuilderFactory
-from .._utils import average_length
 
 
 class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
@@ -93,8 +91,7 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
         return value
 
     def _get_length(self) -> gp.LinExpr:
-        def reducer(acc: gp.LinExpr, node: Node) -> gp.LinExpr:
-            length = node.depth + average_length(node.n_samples)
-            return acc + length * self[node.node_id]
+        def length(node: Node) -> gp.LinExpr:
+            return node.length * self[node.node_id]
 
-        return reduce(reducer, self.leaves, gp.LinExpr())
+        return sum(map(length, self.leaves), gp.LinExpr())

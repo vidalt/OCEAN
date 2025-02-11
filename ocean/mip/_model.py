@@ -18,7 +18,6 @@ from ._base import BaseModel
 from ._builders.model import ModelBuilder, ModelBuilderFactory
 from ._managers import FeatureManager, GarbageManager, TreeManager
 from ._typing import Objective
-from ._utils import average_length
 from ._variables import TreeVar
 
 
@@ -139,8 +138,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         if self.n_isolators == 0:
             return
 
-        min_average_length = average_length(self.max_samples)
-        self.addConstr(self.length >= min_average_length * self.n_isolators)
+        self.addConstr(self.length >= self.min_length)
 
     def _add_objective(self, x: Array1D, norm: int) -> Objective:
         if x.size != self.mapper.n_columns:

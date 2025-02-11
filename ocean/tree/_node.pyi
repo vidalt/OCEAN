@@ -1,6 +1,6 @@
 from anytree import NodeMixin
 
-from ..typing import Array, Key, NonNegativeInt, PositiveInt
+from ..typing import Array, Key, NonNegativeInt, NonNegativeNumber, PositiveInt
 
 class Node(NodeMixin):
     def __init__(
@@ -28,6 +28,8 @@ class Node(NodeMixin):
     def code(self) -> Key: ...
     @property
     def n_samples(self) -> NonNegativeInt: ...
+    @property
+    def length(self) -> NonNegativeNumber: ...
     @property
     def is_leaf(self) -> bool: ...
     @property
