@@ -27,9 +27,8 @@ from ocean.datasets import load_adult
 # Load the adult dataset
 (data, target), mapper = load_adult()
 
-# Generate a random instance from the dataset.
-generator = np.random.default_rng(42)
-x = generator.choice(data, size=1)
+# Select an instance to explain from the dataset
+x = np.array(data[0:1])
 
 # Train a random forest classifier
 rf = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=42)
@@ -45,4 +44,19 @@ explanation = model.explain(x, y=1 - y, norm=1)
 
 # Show the explanation
 print(explanation)
+```
+Expected output:
+```
+Solution:
+Age              : 39.0
+CapitalGain      : 2174.0
+CapitalLoss      : 0
+EducationNumber  : 13.0
+HoursPerWeek     : 41.0
+MaritalStatus    : 3
+NativeCountry    : 0
+Occupation       : 1
+Relationship     : 0
+Sex              : 0
+WorkClass        : 6
 ```
