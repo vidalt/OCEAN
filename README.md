@@ -18,7 +18,6 @@ pip install git+https://github.com/eminyous/ocean.git
 The package provides multiple classes and functions to wrap the tree ensemble models from the `scikit-learn` library. A minimal example is provided below:
 
 ```python
-import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
 from ocean import MixedIntegerProgramExplainer
@@ -28,7 +27,7 @@ from ocean.datasets import load_adult
 (data, target), mapper = load_adult()
 
 # Select an instance to explain from the dataset
-x = np.array(data[0:1])
+x = data.iloc[0].to_frame().T
 
 # Train a random forest classifier
 rf = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=42)
@@ -39,7 +38,7 @@ y = int(rf.predict(x).item())
 
 # Explain the prediction using MIPEXplainer
 model = MixedIntegerProgramExplainer(rf, mapper=mapper)
-x = x.flatten()
+x = x.to_numpy().flatten()
 explanation = model.explain(x, y=1 - y, norm=1)
 
 # Show the explanation
