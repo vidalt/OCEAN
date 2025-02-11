@@ -10,6 +10,7 @@ type BaseExplainableEnsemble = RandomForestClassifier
 type ParsableEnsemble = BaseExplainableEnsemble | IsolationForest
 
 Number = float
+NonNegativeNumber = Annotated[Number, Field(ge=0.0)]
 PositiveInt = Annotated[int, Field(ge=1)]
 NonNegativeInt = Annotated[int, Field(ge=0)]
 NonNegative = Annotated[np.float64, Field(ge=0.0)]

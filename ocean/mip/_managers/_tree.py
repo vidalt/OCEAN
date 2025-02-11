@@ -4,9 +4,11 @@ import gurobipy as gp
 import numpy as np
 
 from ...tree import Tree
+from ...tree._utils import average_length
 from ...typing import (
     NonNegativeArray1D,
     NonNegativeInt,
+    NonNegativeNumber,
     PositiveInt,
 )
 from .._base import BaseModel
@@ -28,6 +30,12 @@ class TreeManager:
     # Weights for the estimators in the ensemble.
     _weights: NonNegativeArray1D
 
+    # Length of the ensemble.
+    _length: gp.LinExpr
+
+    # Function of the ensemble.
+    _function: gp.MLinExpr
+
     def __init__(
         self,
         trees: Iterable[Tree],
@@ -44,6 +52,9 @@ class TreeManager:
 
     def build_trees(self, model: BaseModel) -> None:
         model.build_vars(*self.trees)
+
+        self._length = self._get_length()
+        self._function = self._get_function()
 
     @property
     def n_trees(self) -> PositiveInt:
@@ -87,21 +98,27 @@ class TreeManager:
 
     @property
     def function(self) -> gp.MLinExpr:
-        return self.weighted_function(weights=self.weights)
+        return self._function
 
     @property
     def length(self) -> gp.LinExpr:
-        return sum((tree.length for tree in self.isolators), gp.LinExpr())
+        return self._length
+
+    @property
+    def min_average_length(self) -> NonNegativeNumber:
+        return average_length(self.max_samples)
+
+    @property
+    def min_length(self) -> NonNegativeNumber:
+        return self.n_isolators * self.min_average_length
 
     def weighted_function(self, weights: NonNegativeArray1D) -> gp.MLinExpr:
         # \sum_{t=1}^{T} w_t f_t(x)
-        return sum(
-            (
-                np.float64(weights[t]) * tree.value
-                for t, tree in enumerate(self.estimators)
-            ),
-            gp.MLinExpr.zeros(self.shape),
-        )
+        def weighted(tree: TreeVar, weight: float) -> gp.MLinExpr:
+            return weight * tree.value
+
+        zeros = gp.MLinExpr.zeros(self.shape)
+        return sum(map(weighted, self.estimators, weights), zeros)
 
     def _set_trees(
         self,
@@ -130,3 +147,9 @@ class TreeManager:
             raise ValueError(msg)
 
         self._weights = weights
+
+    def _get_length(self) -> gp.LinExpr:
+        return sum((tree.length for tree in self.isolators), gp.LinExpr())
+
+    def _get_function(self) -> gp.MLinExpr:
+        return self.weighted_function(weights=self.weights)

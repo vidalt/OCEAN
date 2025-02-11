@@ -1,6 +1,7 @@
 from anytree import NodeMixin
 
-from ..typing import Array, Key, NonNegativeInt
+from ..typing import Array, Key, NonNegativeInt, NonNegativeNumber
+from ._utils import average_length
 
 
 class Node(NodeMixin):
@@ -92,6 +93,10 @@ class Node(NodeMixin):
     @property
     def n_samples(self) -> NonNegativeInt:
         return self._n_samples
+
+    @property
+    def length(self) -> NonNegativeNumber:
+        return self.depth + average_length(self.n_samples)
 
     @property
     def left(self) -> "Node":
