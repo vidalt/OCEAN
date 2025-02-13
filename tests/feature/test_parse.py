@@ -30,7 +30,7 @@ n_features = 5
 
 
 def test_parse() -> None:
-    mapper, data = parse_features(data=DATA)
+    data, mapper = parse_features(data=DATA)
     assert isinstance(mapper, Mapper)
     assert isinstance(data, pd.DataFrame)
     assert data.shape == expected_shape
@@ -50,7 +50,7 @@ def test_parse() -> None:
 
 
 def test_parse_valid() -> None:
-    mapper, data = parse_features(data=DATA, discretes=discretes)
+    data, mapper = parse_features(data=DATA, discretes=discretes)
     assert isinstance(mapper, Mapper)
     assert isinstance(data, pd.DataFrame)
     assert data.shape == (5, 7)
