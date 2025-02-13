@@ -8,6 +8,8 @@ from ._feature import Feature
 
 N_BINARY: int = 2
 
+type Parsed = tuple[pd.DataFrame, Mapper[Feature]]
+
 
 def _count_unique(series: "pd.Series[Any]") -> int:
     return series.nunique()
@@ -25,61 +27,56 @@ def _parse(
     data: pd.DataFrame,
     *,
     discretes: tuple[Key, ...] = (),
-    encoded: tuple[Key, ...] = (),
+    encodeds: tuple[Key, ...] = (),
     scale: bool = True,
-) -> tuple[Mapper[Feature], pd.DataFrame]:
+) -> Parsed:
     discrete = set(discretes)
-    frames: list[pd.DataFrame | pd.Series[int] | pd.Series[float]] = []
-    features: list[Feature] = []
-    keys: list[Key] = []
+    encoded = set(encodeds)
+    frames: dict[Key, pd.DataFrame | pd.Series[int] | pd.Series[float]] = {}
+    mapping: dict[Key, Feature] = {}
 
     for column in data.columns:
         series: pd.Series[Any] = data[column].rename("")
         levels: tuple[float, ...] = ()
         codes: tuple[Key, ...] = ()
+        is_binary = series.nunique() == N_BINARY
+        is_numeric = pd.to_numeric(series, errors="coerce").notna().all()
 
         if column in discrete:
             series = series.astype(float)
-            frames.append(series)
+            frames[column] = series
             levels = tuple(set(series.dropna()))
             feature = Feature(Feature.Type.DISCRETE, levels=levels)
-        elif column in encoded:
-            frames.append(pd.get_dummies(series).astype(int))
+        elif (column in encoded) or not (is_binary or is_numeric):
+            frames[column] = pd.get_dummies(series).astype(int)
             codes = tuple(set(series))
             feature = Feature(Feature.Type.ONE_HOT_ENCODED, codes=codes)
-        elif series.nunique() == N_BINARY:
-            frames.append(
+        elif is_binary:
+            frames[column] = (
                 pd.get_dummies(series, drop_first=True)
                 .iloc[:, 0]
                 .rename("")
                 .astype(int)
             )
             feature = Feature(Feature.Type.BINARY)
-        elif pd.to_numeric(series, errors="coerce").notna().all():
+        else:
             x = series.astype(float)
             if scale:
                 x = ((x - x.min()) / (x.max() - x.min()) - 0.5).astype(float)
-            frames.append(x)
+            frames[column] = x
             levels = (x.min() - 0.5, x.max() + 0.5)
             feature = Feature(Feature.Type.CONTINUOUS, levels=levels)
-        else:
-            frames.append(pd.get_dummies(series).astype(int))
-            codes = tuple(set(series))
-            feature = Feature(Feature.Type.ONE_HOT_ENCODED, codes=codes)
 
-        keys.append(column)
-        features.append(feature)
+        mapping[column] = feature
 
-    proc = pd.concat(frames, axis=1, keys=keys)
-    mapping = dict(zip(keys, features, strict=True))
+    proc = pd.concat(frames, axis=1)
 
     if proc.columns.nlevels == 1:
         columns = pd.Index(proc.columns)
     else:
         columns = pd.MultiIndex.from_tuples(proc.columns)
 
-    mapper = Mapper(mapping, columns=columns)
-    return mapper, proc
+    return proc, Mapper(mapping, columns=columns)
 
 
 def parse_features(
@@ -90,7 +87,7 @@ def parse_features(
     drop_na: bool = True,
     drop_constant: bool = True,
     scale: bool = True,
-) -> tuple[Mapper[Feature], pd.DataFrame]:
+) -> Parsed:
     """
     Preprocesses a DataFrame by validating, cleaning, and parsing features.
 
@@ -135,4 +132,4 @@ def parse_features(
     if drop_constant:
         data = _remove_constant_columns(data)
 
-    return _parse(data, discretes=discretes, encoded=encoded, scale=scale)
+    return _parse(data, discretes=discretes, encodeds=encoded, scale=scale)

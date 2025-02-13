@@ -46,7 +46,7 @@ def generate_data(
         **continuous_values,
         **encoded_values,
     })
-    mapper, data = parse_features(data, discretes=tuple(discrete_values.keys()))
+    data, mapper = parse_features(data, discretes=tuple(discrete_values.keys()))
 
     if n_classes == -1:
         return data, generator.uniform(0, 1, n_samples).flatten(), mapper

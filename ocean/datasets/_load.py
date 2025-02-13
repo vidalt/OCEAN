@@ -49,7 +49,7 @@ class Loader:
         discretes = tuple(data.columns[types == "D"].to_list())
         encoded = tuple(data.columns[types == "E"].to_list())
         data = data.drop(columns=targets)
-        mapper, data = parse_features(
+        data, mapper = parse_features(
             data,
             discretes=discretes,
             encoded=encoded,
