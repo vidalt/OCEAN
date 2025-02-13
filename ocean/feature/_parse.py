@@ -42,17 +42,18 @@ def _parse(
         is_binary = series.nunique() == N_BINARY
         is_numeric = pd.to_numeric(series, errors="coerce").notna().all()
 
+        frame: pd.DataFrame | pd.Series[int] | pd.Series[float] = series
+
         if column in discrete:
             series = series.astype(float)
-            frames[column] = series
             levels = tuple(set(series.dropna()))
             feature = Feature(Feature.Type.DISCRETE, levels=levels)
         elif (column in encoded) or not (is_binary or is_numeric):
-            frames[column] = pd.get_dummies(series).astype(int)
+            frame = pd.get_dummies(series).astype(int)
             codes = tuple(set(series))
             feature = Feature(Feature.Type.ONE_HOT_ENCODED, codes=codes)
         elif is_binary:
-            frames[column] = (
+            frame = (
                 pd.get_dummies(series, drop_first=True)
                 .iloc[:, 0]
                 .rename("")
@@ -63,10 +64,11 @@ def _parse(
             x = series.astype(float)
             if scale:
                 x = ((x - x.min()) / (x.max() - x.min()) - 0.5).astype(float)
-            frames[column] = x
+            frame = x
             levels = (x.min() - 0.5, x.max() + 0.5)
             feature = Feature(Feature.Type.CONTINUOUS, levels=levels)
 
+        frames[column] = frame
         mapping[column] = feature
 
     proc = pd.concat(frames, axis=1)
