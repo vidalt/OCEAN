@@ -19,16 +19,24 @@ class Loader:
         self,
         name: str,
         *,
+        scale: bool = False,
         return_mapper: Literal[True] = True,
     ) -> Loaded: ...
 
     @overload
-    def load(self, name: str, *, return_mapper: Literal[False]) -> Dataset: ...
+    def load(
+        self,
+        name: str,
+        *,
+        scale: bool = False,
+        return_mapper: Literal[False],
+    ) -> Dataset: ...
 
     def load(
         self,
         name: str,
         *,
+        scale: bool = False,
         return_mapper: bool = True,
     ) -> Dataset | Loaded:
         path = f"{name}/{name}.csv"
@@ -45,7 +53,7 @@ class Loader:
             data,
             discretes=discretes,
             encoded=encoded,
-            scale=False,
+            scale=scale,
         )
 
         if return_mapper:
