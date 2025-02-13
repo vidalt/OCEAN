@@ -1,6 +1,6 @@
 # Optimal Counterfactual Explanations in Tree Ensembles
 
-![Logo](logo.svg)
+![Logo](https://github.com/eminyous/ocean/blob/main/logo.svg?raw=True)
 
 This repository provides methods to generate optimal counterfactual explanations in tree ensembles.
 It is based on the paper *Optimal Counterfactual Explanations in Tree Ensemble* by Axel Parmentier and Thibaut Vidal in the *Proceedings of the thirty-eighth International Conference on Machine Learning*, 2021, in press. The article is [available here](http://proceedings.mlr.press/v139/parmentier21a/parmentier21a.pdf).
