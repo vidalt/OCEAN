@@ -12,6 +12,7 @@ class Node(NodeMixin):
     _id: NonNegativeInt
     _n_samples: NonNegativeInt
 
+    __sigma: bool | None = None
     __left: "Node | None" = None
     __right: "Node | None" = None
 
@@ -110,7 +111,9 @@ class Node(NodeMixin):
         node.parent = self
         if self.__left is not None:
             self.__left.parent = None
+            self.__left.sigma = None
         self.__left = node
+        self.__left.sigma = True
 
     @property
     def right(self) -> "Node":
@@ -124,4 +127,17 @@ class Node(NodeMixin):
         node.parent = self
         if self.__right is not None:
             self.__right.parent = None
+            self.__right.sigma = None
         self.__right = node
+        self.__right.sigma = False
+
+    @property
+    def sigma(self) -> bool:
+        if self.__sigma is None:
+            msg = "This is the root node. It does not have a sigma value."
+            raise AttributeError(msg)
+        return self.__sigma
+
+    @sigma.setter
+    def sigma(self, value: bool | None) -> None:
+        self.__sigma = value
