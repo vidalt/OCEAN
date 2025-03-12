@@ -24,7 +24,7 @@ class TreeManager:
     _weights: NonNegativeArray1D
 
     # Function of the ensemble.
-    _function: tuple[cp.LinearExpr, ...]
+    _function: dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]
 
     # Scale for the scores.
     _score_scale: int = DEFAULT_SCORE_SCALE
@@ -70,6 +70,12 @@ class TreeManager:
         return self.shape[-1]
 
     @property
+    def function(
+        self,
+    ) -> dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]:
+        return self._function
+
+    @property
     def weights(self) -> NonNegativeArray1D:
         return self._weights
 
@@ -102,19 +108,25 @@ class TreeManager:
     def weighted_function(
         self,
         weights: NonNegativeArray1D,
-    ) -> tuple[cp.LinearExpr, ...]:
-        exprs: list[cp.LinearExpr] = []
+    ) -> dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]:
+        exprs: dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr] = {}
         n_classes = self.n_classes
+        n_outputs = self.shape[-2]
         scale = self._score_scale
-        for c in range(n_classes):
-            expr = cp.LinearExpr()
-            for tree, weight in zip(self.estimators, weights, strict=True):
-                tree_expr = cp.LinearExpr()
-                for leaf in tree.leaves:
-                    tree_expr += tree[leaf.node_id] * int(leaf.value[c] * scale)
-                expr += tree_expr * int(weight)
-            exprs.append(expr)
-        return tuple(exprs)
+        for op in range(n_outputs):
+            for c in range(n_classes):
+                expr = cp.LinearExpr()
+                for tree, weight in zip(self.estimators, weights, strict=True):
+                    tree_expr = cp.LinearExpr()
+                    for leaf in tree.leaves:
+                        tree_expr += tree[leaf.node_id] * int(
+                            leaf.value[op, c] * scale
+                        )
+                    expr += tree_expr * int(weight)
+                exprs[op, c] = expr
+        return exprs
 
-    def _get_function(self) -> tuple[cp.LinearExpr, ...]:
+    def _get_function(
+        self,
+    ) -> dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]:
         return self.weighted_function(weights=self.weights)
