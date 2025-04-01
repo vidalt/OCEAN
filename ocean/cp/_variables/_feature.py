@@ -11,18 +11,23 @@ class FeatureVar(Var, FeatureKeeper):
 
     _x: cp.IntVar
     _u: dict[Key, cp.IntVar]
+    _mu: list[cp.IntVar]
 
     def __init__(self, feature: Feature, name: str) -> None:
         Var.__init__(self, name=name)
         FeatureKeeper.__init__(self, feature=feature)
 
     def build(self, model: BaseModel) -> None:
-        if self.is_one_hot_encoded:
+        self._x = self._add_x(model)
+        if self.is_numeric:
+            mu = self._set_mu(model)
+            model.add_map_domain(self.xget(), mu)
+            self._mu = mu
+        elif self.is_one_hot_encoded:
             u = self._add_u(model)
             model.Add(cp.LinearExpr.Sum(u.values()) == 1)
             self._u = u
             return
-        self._x = self._add_x(model)
 
     def xget(self, code: Key | None = None) -> cp.IntVar:
         if self.is_one_hot_encoded:
@@ -37,6 +42,12 @@ class FeatureVar(Var, FeatureKeeper):
 
         return self._x
 
+    def mget(self, key: int) -> cp.IntVar:
+        if not self.is_numeric:
+            msg = "The 'mget' method is only supported for numeric features"
+            raise ValueError(msg)
+        return self._mu[key]
+
     def _add_x(self, model: BaseModel) -> cp.IntVar:
         name = self.X_VAR_NAME_FMT.format(name=self._name)
 
@@ -50,6 +61,10 @@ class FeatureVar(Var, FeatureKeeper):
     def _add_u(self, model: BaseModel) -> dict[Key, cp.IntVar]:
         name = self.X_VAR_NAME_FMT.format(name=self._name)
         return self._add_one_hot_encoded(model=model, name=name)
+
+    def _set_mu(self, model: BaseModel) -> list[cp.IntVar]:
+        m = len(self.levels)
+        return [model.NewBoolVar(f"{self._name}_mu_{i}") for i in range(m)]
 
     def _add_one_hot_encoded(
         self,

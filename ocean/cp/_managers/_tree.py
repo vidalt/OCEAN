@@ -115,14 +115,18 @@ class TreeManager:
         scale = self._score_scale
         for op in range(n_outputs):
             for c in range(n_classes):
-                expr = cp.LinearExpr()
+                tree_exprs: list[cp.LinearExpr] = []
+                tree_weights: list[int] = []
                 for tree, weight in zip(self.estimators, weights, strict=True):
-                    tree_expr = cp.LinearExpr()
+                    coefs: list[int] = []
+                    variables: list[cp.IntVar] = []
                     for leaf in tree.leaves:
-                        tree_expr += tree[leaf.node_id] * int(
-                            leaf.value[op, c] * scale
-                        )
-                    expr += tree_expr * int(weight)
+                        coefs.append(int(leaf.value[op, c] * scale))
+                        variables.append(tree[leaf.node_id])
+                    tree_expr = cp.LinearExpr.WeightedSum(variables, coefs)
+                    tree_exprs.append(tree_expr)
+                    tree_weights.append(int(weight))
+                expr = cp.LinearExpr.WeightedSum(tree_exprs, tree_weights)
                 exprs[op, c] = expr
         return exprs
 

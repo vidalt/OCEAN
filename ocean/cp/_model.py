@@ -12,7 +12,6 @@ from ..typing import (
     Array1D,
     NonNegativeArray1D,
     NonNegativeInt,
-    Unit,
 )
 from ._base import BaseModel
 from ._builder.model import ModelBuilder, ModelBuilderFactory
@@ -21,7 +20,7 @@ from ._variables import FeatureVar
 
 
 class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
-    DEFAULT_EPSILON: Unit = 1.0 / (2.0**16)
+    DEFAULT_EPSILON: int = 1
 
     class Type(Enum):
         CP = "CP"
@@ -39,7 +38,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         *,
         weights: NonNegativeArray1D | None = None,
         max_samples: NonNegativeInt = 0,
-        epsilon: Unit = DEFAULT_EPSILON,
+        epsilon: int = DEFAULT_EPSILON,
         model_type: Type = Type.CP,
     ) -> None:
         # Initialize the super models.
@@ -117,18 +116,34 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             raise ValueError(msg)
 
         variables = self.mapper.values()
-        return sum(map(self.L1, x, variables), start=cp.LinearExpr())
+        return sum(map(self.L1, x, variables))
 
     def L1(self, x: np.float64, v: FeatureVar) -> cp.LinearExpr:
-        objective_func = cp.LinearExpr()
-        if v.is_binary:
-            objective_func += v.xget() if x == 0.0 else 1 - v.xget()
-        else:
+        obj_exprs: list[cp.LinearExpr] = []
+        obj_coefs: list[int] = []
+        if v.is_discrete:
             j = int(np.searchsorted(v.levels, x, side="right"))
             u = self.NewIntVar(
                 0, len(v.levels) - 1, f"u_{v.X_VAR_NAME_FMT}_{j}"
             )
             self.add_garbage(u)
             self.add_garbage(self.AddAbsEquality(u, v.xget() - j))
-            objective_func += u
-        return objective_func
+            obj_exprs.append(u)
+            obj_coefs.append(1)
+        elif v.is_numeric:
+            j = int(np.searchsorted(v.levels, x, side="right"))
+            variables = [v.mget(i) for i in range(len(v.levels))]
+            intervals_cost = np.zeros(len(v.levels))
+            for i in range(len(v.levels)):
+                if i < j:
+                    intervals_cost[i] = x - v.levels[i + 1]
+                elif i > j:
+                    intervals_cost[i] = v.levels[i] - x
+            obj_expr = cp.LinearExpr.WeightedSum(variables, intervals_cost)
+            obj_exprs.append(obj_expr)
+            obj_coefs.append(1)
+        else:
+            obj_expr = v.xget() if x == 0.0 else 1 - v.xget()
+            obj_exprs.append(obj_expr)
+            obj_coefs.append(1)
+        return cp.LinearExpr.WeightedSum(obj_exprs, obj_coefs)
