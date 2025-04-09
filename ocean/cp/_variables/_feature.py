@@ -18,28 +18,21 @@ class FeatureVar(Var, FeatureKeeper):
         FeatureKeeper.__init__(self, feature=feature)
 
     def build(self, model: BaseModel) -> None:
-        self._x = self._add_x(model)
+        if not self.is_one_hot_encoded:
+            self._x = self._add_x(model)
         if self.is_numeric:
             mu = self._set_mu(model)
             model.add_map_domain(self.xget(), mu)
             self._mu = mu
         elif self.is_one_hot_encoded:
             u = self._add_u(model)
-            model.Add(cp.LinearExpr.Sum(u.values()) == 1)
+            model.Add(cp.LinearExpr.Sum(list(u.values())) == 1)
             self._u = u
             return
 
     def xget(self, code: Key | None = None) -> cp.IntVar:
         if self.is_one_hot_encoded:
-            if code is None:
-                msg = "Code was not provided for one-hot encoded feature"
-                raise ValueError(msg)
-            return self._u[code]
-
-        if code is not None:
-            msg = "Get by code is only supported for one-hot encoded features"
-            raise ValueError(msg)
-
+            return self._xget_one_hot_encoded(code)
         return self._x
 
     def mget(self, key: int) -> cp.IntVar:
@@ -50,6 +43,11 @@ class FeatureVar(Var, FeatureKeeper):
 
     def _add_x(self, model: BaseModel) -> cp.IntVar:
         name = self.X_VAR_NAME_FMT.format(name=self._name)
+
+        # Case when the feature is one-hot encoded.
+        if self.is_one_hot_encoded:
+            msg = "One-hot encoded features are not for x"
+            raise ValueError(msg)
 
         # Case when the feature is binary.
         if self.is_binary:
@@ -82,3 +80,12 @@ class FeatureVar(Var, FeatureKeeper):
     def _add_numeric(self, model: BaseModel, name: str) -> cp.IntVar:
         m = len(self.levels)
         return model.NewIntVar(0, m - 1, name)
+
+    def _xget_one_hot_encoded(self, code: Key | None) -> cp.IntVar:
+        if code is None:
+            msg = "Code is required for one-hot encoded features get"
+            raise ValueError(msg)
+        if code not in self.codes:
+            msg = f"Code '{code}' not found in the feature codes"
+            raise ValueError(msg)
+        return self._u[code]

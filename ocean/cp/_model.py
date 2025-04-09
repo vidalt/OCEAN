@@ -99,7 +99,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             if class_ == y:
                 continue
 
-            rhs = self._epsilon if class_ < y else 0.0
+            rhs = self._epsilon if class_ < y else 0
             lhs = self.function[op, y] - self.function[op, class_]
             self._scores[op, class_] = self.Add(lhs >= rhs)
             self.add_garbage(self._scores[op, class_])

@@ -6,7 +6,7 @@ from ortools.sat.python import cp_model as cp
 
 from ..abc import Mapper
 from ..typing import Array1D, BaseExplanation, Key, Number
-from ._solver import ENV
+from ._env import ENV
 from ._variables import FeatureVar
 
 
@@ -19,9 +19,15 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         return self[name].xget()
 
     def to_series(self) -> "pd.Series[float]":
-        values = [
+        values: list[float] = [
             ENV.solver.Value(v) for v in map(self.vget, range(self.n_columns))
         ]
+        for f in range(self.n_columns):
+            name = self.names[f]
+            value = ENV.solver.Value(self.vget(f))
+            if self[name].is_numeric:
+                value = self[name].levels[int(value)]
+                values[f] = value
         return pd.Series(values, index=self.columns)
 
     def to_numpy(self) -> Array1D:
