@@ -122,7 +122,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         obj_exprs: list[cp.LinearExpr] = []
         obj_coefs: list[int] = []
         if v.is_discrete:
-            j = int(np.searchsorted(v.levels, x, side="right"))
+            j = int(np.searchsorted(v.levels, x, side="left"))
             u = self.NewIntVar(
                 0, len(v.levels) - 1, f"u_{v.X_VAR_NAME_FMT}_{j}"
             )
@@ -133,12 +133,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         elif v.is_numeric:
             j = int(np.searchsorted(v.levels, x, side="right"))
             variables = [v.mget(i) for i in range(len(v.levels))]
-            intervals_cost = np.zeros(len(v.levels))
-            for i in range(len(v.levels)):
-                if i < j:
-                    intervals_cost[i] = x - v.levels[i + 1]
-                elif i > j:
-                    intervals_cost[i] = v.levels[i] - x
+            intervals_cost = [
+                0 if i > 0 and v.levels[i - 1] < x <= L else abs(x - L)
+                for i, L in enumerate(v.levels)
+            ]
             obj_expr = cp.LinearExpr.WeightedSum(variables, intervals_cost)
             obj_exprs.append(obj_expr)
             obj_coefs.append(1)

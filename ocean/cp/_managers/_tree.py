@@ -15,7 +15,7 @@ from .._variables import TreeVar
 
 class TreeManager:
     TREE_VAR_FMT: str = "tree[{t}]"
-    DEFAULT_SCORE_SCALE: int = 10000
+    DEFAULT_SCORE_SCALE: int = 1000000
 
     # Tree variables in the ensemble.
     _trees: tuple[TreeVar, *tuple[TreeVar, ...]]

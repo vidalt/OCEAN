@@ -140,7 +140,7 @@ class ConstraintProgramBuilder(ModelBuilder):
         sigma: bool,
     ) -> None:
         threshold = node.threshold
-        j = int(np.searchsorted(v.levels, threshold, side="right"))
+        j = int(np.searchsorted(v.levels, threshold, side="left"))
         x = v.xget()
         if sigma:
             model.Add(x <= j).OnlyEnforceIf(y)

@@ -33,6 +33,9 @@ class FeatureVar(Var, FeatureKeeper):
     def xget(self, code: Key | None = None) -> cp.IntVar:
         if self.is_one_hot_encoded:
             return self._xget_one_hot_encoded(code)
+        if code is not None:
+            msg = "Get by code is only supported for one-hot encoded features"
+            raise ValueError(msg)
         return self._x
 
     def mget(self, key: int) -> cp.IntVar:

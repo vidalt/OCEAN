@@ -45,7 +45,6 @@ def validate_solution(explanation: Explanation) -> None:
         if feature.is_binary:
             assert np.any(np.isclose(value, [0.0, 1.0]))
         elif feature.is_numeric:
-            value = feature.levels[int(value)]
             assert feature.levels[0] <= value <= feature.levels[-1]
             if feature.is_discrete:
                 assert np.any(np.isclose(value, feature.levels)), (
@@ -119,7 +118,12 @@ def validate_sklearn_paths(
     solver = ENV.solver
     for t, tree in enumerate(trees):
         # Get the leaf node from the tree
-        leaf_id = ind.indices[ptr[t] : ptr[t + 1]][-1]
+        node = tree.root
+        while not node.is_leaf:
+            is_left = bool(ind[0, ptr[t] + node.left.node_id])
+            node = node.left if is_left else node.right
+
+        leaf_id = node.node_id
         v = solver.Value(tree[leaf_id])
         assert v == 1.0, f"Expected leaf {leaf_id} to be active, but it is not."
 
@@ -138,7 +142,9 @@ def validate_sklearn_pred(
     proba = function / np.sum(function)
     expected_proba = np.asarray(clf.predict_proba(x), dtype=np.float64)
     assert (prediction == m_class).all()
-    assert np.isclose(expected_proba.flatten(), proba).all()
+    assert np.isclose(expected_proba.flatten(), proba).all(), (
+        f"Expected {expected_proba.flatten()}, got {proba}"
+    )
 
 
 @overload
@@ -190,7 +196,7 @@ def train_rf(
 
 
 SEEDS = [43, 44, 45]
-N_ESTIMATORS = [1]
+N_ESTIMATORS = [1, 4, 8]
 MAX_DEPTH = [2, 3]
-N_CLASSES = [2]
-N_SAMPLES = [500]
+N_CLASSES = [2, 4]
+N_SAMPLES = [100, 200, 500]

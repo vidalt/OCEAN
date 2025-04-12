@@ -26,7 +26,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             name = self.names[f]
             value = ENV.solver.Value(self.vget(f))
             if self[name].is_numeric:
-                value = self[name].levels[int(value)]
+                value = self[name].levels[value]
                 values[f] = value
         return pd.Series(values, index=self.columns)
 
@@ -51,6 +51,8 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                 for code in v.codes:
                     if np.isclose(ENV.solver.Value(v.xget(code)), 1.0):
                         return code
+            if v.is_numeric:
+                return v.levels[ENV.solver.Value(v.xget())]
             x = v.xget()
             return ENV.solver.Value(x)
 
