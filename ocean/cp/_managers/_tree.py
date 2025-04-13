@@ -70,6 +70,10 @@ class TreeManager:
         return self.shape[-1]
 
     @property
+    def score_scale(self) -> int:
+        return self._score_scale
+
+    @property
     def function(
         self,
     ) -> dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]:

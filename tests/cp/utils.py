@@ -58,9 +58,9 @@ def validate_solution(explanation: Explanation) -> None:
 def check_leafs(tree: TreeVar, explanation: Explanation) -> None:
     n_active = 0
     id_leaf = tree.root.node_id
+    solver = ENV.solver
     for node in tree.leaves:
         assert node.is_leaf
-        solver = ENV.solver
         v = solver.Value(tree[node.node_id])
         n_active += v
         id_leaf = node.node_id if v else id_leaf
