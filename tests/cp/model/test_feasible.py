@@ -43,7 +43,7 @@ class TestNoIsolation:
         trees = tuple(parse_trees(clf, mapper=mapper))
         model = Model(trees=trees, mapper=mapper)
         model.build()
-        lb = sum(tree.n_nodes for tree in model.trees)
+        n_nodes = sum(tree.n_nodes for tree in model.trees)
         n_leaves = sum(len(tree.leaves) for tree in model.trees)
         feature_vars = 0
         feature_constraints = 0
@@ -56,9 +56,10 @@ class TestNoIsolation:
             else:
                 feature_vars += len(feature.codes)
                 feature_constraints += 1
-        ub = lb * max_depth
-        lb += feature_constraints + n_estimators + n_classes - 1
-        ub += feature_constraints + n_estimators + n_classes - 1
+        lb = 2 * (n_nodes - n_leaves)
+        ub = (n_nodes - n_leaves) * (n_nodes - n_leaves + 1)
+        lb += feature_constraints + n_estimators
+        ub += feature_constraints + n_estimators
         assert len(model.Proto().variables) == n_leaves + feature_vars
         assert len(model.Proto().constraints) >= lb
         assert len(model.Proto().constraints) <= ub

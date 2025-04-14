@@ -126,9 +126,9 @@ class ConstraintProgramBuilder(ModelBuilder):
         j = int(np.searchsorted(v.levels, threshold, side="right"))
         x = v.xget()
         if sigma:
-            model.Add(x <= j).OnlyEnforceIf(y)
+            model.Add(x <= j - 1).OnlyEnforceIf(y)
         else:
-            model.Add(x >= j + 1).OnlyEnforceIf(y)
+            model.Add(x >= j).OnlyEnforceIf(y)
 
     @staticmethod
     def _dset(
@@ -143,9 +143,9 @@ class ConstraintProgramBuilder(ModelBuilder):
         j = int(np.searchsorted(v.levels, threshold, side="left"))
         x = v.xget()
         if sigma:
-            model.Add(x <= j).OnlyEnforceIf(y)
+            model.Add(x <= j - 1).OnlyEnforceIf(y)
         else:
-            model.Add(x >= j + 1).OnlyEnforceIf(y)
+            model.Add(x >= j).OnlyEnforceIf(y)
 
     @staticmethod
     def _eset(

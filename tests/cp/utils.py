@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 import pandas as pd
@@ -13,8 +13,6 @@ from ocean.typing import Array1D, NonNegativeInt
 from ..utils import generate_data
 
 if TYPE_CHECKING:
-    import scipy.sparse as sp
-
     from ocean.typing import Key
 
 
@@ -76,9 +74,9 @@ def check_leafs(tree: TreeVar, explanation: Explanation) -> None:
 
 def find_leaf(tree: TreeVar, explanation: Explanation) -> NonNegativeInt:
     node = tree.root
+    x = explanation.x
     while not node.is_leaf:
         name = node.feature
-        x = explanation.x
         if explanation[name].is_one_hot_encoded:
             code = node.code
             i = explanation.idx.get(name, code)
@@ -112,20 +110,24 @@ def validate_sklearn_paths(
     trees: tuple[TreeVar, ...],
 ) -> None:
     x = explanation.x.reshape(1, -1)
-    ind, ptr = clf.decision_path(x)  # pyright: ignore[reportUnknownVariableType]
-    ind = cast("sp.csr_matrix", ind)
-    ptr = np.array(ptr, dtype=np.int64)
+    leaf_ids = clf.apply(x)  # pyright: ignore[reportUnknownVariableType]
     solver = ENV.solver
     for t, tree in enumerate(trees):
         # Get the leaf node from the tree
-        node = tree.root
-        while not node.is_leaf:
-            is_left = bool(ind[0, ptr[t] + node.left.node_id])
-            node = node.left if is_left else node.right
-
-        leaf_id = node.node_id
+        leaf_id = leaf_ids[0, t]
         v = solver.Value(tree[leaf_id])
-        assert v == 1.0, f"Expected leaf {leaf_id} to be active, but it is not."
+        active_leaf = leaf_id
+        for node in tree.leaves:
+            v_1 = solver.Value(tree[node.node_id])
+            if v_1 == 1.0:
+                active_leaf = node.node_id
+                break
+        lf = find_leaf(tree, explanation)
+        assert active_leaf == lf
+        assert v == 1.0, (
+            f"Expected leaf {leaf_id} to be active, but found {active_leaf}, "
+            f"in tree {t}"
+        )
 
 
 def validate_sklearn_pred(
