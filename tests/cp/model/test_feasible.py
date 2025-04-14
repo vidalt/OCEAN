@@ -43,6 +43,26 @@ class TestNoIsolation:
         trees = tuple(parse_trees(clf, mapper=mapper))
         model = Model(trees=trees, mapper=mapper)
         model.build()
+        lb = sum(tree.n_nodes for tree in model.trees)
+        n_leaves = sum(len(tree.leaves) for tree in model.trees)
+        feature_vars = 0
+        feature_constraints = 0
+        for feature in model.mapper.values():
+            if feature.is_binary:
+                feature_vars += 1
+            elif feature.is_numeric:
+                feature_vars += len(feature.levels) + 1
+                feature_constraints += 2 * len(feature.levels)
+            else:
+                feature_vars += len(feature.codes)
+                feature_constraints += 1
+        ub = lb * max_depth
+        lb += feature_constraints + n_estimators + n_classes - 1
+        ub += feature_constraints + n_estimators + n_classes - 1
+        assert len(model.Proto().variables) == n_leaves + feature_vars
+        assert len(model.Proto().constraints) >= lb
+        assert len(model.Proto().constraints) <= ub
+
         solver = ENV.solver
         status = solver.Solve(model)
         assert status == cp.OPTIMAL
