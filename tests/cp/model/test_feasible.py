@@ -50,7 +50,10 @@ class TestNoIsolation:
         for feature in model.mapper.values():
             if feature.is_binary:
                 feature_vars += 1
-            elif feature.is_numeric:
+            elif feature.is_continuous:
+                feature_vars += len(feature.levels)
+                feature_constraints += 2 * (len(feature.levels) - 1)
+            elif feature.is_discrete:
                 feature_vars += len(feature.levels) + 1
                 feature_constraints += 2 * len(feature.levels)
             else:
@@ -102,7 +105,9 @@ class TestNoIsolation:
 
             solver = ENV.solver
             status = solver.Solve(model)
-            assert status == cp.OPTIMAL, f"Status: {solver.status_name()}"
+            assert status == cp.OPTIMAL, (
+                f"{solver.ResponseStats()} for class {class_} with constraint "
+            )
 
             explanation = model.explanation
 

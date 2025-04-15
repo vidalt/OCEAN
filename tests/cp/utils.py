@@ -42,12 +42,12 @@ def validate_solution(explanation: Explanation) -> None:
 
         if feature.is_binary:
             assert np.any(np.isclose(value, [0.0, 1.0]))
-        elif feature.is_numeric:
+        elif feature.is_continuous:
             assert feature.levels[0] <= value <= feature.levels[-1]
-            if feature.is_discrete:
-                assert np.any(np.isclose(value, feature.levels)), (
-                    f"Value {value} not in levels {feature.levels}"
-                )
+        elif feature.is_discrete:
+            assert np.any(np.isclose(value, feature.levels)), (
+                f"Value {value} not in levels {feature.levels}"
+            )
 
     for value in codes.values():
         assert np.isclose(value, 1.0)
@@ -69,6 +69,7 @@ def check_leafs(tree: TreeVar, explanation: Explanation) -> None:
     x_id_leaf = find_leaf(tree, explanation)
     assert id_leaf == x_id_leaf, (
         f"Expected leaf {id_leaf}, but found {x_id_leaf}."
+        f" explanation {explanation}"
     )
 
 

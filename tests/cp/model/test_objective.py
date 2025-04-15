@@ -77,21 +77,26 @@ class TestNoIsolation:
             return_data=True,
         )
         trees = tuple(parse_trees(clf, mapper=mapper))
-        model = Model(trees=trees, mapper=mapper)
-        model.build()
 
         predictions = np.array(clf.predict(data), dtype=np.int64)
         classes = set(map(int, predictions.flatten()))
-
         x = np.array(data.iloc[0].to_numpy(), dtype=np.float64).flatten()
 
         for class_ in classes:
+            if class_ == int(predictions[0]):
+                continue
+            model = Model(trees=trees, mapper=mapper)
+            model.build()
             model.set_majority_class(y=class_)
             model.add_objective(x=x)
 
             solver = ENV.solver
             status = solver.Solve(model)
-            assert status == cp.OPTIMAL
+            assert status == cp.OPTIMAL, (
+                f"Status: {solver.status_name()}"
+                f" for class {class_}, x = {x}, y={predictions[0]}"
+                f" {solver.ResponseStats()}"
+            )
 
             explanation = model.explanation
 
@@ -99,5 +104,4 @@ class TestNoIsolation:
             validate_paths(*model.trees, explanation=explanation)
             validate_sklearn_paths(clf, explanation, model.estimators)
             validate_sklearn_pred(clf, explanation, m_class=class_, model=model)
-
             model.cleanup()

@@ -173,15 +173,15 @@ class TestConstraintProgramBuilder:
         feature_var = FeatureVar(feature=feature, name="x")
         tree_var = TreeVar(tree=tree, name="tree")
 
-        feature_var.build(model)  # 4 variables and 6 constraints
+        feature_var.build(model)  # 3 variables and 6 constraints
         tree_var.build(model)  # 4 variables and 1 constraint
 
         mapper = Mapper[FeatureVar]({"x": feature_var}, columns=pd.Index(["x"]))
 
         builder.build(model, trees=[tree_var], mapper=mapper)  # 8 constraints
 
-        assert len(model.Proto().constraints) == 15
-        assert len(model.Proto().variables) == 8
+        assert len(model.Proto().constraints) == 13
+        assert len(model.Proto().variables) == 7
 
     @staticmethod
     def test_build_discrete_feature(
@@ -257,7 +257,7 @@ class TestConstraintProgramBuilder:
 
         tree_var = TreeVar(tree=tree, name="tree")
         for feature_var in feature_vars:
-            # 7 variables and 5 constraints
+            # 6 variables and 3 constraints
             feature_var.build(model)
 
         tree_var.build(model)  # 6 variables and 1 constraint
@@ -272,8 +272,8 @@ class TestConstraintProgramBuilder:
             columns=pd.Index(["b", "c", "d", "e"]),
         )
         builder.build(model, trees=[tree_var], mapper=mapper)  # 16 constraints
-        assert len(model.Proto().constraints) == 22
-        assert len(model.Proto().variables) == 13
+        assert len(model.Proto().constraints) == 20
+        assert len(model.Proto().variables) == 12
 
     @staticmethod
     def test_build_multiple_trees(
@@ -303,7 +303,7 @@ class TestConstraintProgramBuilder:
             TreeVar(tree=tree, name=f"tree_{i}") for i, tree in enumerate(trees)
         ]
         for feature_var in feature_vars:
-            # 7 variables and 5 constraints
+            # 6 variables and 3 constraints
             feature_var.build(model)
         for tree_var in tree_vars:
             # 18 variables and 3 constraint
@@ -320,5 +320,5 @@ class TestConstraintProgramBuilder:
         )
         builder.build(model, trees=tree_vars, mapper=mapper)
         # 48 constraints
-        assert len(model.Proto().constraints) == 56
-        assert len(model.Proto().variables) == 25
+        assert len(model.Proto().constraints) == 54
+        assert len(model.Proto().variables) == 24

@@ -21,6 +21,7 @@ from ._variables import FeatureVar
 
 class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
     DEFAULT_EPSILON: int = 1
+    _obj_scale: int = int(1e8)
 
     class Type(Enum):
         CP = "CP"
@@ -100,7 +101,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 continue
 
             rhs = self._epsilon if class_ < y else 0
-            lhs = self.function[op, y] - self.function[op, class_]
+            lhs = cp.LinearExpr.WeightedSum(
+                [self.function[op, y], self.function[op, class_]],
+                [1, -1],
+            )
             self._scores[op, class_] = self.Add(lhs >= rhs)
             self.add_garbage(self._scores[op, class_])
 
@@ -116,9 +120,24 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             raise ValueError(msg)
 
         variables = self.mapper.values()
-        return sum(map(self.L1, x, variables))
+        objective = 0
+        k = 0
+        for v in variables:
+            if v.is_one_hot_encoded:
+                for i, code in enumerate(v.codes):
+                    objective += self.L1(x[i + k], v, code=str(code))
+                k += len(v.codes)
+            else:
+                objective += self.L1(x[k], v)
+                k += 1
+        return objective
 
-    def L1(self, x: np.float64, v: FeatureVar) -> cp.LinearExpr:
+    def L1(
+        self,
+        x: np.float64,
+        v: FeatureVar,
+        code: str | None = None,
+    ) -> cp.LinearExpr:
         obj_exprs: list[cp.LinearExpr] = []
         obj_coefs: list[int] = []
         if v.is_discrete:
@@ -126,18 +145,30 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             u = self.NewIntVar(
                 0, len(v.levels) - 1, f"u_{v.X_VAR_NAME_FMT}_{j}"
             )
-            self.add_garbage(u)
+            #  self.add_garbage(u)  # noqa: ERA001
             self.add_garbage(self.AddAbsEquality(u, v.xget() - j))
             obj_exprs.append(u)
             obj_coefs.append(1)
-        elif v.is_numeric:
-            j = int(np.searchsorted(v.levels, x, side="right"))
-            variables = [v.mget(i) for i in range(len(v.levels))]
-            intervals_cost = [
-                0 if i > 0 and v.levels[i - 1] < x <= L else abs(x - L)
-                for i, L in enumerate(v.levels)
-            ]
+        elif v.is_continuous:
+            j = int(np.searchsorted(v.levels, x, side="left"))
+            variables = [v.mget(i) for i in range(len(v.levels) - 1)]
+            intervals_cost = np.zeros(len(v.levels) - 1, dtype=int)
+            for i in range(len(intervals_cost)):
+                if v.levels[i] < x <= v.levels[i + 1]:
+                    continue
+                if v.levels[i] > x:
+                    intervals_cost[i] = int(
+                        abs(x - v.levels[i]) * self._obj_scale
+                    )
+                elif v.levels[i + 1] < x:
+                    intervals_cost[i] = int(
+                        abs(x - v.levels[i + 1]) * self._obj_scale
+                    )
             obj_expr = cp.LinearExpr.WeightedSum(variables, intervals_cost)
+            obj_exprs.append(obj_expr)
+            obj_coefs.append(1)
+        elif v.is_one_hot_encoded:
+            obj_expr = v.xget(code) if x == 0.0 else 1 - v.xget(code)
             obj_exprs.append(obj_expr)
             obj_coefs.append(1)
         else:

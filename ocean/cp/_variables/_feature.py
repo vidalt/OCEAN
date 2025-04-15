@@ -21,7 +21,10 @@ class FeatureVar(Var, FeatureKeeper):
         if not self.is_one_hot_encoded:
             self._x = self._add_x(model)
         if self.is_numeric:
-            mu = self._set_mu(model)
+            if self.is_continuous:
+                mu = self._set_mu(model, m=len(self.levels) - 1)
+            else:
+                mu = self._set_mu(model, m=len(self.levels))
             model.add_map_domain(self.xget(), mu)
             self._mu = mu
         elif self.is_one_hot_encoded:
@@ -56,15 +59,17 @@ class FeatureVar(Var, FeatureKeeper):
         if self.is_binary:
             return self._add_binary(model, name)
 
-        # Case when the feature is continuous or discrete.
-        return self._add_numeric(model, name)
+        # Case when the feature is continuous or discrete
+        if self.is_continuous:
+            return self._add_continuous(model, name)
+
+        return self._add_discrete(model, name)
 
     def _add_u(self, model: BaseModel) -> dict[Key, cp.IntVar]:
         name = self.X_VAR_NAME_FMT.format(name=self._name)
         return self._add_one_hot_encoded(model=model, name=name)
 
-    def _set_mu(self, model: BaseModel) -> list[cp.IntVar]:
-        m = len(self.levels)
+    def _set_mu(self, model: BaseModel, m: int) -> list[cp.IntVar]:
         return [model.NewBoolVar(f"{self._name}_mu_{i}") for i in range(m)]
 
     def _add_one_hot_encoded(
@@ -80,7 +85,11 @@ class FeatureVar(Var, FeatureKeeper):
     def _add_binary(model: BaseModel, name: str) -> cp.IntVar:
         return model.NewBoolVar(name)
 
-    def _add_numeric(self, model: BaseModel, name: str) -> cp.IntVar:
+    def _add_continuous(self, model: BaseModel, name: str) -> cp.IntVar:
+        m = len(self.levels)
+        return model.NewIntVar(0, m - 2, name)
+
+    def _add_discrete(self, model: BaseModel, name: str) -> cp.IntVar:
         m = len(self.levels)
         return model.NewIntVar(0, m - 1, name)
 

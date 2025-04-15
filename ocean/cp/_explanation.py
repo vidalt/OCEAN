@@ -11,6 +11,8 @@ from ._variables import FeatureVar
 
 
 class Explanation(Mapper[FeatureVar], BaseExplanation):
+    _epsilon: float = 1e-8
+
     def vget(self, i: int) -> cp.IntVar:
         name = self.names[i]
         if self[name].is_one_hot_encoded:
@@ -25,9 +27,12 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         for f in range(self.n_columns):
             name = self.names[f]
             value = ENV.solver.Value(self.vget(f))
-            if self[name].is_numeric:
+            if self[name].is_continuous:
+                value = self[name].levels[value + 1]
+                values[f] = value - self._epsilon
+            elif self[name].is_discrete:
                 value = self[name].levels[value]
-                values[f] = value
+                values[f] = value - self._epsilon
         return pd.Series(values, index=self.columns)
 
     def to_numpy(self) -> Array1D:
