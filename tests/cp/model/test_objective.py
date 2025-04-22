@@ -81,7 +81,6 @@ class TestNoIsolation:
         predictions = np.array(clf.predict(data), dtype=np.int64)
         classes = set(map(int, predictions.flatten()))
         x = np.array(data.iloc[0].to_numpy(), dtype=np.float64).flatten()
-
         for class_ in classes:
             if class_ == int(predictions[0]):
                 continue
@@ -95,7 +94,6 @@ class TestNoIsolation:
             assert status == cp.OPTIMAL, (
                 f"Status: {solver.status_name()}"
                 f" for class {class_}, x = {x}, y={predictions[0]}"
-                f" {solver.ResponseStats()}"
             )
 
             explanation = model.explanation

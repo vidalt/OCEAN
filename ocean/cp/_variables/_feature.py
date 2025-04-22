@@ -12,6 +12,7 @@ class FeatureVar(Var, FeatureKeeper):
     _x: cp.IntVar
     _u: dict[Key, cp.IntVar]
     _mu: list[cp.IntVar]
+    _objvar: cp.IntVar
 
     def __init__(self, feature: Feature, name: str) -> None:
         Var.__init__(self, name=name)
@@ -25,6 +26,9 @@ class FeatureVar(Var, FeatureKeeper):
                 mu = self._set_mu(model, m=len(self.levels) - 1)
             else:
                 mu = self._set_mu(model, m=len(self.levels))
+                self._objvar = model.NewIntVar(
+                    0, len(self.levels) - 1, f"u_{self.X_VAR_NAME_FMT}"
+                )
             model.add_map_domain(self.xget(), mu)
             self._mu = mu
         elif self.is_one_hot_encoded:
@@ -46,6 +50,14 @@ class FeatureVar(Var, FeatureKeeper):
             msg = "The 'mget' method is only supported for numeric features"
             raise ValueError(msg)
         return self._mu[key]
+
+    def objvarget(self) -> cp.IntVar:
+        if not self.is_discrete:
+            msg = (
+                "The 'objvarget' method is only supported for discrete features"
+            )
+            raise ValueError(msg)
+        return self._objvar
 
     def _add_x(self, model: BaseModel) -> cp.IntVar:
         name = self.X_VAR_NAME_FMT.format(name=self._name)

@@ -206,7 +206,7 @@ class TestConstraintProgramBuilder:
         builder.build(model, trees=[tree_var], mapper=mapper)  # 8 constraints
 
         assert len(model.Proto().constraints) == 15
-        assert len(model.Proto().variables) == 8
+        assert len(model.Proto().variables) == 9
 
     @staticmethod
     def test_build_one_hot_feature(
@@ -273,7 +273,7 @@ class TestConstraintProgramBuilder:
         )
         builder.build(model, trees=[tree_var], mapper=mapper)  # 16 constraints
         assert len(model.Proto().constraints) == 20
-        assert len(model.Proto().variables) == 12
+        assert len(model.Proto().variables) == 13
 
     @staticmethod
     def test_build_multiple_trees(
@@ -303,7 +303,7 @@ class TestConstraintProgramBuilder:
             TreeVar(tree=tree, name=f"tree_{i}") for i, tree in enumerate(trees)
         ]
         for feature_var in feature_vars:
-            # 6 variables and 3 constraints
+            # 7 variables and 3 constraints
             feature_var.build(model)
         for tree_var in tree_vars:
             # 18 variables and 3 constraint
@@ -321,4 +321,4 @@ class TestConstraintProgramBuilder:
         builder.build(model, trees=tree_vars, mapper=mapper)
         # 48 constraints
         assert len(model.Proto().constraints) == 54
-        assert len(model.Proto().variables) == 24
+        assert len(model.Proto().variables) == 25

@@ -142,11 +142,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         obj_coefs: list[int] = []
         if v.is_discrete:
             j = int(np.searchsorted(v.levels, x, side="left"))
-            u = self.NewIntVar(
-                0, len(v.levels) - 1, f"u_{v.X_VAR_NAME_FMT}_{j}"
-            )
-            #  self.add_garbage(u)  # noqa: ERA001
-            self.add_garbage(self.AddAbsEquality(u, v.xget() - j))
+            u = v.objvarget()
+            # self.add_garbage(self.AddAbsEquality(u, j- v.xget())) noqa: ERA001
+            self.add_garbage(self.Add(u >= j - v.xget()))
+            self.add_garbage(self.Add(u >= v.xget() - j))
             obj_exprs.append(u)
             obj_coefs.append(1)
         elif v.is_continuous:

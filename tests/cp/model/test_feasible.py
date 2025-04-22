@@ -54,7 +54,7 @@ class TestNoIsolation:
                 feature_vars += len(feature.levels)
                 feature_constraints += 2 * (len(feature.levels) - 1)
             elif feature.is_discrete:
-                feature_vars += len(feature.levels) + 1
+                feature_vars += len(feature.levels) + 2
                 feature_constraints += 2 * len(feature.levels)
             else:
                 feature_vars += len(feature.codes)
@@ -98,9 +98,8 @@ class TestNoIsolation:
 
         predictions = np.array(clf.predict(data), dtype=np.int64)
         classes = set(map(int, predictions.flatten()))
-
+        model.build()
         for class_ in classes:
-            model.build()
             model.set_majority_class(y=class_)
 
             solver = ENV.solver
