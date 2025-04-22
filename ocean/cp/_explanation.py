@@ -51,15 +51,19 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
 
     @property
     def value(self) -> Mapping[Key, Key | Number]:
+        solver = ENV.solver
+
         def get(v: FeatureVar) -> Key | Number:
             if v.is_one_hot_encoded:
                 for code in v.codes:
-                    if np.isclose(ENV.solver.Value(v.xget(code)), 1.0):
+                    if np.isclose(solver.Value(v.xget(code)), 1.0):
                         return code
-            if v.is_numeric:
-                return v.levels[ENV.solver.Value(v.xget())]
+            if v.is_discrete:
+                return v.levels[solver.Value(v.xget())]
+            if v.is_continuous:
+                return v.levels[solver.Value(v.xget()) + 1]
             x = v.xget()
-            return ENV.solver.Value(x)
+            return solver.Value(x)
 
         return self.reduce(get)
 

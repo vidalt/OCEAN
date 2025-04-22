@@ -1,5 +1,3 @@
-from ortools.sat.python import cp_model as cp
-
 from ..abc import Mapper
 from ..feature import Feature
 from ..tree import parse_ensembles
@@ -10,6 +8,7 @@ from ..typing import (
     NonNegativeInt,
     PositiveInt,
 )
+from ._env import ENV
 from ._explanation import Explanation
 from ._model import Model
 
@@ -21,7 +20,6 @@ class Explainer(Model, BaseExplainer):
         *,
         mapper: Mapper[Feature],
         weights: Array1D | None = None,
-        solver: cp.CpSolver | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
         model_type: Model.Type = Model.Type.CP,
     ) -> None:
@@ -36,7 +34,7 @@ class Explainer(Model, BaseExplainer):
             model_type=model_type,
         )
         self.build()
-        self.solver = solver if solver is not None else cp.CpSolver()
+        self.solver = ENV.solver
 
     def explain(
         self,

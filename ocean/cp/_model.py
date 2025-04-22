@@ -10,6 +10,7 @@ from ..feature import Feature
 from ..tree import Tree
 from ..typing import (
     Array1D,
+    Key,
     NonNegativeArray1D,
     NonNegativeInt,
 )
@@ -125,7 +126,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         for v in variables:
             if v.is_one_hot_encoded:
                 for i, code in enumerate(v.codes):
-                    objective += self.L1(x[i + k], v, code=str(code))
+                    objective += self.L1(x[i + k], v, code=code)
                 k += len(v.codes)
             else:
                 objective += self.L1(x[k], v)
@@ -136,7 +137,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self,
         x: np.float64,
         v: FeatureVar,
-        code: str | None = None,
+        code: Key | None = None,
     ) -> cp.LinearExpr:
         obj_exprs: list[cp.LinearExpr] = []
         obj_coefs: list[int] = []
