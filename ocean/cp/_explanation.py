@@ -59,9 +59,9 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                     if np.isclose(solver.Value(v.xget(code)), 1.0):
                         return code
             if v.is_discrete:
-                return v.levels[solver.Value(v.xget())]
+                return float(v.levels[solver.Value(v.xget())])
             if v.is_continuous:
-                return v.levels[solver.Value(v.xget()) + 1]
+                return float(v.levels[solver.Value(v.xget()) + 1])
             x = v.xget()
             return solver.Value(x)
 
