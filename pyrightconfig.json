@@ -2,11 +2,17 @@
     "typeCheckingMode": "strict",
     "reportMissingTypeStubs": "none",
     "reportUnknownMemberType": "none",
-    "ignore": ["sklearn", "anytree"],
+    "reportUnknownVariableType": "none",
+    "ignore": [
+        "sklearn",
+        "anytree"
+    ],
     "executionEnvironments": [
         {
             "root": "./examples",
-            "extraPaths": ["../ocean"],
+            "extraPaths": [
+                "../ocean"
+            ],
             "reportArgumentType": "none",
             "reportUnknownArgumentType": "none",
             "reportUnknownVariableType": "none"
