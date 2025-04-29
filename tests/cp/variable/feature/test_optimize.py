@@ -52,7 +52,7 @@ def test_discrete(
 
     v = var.xget()
     val = generator.choice(levels)
-    j = int(np.searchsorted(levels, val, side="left"))  # type: ignore[reportUnknownArgumentType]
+    j = int(np.searchsorted(levels, val, side="left"))  # pyright: ignore[reportUnknownArgumentType]
     u = model.NewIntVar(0, n_levels - 1, f"u_{j}")
     model.AddAbsEquality(u, v - j)
     objective = u

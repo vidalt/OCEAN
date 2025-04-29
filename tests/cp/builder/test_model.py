@@ -54,7 +54,6 @@ def create_simple_tree(
     values = values.reshape(4, 1, n_classes)
     if thresholds is None:
         thresholds = generator.uniform(0.0, 1.0, 3)
-    ohe = codes is not None
     left = Node(2, value=values[0])
     right = Node(3, value=values[1])
     root1 = Node(
@@ -63,7 +62,7 @@ def create_simple_tree(
         feature="x",
         left=left,
         right=right,
-        code=codes[0] if ohe else None,
+        code=codes[0] if codes is not None else None,
     )
 
     left = Node(5, value=values[2])
@@ -74,7 +73,7 @@ def create_simple_tree(
         feature="x",
         left=left,
         right=right,
-        code=codes[1] if ohe else None,
+        code=codes[1] if codes is not None else None,
     )
 
     root = Node(
@@ -83,7 +82,7 @@ def create_simple_tree(
         feature="x",
         left=root1,
         right=root2,
-        code=codes[0] if ohe else None,
+        code=codes[0] if codes is not None else None,
     )
     return Tree(root=root)
 

@@ -121,7 +121,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             raise ValueError(msg)
 
         variables = self.mapper.values()
-        objective = 0
+        objective: cp.LinearExpr = 0  # type: ignore[assignment]
         k = 0
         for v in variables:
             if v.is_one_hot_encoded:
