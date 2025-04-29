@@ -1,3 +1,4 @@
+from itertools import starmap
 from typing import Any
 
 import pandas as pd
@@ -76,7 +77,8 @@ def _parse(
     if proc.columns.nlevels == 1:
         columns = pd.Index(proc.columns)
     else:
-        columns = pd.MultiIndex.from_tuples(proc.columns)
+        tuples = list(starmap(tuple, proc.columns))
+        columns = pd.MultiIndex.from_tuples(tuples)
 
     return proc, Mapper(mapping, columns=columns)
 
