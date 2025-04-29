@@ -22,6 +22,9 @@ class Explainer(Model, BaseExplainer):
         weights: Array1D | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
         model_type: Model.Type = Model.Type.CP,
+        n_threads: int | None = None,
+        max_time: int = 3000,
+        seed: int = 42,
     ) -> None:
         ensembles = (ensemble,)
         trees = parse_ensembles(*ensembles, mapper=mapper)
@@ -35,6 +38,10 @@ class Explainer(Model, BaseExplainer):
         )
         self.build()
         self.solver = ENV.solver
+        self.solver.parameters.max_time_in_seconds = max_time
+        self.solver.parameters.random_seed = seed
+        if n_threads is not None:
+            self.solver.parameters.num_workers = n_threads
 
     def explain(
         self,
