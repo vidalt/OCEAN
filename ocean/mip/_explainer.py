@@ -1,3 +1,5 @@
+import time
+
 import gurobipy as gp
 from sklearn.ensemble import IsolationForest
 
@@ -56,10 +58,15 @@ class Explainer(Model, BaseExplainer):
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
+        return_callback: bool = False,
     ) -> Explanation:
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
-        self.optimize()
+        if return_callback:
+            self.callback = SolutionCallback(starttime=time.time())
+            self.optimize(self.callback)
+        else:
+            self.optimize()
         if self.SolCount == 0:
             msg = "No solution found. Please check the model constraints."
             raise RuntimeError(msg)
@@ -72,3 +79,18 @@ class Explainer(Model, BaseExplainer):
         if isolation is not None:
             return len(isolation), int(isolation.max_samples_)  # pyright: ignore[reportUnknownArgumentType]
         return 0, 0
+
+
+class SolutionCallback:
+    def __init__(self, starttime: float) -> None:
+        self.starttime = starttime
+        self.sollist: list[dict[str, float]] = []
+
+    def __call__(self, model: gp.Model, where: int) -> None:
+        if where == gp.GRB.Callback.MIPSOL:
+            # Query the objective value of the new solution
+            best_objective = model.cbGet(gp.GRB.Callback.MIPSOL_OBJ)
+            self.sollist.append({
+                "objective_value": best_objective,
+                "time": time.time() - self.starttime,
+            })

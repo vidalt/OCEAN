@@ -1,3 +1,8 @@
+import time
+import traceback
+
+from ortools.sat.python import cp_model as cp
+
 from ..abc import Mapper
 from ..feature import Feature
 from ..tree import parse_ensembles
@@ -49,12 +54,42 @@ class Explainer(Model, BaseExplainer):
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
+        save_callback: bool = False,
     ) -> Explanation:
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
-        self.solver.Solve(self)
+        self.callback: MySolCallback | None = (
+            MySolCallback(starttime=time.time()) if save_callback else None
+        )
+        _ = self.solver.Solve(self, solution_callback=self.callback)
         status = self.solver.status_name()
         if status != "OPTIMAL":
             msg = f"Failed to optimize the model. Status: {status}"
             raise RuntimeError(msg)
         return self.explanation
+
+
+class MySolCallback(cp.CpSolverSolutionCallback):
+    """Save intermediate solutions."""
+
+    def __init__(self, starttime: float) -> None:
+        cp.CpSolverSolutionCallback.__init__(self)
+        self.sollist: list[dict[str, float]] = []
+        self.__solution_count = 0
+        self.starttime = starttime
+
+    def on_solution_callback(self) -> None:
+        try:
+            self.__solution_count += 1
+            t = time.time()
+            objval = self.ObjectiveValue()
+            self.addSol(objval, t - self.starttime)
+        except Exception:
+            traceback.print_exc()
+            raise
+
+    def solution_count(self) -> NonNegativeInt:
+        return self.__solution_count
+
+    def addSol(self, objval: float, time: float) -> None:
+        self.sollist.append({"objective_value": objval, "time": time})

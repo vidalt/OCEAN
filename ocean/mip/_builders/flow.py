@@ -56,7 +56,7 @@ class ContinuousBuilder(FlowBuilder):
         name: str,
     ) -> gp.MVar:
         flow = self._get(model=model, tree=tree, name=name)
-        branch = self._bget(model=model, tree=tree)
+        branch = self._bget(model=model, tree=tree, name=name)
         self._propagate(model, tree=tree, flow=flow, branch=branch)
         return flow
 
@@ -67,9 +67,9 @@ class ContinuousBuilder(FlowBuilder):
         return model.addMVar(shape=n, lb=lb, ub=ub, vtype=vtype, name=name)
 
     @staticmethod
-    def _bget(model: BaseModel, tree: TreeKeeper) -> gp.MVar:
+    def _bget(model: BaseModel, tree: TreeKeeper, *, name: str) -> gp.MVar:
         m, vtype = tree.max_depth, gp.GRB.BINARY
-        return model.addMVar(shape=m, vtype=vtype)
+        return model.addMVar(shape=m, vtype=vtype, name=name + "_lambda")
 
     def _propagate(
         self,
