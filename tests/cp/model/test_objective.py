@@ -51,7 +51,7 @@ class TestNoIsolation:
         solver = ENV.solver
         status = solver.Solve(model)
         assert status == cp.OPTIMAL
-
+        model.explanation.query = x
         explanation = model.explanation
 
         validate_solution(explanation)
@@ -96,6 +96,7 @@ class TestNoIsolation:
                 f" for class {class_}, x = {x}, y={predictions[0]}"
             )
 
+            model.explanation.query = x
             explanation = model.explanation
 
             validate_solution(explanation)
