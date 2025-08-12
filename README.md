@@ -20,7 +20,7 @@ The package provides multiple classes and functions to wrap the tree ensemble mo
 ```python
 from sklearn.ensemble import RandomForestClassifier
 
-from ocean import MixedIntegerProgramExplainer
+from ocean import MixedIntegerProgramExplainer, ConstraintProgrammingExplainer
 from ocean.datasets import load_adult
 
 # Load the adult dataset
@@ -37,21 +37,40 @@ rf.fit(data, target)
 y = int(rf.predict(x).item())
 
 # Explain the prediction using MIPEXplainer
-model = MixedIntegerProgramExplainer(rf, mapper=mapper)
+mip_model = MixedIntegerProgramExplainer(rf, mapper=mapper)
 x = x.to_numpy().flatten()
-explanation = model.explain(x, y=1 - y, norm=1)
+mip_explanation = mip_model.explain(x, y=1 - y, norm=1)
+
+# Explain the prediction using CPEExplainer
+cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
+x = x.to_numpy().flatten()
+cp_explanation = cp_model.explain(x, y=1 - y, norm=1)
 
 # Show the explanation
-print(explanation)
+print("MIP: ",mip_explanation)
+print("CP : ",cp_explanation)
+
 ```
 
 Expected output:
 
 ```plaintext
-Explanation:
+MIP Explanation:
 Age              : 39.0
 CapitalGain      : 2174.0
 CapitalLoss      : 0
+EducationNumber  : 13.0
+HoursPerWeek     : 41.0
+MaritalStatus    : 3
+NativeCountry    : 0
+Occupation       : 1
+Relationship     : 0
+Sex              : 0
+WorkClass        : 6
+CP Explanation:
+Age              : 39.0
+CapitalGain      : 2174.0
+CapitalLoss      : 0.0
 EducationNumber  : 13.0
 HoursPerWeek     : 41.0
 MaritalStatus    : 3

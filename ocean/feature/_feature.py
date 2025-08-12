@@ -47,7 +47,7 @@ class Feature:
         self._ftype = ftype
         lvls = list(set(levels))
         self._levels = np.sort(lvls).flatten().astype(np.float64)
-        self._codes = tuple(set(codes))
+        self._codes = tuple(sorted(set(codes)))
 
     @property
     def ftype(self) -> Type:

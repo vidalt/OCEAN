@@ -125,9 +125,9 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         k = 0
         for v in variables:
             if v.is_one_hot_encoded:
-                for i, code in enumerate(v.codes):
-                    objective += self.L1(x[i + k], v, code=code)
-                k += len(v.codes)
+                for code in v.codes:
+                    objective += self.L1(x[k], v, code=code)
+                    k += 1
             else:
                 objective += self.L1(x[k], v)
                 k += 1
@@ -148,7 +148,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             self.add_garbage(self.Add(u >= j - v.xget()))
             self.add_garbage(self.Add(u >= v.xget() - j))
             obj_exprs.append(u)
-            obj_coefs.append(1)
+            obj_coefs.append(self._obj_scale)
         elif v.is_continuous:
             j = int(np.searchsorted(v.levels, x, side="left"))
             variables = [v.mget(i) for i in range(len(v.levels) - 1)]
@@ -170,9 +170,9 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         elif v.is_one_hot_encoded:
             obj_expr = v.xget(code) if x == 0.0 else 1 - v.xget(code)
             obj_exprs.append(obj_expr)
-            obj_coefs.append(1)
+            obj_coefs.append(self._obj_scale)
         else:
             obj_expr = v.xget() if x == 0.0 else 1 - v.xget()
             obj_exprs.append(obj_expr)
-            obj_coefs.append(1)
+            obj_coefs.append(self._obj_scale)
         return cp.LinearExpr.WeightedSum(obj_exprs, obj_coefs)

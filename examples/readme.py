@@ -9,7 +9,6 @@ from ocean.datasets import load_adult
 # Select an instance to explain from the dataset
 x = data.iloc[0].to_frame().T
 
-
 # Train a random forest classifier
 rf = RandomForestClassifier(n_estimators=10, max_depth=3, random_state=42)
 rf.fit(data, target)
@@ -18,14 +17,14 @@ rf.fit(data, target)
 y = int(rf.predict(x).item())
 
 # Explain the prediction using MIPEXplainer
-mip = MixedIntegerProgramExplainer(rf, mapper=mapper)
-cp = ConstraintProgrammingExplainer(rf, mapper=mapper)
+mip_model = MixedIntegerProgramExplainer(rf, mapper=mapper)
 x = x.to_numpy().flatten()
+mip_explanation = mip_model.explain(x, y=1 - y, norm=1)
 
-explanation = mip.explain(x, y=1 - y, norm=1)
-# Show the explanation
-print(f"MIP explanation : \n {explanation}")
+# Explain the prediction using CPEExplainer
+cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
+cp_explanation = cp_model.explain(x, y=1 - y, norm=1)
 
-explanation = cp.explain(x, y=1 - y, norm=1)
 # Show the explanation
-print(f"CP explanation : \n {explanation}")
+print("MIP", mip_explanation)
+print("CP", cp_explanation)

@@ -66,6 +66,7 @@ class Explainer(Model, BaseExplainer):
         if status != "OPTIMAL":
             msg = f"Failed to optimize the model. Status: {status}"
             raise RuntimeError(msg)
+        self.explanation.query = x
         return self.explanation
 
 

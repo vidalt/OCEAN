@@ -55,5 +55,9 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
 
         return prefix + root + suffix
 
+    @property
+    def query(self) -> Array1D:
+        raise NotImplementedError
+
 
 __all__ = ["Explanation"]

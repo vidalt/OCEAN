@@ -27,7 +27,7 @@ class FeatureVar(Var, FeatureKeeper):
             else:
                 mu = self._set_mu(model, m=len(self.levels))
                 self._objvar = model.NewIntVar(
-                    0, len(self.levels) - 1, f"u_{self.X_VAR_NAME_FMT}"
+                    0, len(self.levels) - 1, f"u_{self._name}"
                 )
             model.add_map_domain(self.xget(), mu)
             self._mu = mu
@@ -78,7 +78,7 @@ class FeatureVar(Var, FeatureKeeper):
         return self._add_discrete(model, name)
 
     def _add_u(self, model: BaseModel) -> dict[Key, cp.IntVar]:
-        name = self.X_VAR_NAME_FMT.format(name=self._name)
+        name = self._name.format(name=self._name)
         return self._add_one_hot_encoded(model=model, name=name)
 
     def _set_mu(self, model: BaseModel, m: int) -> list[cp.IntVar]:
