@@ -59,7 +59,16 @@ class Explainer(Model, BaseExplainer):
         y: NonNegativeInt,
         norm: PositiveInt,
         return_callback: bool = False,
+        verbose: bool = False,
+        max_time: int = 60,
+        num_workers: int | None = None,
+        random_seed: int = 42,
     ) -> Explanation:
+        self.setParam("LogToConsole", int(verbose))
+        self.setParam("TimeLimit", max_time)
+        self.setParam("Seed", random_seed)
+        if num_workers is not None:
+            self.setParam("Threads", num_workers)
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
         if return_callback:

@@ -55,7 +55,16 @@ class Explainer(Model, BaseExplainer):
         y: NonNegativeInt,
         norm: PositiveInt,
         save_callback: bool = False,
+        verbose: bool = False,
+        max_time: int = 60,
+        num_workers: int | None = None,
+        random_seed: int = 42,
     ) -> Explanation:
+        self.solver.parameters.log_search_progress = verbose
+        self.solver.parameters.max_time_in_seconds = max_time
+        self.solver.parameters.random_seed = random_seed
+        if num_workers is not None:
+            self.solver.parameters.num_workers = num_workers
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
         self.callback: MySolCallback | None = (
