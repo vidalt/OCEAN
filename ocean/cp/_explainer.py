@@ -70,7 +70,9 @@ class Explainer(Model, BaseExplainer):
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
         self.callback: MySolCallback | None = (
-            MySolCallback(starttime=time.time(), _obj_scale=self._obj_scale) if return_callback else None
+            MySolCallback(starttime=time.time(), 
+                          _obj_scale=self._obj_scale) 
+                          if return_callback else None
         )
         _ = self.solver.Solve(self, solution_callback=self.callback)
         status = self.solver.status_name()
