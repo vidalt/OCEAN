@@ -47,11 +47,11 @@ class Explainer(Model, BaseExplainer):
     def get_solving_status(self) -> str:
         return self.Status
     
-    def get_anytime_solutions(self) -> list:
-        try:
+    def get_anytime_solutions(self) -> list[dict[str, float]] | None:
+        if self.callback is not None:
             return self.callback.sollist
-        except:
-            print("Call .explain before attempting to get anytime solving performances!")
+        else:
+            return None
     
     def explain(
         self,
