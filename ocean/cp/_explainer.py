@@ -48,7 +48,10 @@ class Explainer(Model, BaseExplainer):
         return self.Status
     
     def get_anytime_solutions(self) -> list:
-        return self.callback.sollist
+        try:
+            return self.callback.sollist
+        except:
+            print("Call .explain before attempting to get anytime solving performances!")
     
     def explain(
         self,
