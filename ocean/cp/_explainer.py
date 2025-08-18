@@ -41,6 +41,15 @@ class Explainer(Model, BaseExplainer):
         self.build()
         self.solver = ENV.solver
 
+    def get_objective_value(self) -> float:
+        return self.solver.objective_value/self._obj_scale
+        
+    def get_solving_status(self) -> str:
+        return self.Status
+    
+    def get_anytime_solutions(self) -> list:
+        return self.callback.sollist
+    
     def explain(
         self,
         x: Array1D,
@@ -61,7 +70,7 @@ class Explainer(Model, BaseExplainer):
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
         self.callback: MySolCallback | None = (
-            MySolCallback(starttime=time.time()) if return_callback else None
+            MySolCallback(starttime=time.time(), _obj_scale=self._obj_scale) if return_callback else None
         )
         _ = self.solver.Solve(self, solution_callback=self.callback)
         status = self.solver.status_name()
@@ -72,21 +81,21 @@ class Explainer(Model, BaseExplainer):
         self.explanation.query = x
         return self.explanation
 
-
 class MySolCallback(cp.CpSolverSolutionCallback):
     """Save intermediate solutions."""
 
-    def __init__(self, starttime: float) -> None:
+    def __init__(self, starttime: float, _obj_scale:float) -> None:
         cp.CpSolverSolutionCallback.__init__(self)
         self.sollist: list[dict[str, float]] = []
         self.__solution_count = 0
         self.starttime = starttime
+        self._obj_scale = _obj_scale
 
     def on_solution_callback(self) -> None:
         try:
             self.__solution_count += 1
             t = time.time()
-            objval = self.ObjectiveValue()
+            objval = self.ObjectiveValue()/self._obj_scale
             self.addSol(objval, t - self.starttime)
         except Exception:
             traceback.print_exc()
