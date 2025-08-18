@@ -66,9 +66,9 @@ class Explainer(Model, BaseExplainer):
                            15: "USER_OBJ_LIMIT", 16: "WORK_LIMIT"}  
         return gurobi_statuses[self.Status]
     
-    def get_anytime_solutions(self) -> list:
-        return self.callback.sollist
-    
+    def get_anytime_solutions(self) -> list[dict[str, float]] | None:
+            return self.callback.sollist
+
     def explain(
         self,
         x: Array1D,
