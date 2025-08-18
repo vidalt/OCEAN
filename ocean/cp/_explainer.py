@@ -26,10 +26,7 @@ class Explainer(Model, BaseExplainer):
         mapper: Mapper[Feature],
         weights: Array1D | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
-        model_type: Model.Type = Model.Type.CP,
-        n_threads: int | None = None,
-        max_time: int = 3000,
-        seed: int = 42,
+        model_type: Model.Type = Model.Type.CP
     ) -> None:
         ensembles = (ensemble,)
         trees = parse_ensembles(*ensembles, mapper=mapper)
@@ -43,10 +40,6 @@ class Explainer(Model, BaseExplainer):
         )
         self.build()
         self.solver = ENV.solver
-        self.solver.parameters.max_time_in_seconds = max_time
-        self.solver.parameters.random_seed = seed
-        if n_threads is not None:
-            self.solver.parameters.num_workers = n_threads
 
     def explain(
         self,
@@ -54,7 +47,7 @@ class Explainer(Model, BaseExplainer):
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
-        save_callback: bool = False,
+        return_callback: bool = False,
         verbose: bool = False,
         max_time: int = 60,
         num_workers: int | None = None,
@@ -68,10 +61,11 @@ class Explainer(Model, BaseExplainer):
         self.add_objective(x, norm=norm)
         self.set_majority_class(y=y)
         self.callback: MySolCallback | None = (
-            MySolCallback(starttime=time.time()) if save_callback else None
+            MySolCallback(starttime=time.time()) if return_callback else None
         )
         _ = self.solver.Solve(self, solution_callback=self.callback)
         status = self.solver.status_name()
+        self.Status = status
         if status != "OPTIMAL":
             msg = f"Failed to optimize the model. Status: {status}"
             raise RuntimeError(msg)

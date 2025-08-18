@@ -27,8 +27,6 @@ class Args:
     max_depth: int
     n_examples: int
     dataset: str
-    n_threads: int
-
 
 def parse_args() -> Args:
     parser = ArgumentParser()
@@ -52,20 +50,13 @@ def parse_args() -> Args:
         choices=["adult", "compas", "credit"],
         default="compas",
     )
-    parser.add_argument(
-        "--n-threads",
-        type=int,
-        default=0,
-        dest="n_threads",
-    )
     args = parser.parse_args()
     return Args(
         seed=args.seed,
         n_estimators=args.n_estimators,
         max_depth=args.max_depth,
         n_examples=args.n_examples,
-        dataset=args.dataset,
-        n_threads=args.n_threads,
+        dataset=args.dataset
     )
 
 
@@ -87,7 +78,7 @@ def main() -> None:
     args = parse_args()
     data, target, mapper = load_data(args)
     rf = fit_model(args, data, target)
-    cp = build_explainer(rf, mapper, args.n_threads)
+    cp = build_explainer(rf, mapper)
     queries = generate_queries(args, rf, data)
     times = run_queries(cp, queries)
     display_statistics(times)
@@ -126,16 +117,13 @@ def fit_model(
 
 def build_explainer(
     rf: RandomForestClassifier,
-    mapper: Mapper[Feature],
-    n_threads: int,
+    mapper: Mapper[Feature]
 ) -> ConstraintProgrammingExplainer:
     with CONSOLE.status("[bold blue]Building the Explainer[/bold blue]"):
         start = time.time()
         cp = ConstraintProgrammingExplainer(
             rf,
-            mapper=mapper,
-            n_threads=n_threads,
-            max_time=100,
+            mapper=mapper
         )
         end = time.time()
     CONSOLE.print("[bold green]Explainer built[/bold green]")
