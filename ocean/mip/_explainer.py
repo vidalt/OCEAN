@@ -67,7 +67,7 @@ class Explainer(Model, BaseExplainer):
         return gurobi_statuses[self.Status]
     
     def get_anytime_solutions(self) -> list[dict[str, float]] | None:
-            return self.callback.sollist
+        return self.callback.sollist
 
     def explain(
         self,
