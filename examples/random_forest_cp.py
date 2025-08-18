@@ -28,6 +28,7 @@ class Args:
     n_examples: int
     dataset: str
 
+
 def parse_args() -> Args:
     parser = ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
@@ -56,7 +57,7 @@ def parse_args() -> Args:
         n_estimators=args.n_estimators,
         max_depth=args.max_depth,
         n_examples=args.n_examples,
-        dataset=args.dataset
+        dataset=args.dataset,
     )
 
 
@@ -116,15 +117,11 @@ def fit_model(
 
 
 def build_explainer(
-    rf: RandomForestClassifier,
-    mapper: Mapper[Feature]
+    rf: RandomForestClassifier, mapper: Mapper[Feature]
 ) -> ConstraintProgrammingExplainer:
     with CONSOLE.status("[bold blue]Building the Explainer[/bold blue]"):
         start = time.time()
-        cp = ConstraintProgrammingExplainer(
-            rf,
-            mapper=mapper
-        )
+        cp = ConstraintProgrammingExplainer(rf, mapper=mapper)
         end = time.time()
     CONSOLE.print("[bold green]Explainer built[/bold green]")
     msg = f"Build time: {end - start:.2f} seconds"
