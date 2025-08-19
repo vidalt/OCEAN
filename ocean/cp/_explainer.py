@@ -1,5 +1,6 @@
 import time
 import traceback
+import warnings
 
 from ortools.sat.python import cp_model as cp
 
@@ -79,9 +80,15 @@ class Explainer(Model, BaseExplainer):
         _ = self.solver.Solve(self, solution_callback=self.callback)
         status = self.solver.status_name()
         self.Status = status
+        if status == "INFEASIBLE":
+            msg = "Model is infeasible. Please check the model constraints."
+            raise RuntimeError(msg)
         if status != "OPTIMAL":
             msg = f"Failed to optimize the model. Status: {status}"
-            raise RuntimeError(msg)
+            warnings.warn(msg, category=UserWarning, stacklevel=2)
+            if status != "FEASIBLE":
+                msg += " No solution found. Try to increase the time limit."
+                raise RuntimeError(msg)
         self.explanation.query = x
         return self.explanation
 

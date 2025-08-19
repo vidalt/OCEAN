@@ -1,4 +1,5 @@
 import time
+import warnings
 
 import gurobipy as gp
 from sklearn.ensemble import IsolationForest
@@ -103,9 +104,16 @@ class Explainer(Model, BaseExplainer):
             self.optimize(self.callback)
         else:
             self.optimize()
-        if self.SolCount == 0:
-            msg = "No solution found. Please check the model constraints."
+        status = self.get_solving_status()
+        if status == "INFEASIBLE":
+            msg = " Model is infeasible. Please check the model constraints."
             raise RuntimeError(msg)
+        if status != "OPTIMAL":
+            msg = f" Model is not optimal. Status = {status}."
+            warnings.warn(msg, stacklevel=2, category=UserWarning)
+            if self.SolCount == 0:
+                msg += " No solution found. Try to increase the time limit."
+                raise RuntimeError(msg)
         return self.explanation
 
     @staticmethod
