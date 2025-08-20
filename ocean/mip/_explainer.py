@@ -91,7 +91,7 @@ class Explainer(Model, BaseExplainer):
         max_time: int = 60,
         num_workers: int | None = None,
         random_seed: int = 42,
-    ) -> Explanation:
+    ) -> Explanation | None:
         self.setParam("LogToConsole", int(verbose))
         self.setParam("TimeLimit", max_time)
         self.setParam("Seed", random_seed)
@@ -105,15 +105,40 @@ class Explainer(Model, BaseExplainer):
         else:
             self.optimize()
         status = self.get_solving_status()
+        
         if status == "INFEASIBLE":
-            msg = " Model is infeasible. Please check the model constraints."
-            raise RuntimeError(msg)
-        if status != "OPTIMAL":
-            msg = f" Model is not optimal. Status = {status}."
-            warnings.warn(msg, stacklevel=2, category=UserWarning)
-            if self.SolCount == 0:
-                msg += " No solution found. Try to increase the time limit."
+            msg = "There are no feasible counterfactuals for this query."
+            msg += " If there should be one, please check the model "
+            msg += "constraints or report this issue to the developers."
+            warnings.warn(msg, category=UserWarning, stacklevel=2)
+            return None
+        elif status != "OPTIMAL":
+            if self.SolCount > 0:
+                msg = "A valid CF was found, but it might be " 
+                msg += "suboptimal as the MILP " 
+                msg += "solver could not prove optimality within "
+                msg += "the given time frame. \n It can however certify"
+                msg += " that no counterfactual can be closer than"
+                msg += f" {self.ObjBound}."
+                warnings.warn(msg, category=UserWarning, stacklevel=2)
+            elif status == "TIME_LIMIT":
+                msg = "The MILP solver could not find any"
+                msg += " valid CF within the given time frame."
+                msg += " Try increasing the time limit."
+                warnings.warn(msg, category=UserWarning, stacklevel=2)
+                return None
+            elif status == "MEM_LIMIT":
+                msg = "The MILP solver could not find any"
+                msg += " valid CF within the given max memory."
+                msg += " Try increasing the memory limit."
+                warnings.warn(msg, category=UserWarning, stacklevel=2)
+                return None
+            else:
+                msg = "The MILP solver could not find any"
+                msg += " valid CF for an un-handled reason."
+                msg += "Unexpected solver status: " + status
                 raise RuntimeError(msg)
+    
         return self.explanation
 
     @staticmethod

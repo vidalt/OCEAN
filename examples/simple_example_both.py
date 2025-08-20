@@ -1,16 +1,13 @@
 import time
-import warnings
-
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 from ocean import ConstraintProgrammingExplainer, MixedIntegerProgramExplainer
 from ocean.datasets import load_adult
 
-warnings.filterwarnings("ignore")
 
 plot_anytime_distances = True
-num_workers = 4  # Both CP and MILP solving support multithreading
+num_workers = 8  # Both CP and MILP solving support multithreading
 random_state = 42
 timeout = 60  # Maximum running time given to the (CP or MILP) solver
 
@@ -55,15 +52,17 @@ explanation_ocean = milp_model.explain(
     max_time=timeout,
 )
 milp_time = time.time() - start_
-
-print(
-    "MILP : ",
-    explanation_ocean,
-    "(class ",
-    rf.predict([explanation_ocean.to_numpy()])[0],
-    ")",
-)
-print("MILP Sollist = ", milp_model.get_anytime_solutions())
+if explanation_ocean is not None:
+    print(
+        "MILP : ",
+        explanation_ocean,
+        "(class ",
+        rf.predict([explanation_ocean.to_numpy()])[0],
+        ")",
+    )
+    print("MILP Sollist = ", milp_model.get_anytime_solutions())
+else:
+    print("MILP: No CF found.")
 
 # Use the CP formulation to generate a CF
 cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
@@ -80,16 +79,19 @@ explanation_oceancp = cp_model.explain(
 )
 cp_time = time.time() - start_
 
-print(
-    "CP : ",
-    explanation_oceancp,
-    "(class ",
-    rf.predict([explanation_oceancp.to_numpy()])[0],
-    ")",
-)
-print(
-    "CP Sollist = ", cp_model.get_anytime_solutions()
-)  # To be divided by the scaling factor (normally 1e8)
+if explanation_oceancp is not None:
+    print(
+        "CP : ",
+        explanation_oceancp,
+        "(class ",
+        rf.predict([explanation_oceancp.to_numpy()])[0],
+        ")",
+    )
+    print(
+        "CP Sollist = ", cp_model.get_anytime_solutions()
+    ) 
+else:
+    print("CP: No CF found.")
 
 # Display summary statistics
 print(f"Runtime: CP {cp_time:.3f} s, MILP {milp_time:.3f} s")
