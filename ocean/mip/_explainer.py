@@ -105,17 +105,17 @@ class Explainer(Model, BaseExplainer):
         else:
             self.optimize()
         status = self.get_solving_status()
-        
+
         if status == "INFEASIBLE":
             msg = "There are no feasible counterfactuals for this query."
             msg += " If there should be one, please check the model "
             msg += "constraints or report this issue to the developers."
             warnings.warn(msg, category=UserWarning, stacklevel=2)
             return None
-        elif status != "OPTIMAL":
+        if status != "OPTIMAL":
             if self.SolCount > 0:
-                msg = "A valid CF was found, but it might be " 
-                msg += "suboptimal as the MILP " 
+                msg = "A valid CF was found, but it might be "
+                msg += "suboptimal as the MILP "
                 msg += "solver could not prove optimality within "
                 msg += "the given time frame. \n It can however certify"
                 msg += " that no counterfactual can be closer than"
@@ -138,7 +138,6 @@ class Explainer(Model, BaseExplainer):
                 msg += " valid CF for an un-handled reason."
                 msg += "Unexpected solver status: " + status
                 raise RuntimeError(msg)
-    
         return self.explanation
 
     @staticmethod

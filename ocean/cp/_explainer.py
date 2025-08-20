@@ -80,34 +80,38 @@ class Explainer(Model, BaseExplainer):
         _ = self.solver.Solve(self, solution_callback=self.callback)
         status = self.solver.status_name()
         self.Status = status
-        if status == "INFEASIBLE":
-            msg = "There are no feasible counterfactuals for this query."
-            msg += " If there should be one, please check the model "
-            msg += "constraints or report this issue to the developers."
-            warnings.warn(msg, category=UserWarning, stacklevel=2)
-            return None
-        elif status == "MODEL_INVALID":
-            msg = "The constraint programming model is invalid. "
-            msg += "Please check the model constraints or report"
-            msg += " this issue to the developers."
-            raise RuntimeError(msg)
-        elif status == "UNKNOWN":
-            msg = "The constraint programming solver could "
-            msg += "not find any valid CF within the given time frame."
-            msg += " Try increasing the time limit."
-            warnings.warn(msg, category=UserWarning, stacklevel=2)
-            return None
-        elif status == "FEASIBLE":
-            msg = "A valid CF was found, but it might be " 
-            msg += "suboptimal as the constraint programming " 
-            msg += "solver could not prove optimality within "
-            msg += "the given time frame. \n It can however certify"
-            msg += " that no counterfactual can be closer than"
-            msg += f" {self.solver.BestObjectiveBound()}."
-            warnings.warn(msg, category=UserWarning, stacklevel=2)
-        elif status != "OPTIMAL":
-            msg = "Unexpected solver status: " + status
-            raise RuntimeError(msg)
+
+        match status:
+            case "OPTIMAL":
+                pass
+            case "FEASIBLE":
+                msg = "A valid CF was found, but it might be "
+                msg += "suboptimal as the constraint programming "
+                msg += "solver could not prove optimality within "
+                msg += "the given time frame. \n It can however certify"
+                msg += " that no counterfactual can be closer than"
+                msg += f" {self.solver.BestObjectiveBound()}."
+                warnings.warn(msg, category=UserWarning, stacklevel=2)
+            case "INFEASIBLE":
+                msg = "There are no feasible counterfactuals for this query."
+                msg += " If there should be one, please check the model "
+                msg += "constraints or report this issue to the developers."
+                warnings.warn(msg, category=UserWarning, stacklevel=2)
+                return None
+            case "MODEL_INVALID":
+                msg = "The constraint programming model is invalid. "
+                msg += "Please check the model constraints or report"
+                msg += " this issue to the developers."
+                raise RuntimeError(msg)
+            case "UNKNOWN":
+                msg = "The constraint programming solver could "
+                msg += "not find any valid CF within the given time frame."
+                msg += " Try increasing the time limit."
+                warnings.warn(msg, category=UserWarning, stacklevel=2)
+                return None
+            case _:
+                msg = "Unexpected solver status: " + status
+                raise RuntimeError(msg)
         self.explanation.query = x
         return self.explanation
 

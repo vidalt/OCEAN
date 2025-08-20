@@ -76,10 +76,11 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         if self.query.shape[0] == 0:
             return float(levels[idx] + levels[idx + 1]) / 2
         j = 0
-        while self.query[f] > levels[j + 1]:
+        query_arr = np.asarray(self.query, dtype=float).ravel()
+        while query_arr[f] > levels[j + 1]:
             j += 1
         if j == idx:
-            value = float(self.query[f])
+            value = float(query_arr[f])
         elif j < idx:
             value = float(levels[idx]) + self._epsilon
         else:
