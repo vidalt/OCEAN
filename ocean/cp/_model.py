@@ -119,6 +119,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         if norm != 1:
             msg = f"Unsupported norm: {norm}"
             raise ValueError(msg)
+        x_arr = np.asarray(x, dtype=float).ravel()
 
         variables = self.mapper.values()
         objective: cp.LinearExpr = 0  # type: ignore[assignment]
@@ -126,10 +127,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         for v in variables:
             if v.is_one_hot_encoded:
                 for code in v.codes:
-                    objective += self.L1(x[k], v, code=code)
+                    objective += self.L1(x_arr[k], v, code=code)
                     k += 1
             else:
-                objective += self.L1(x[k], v)
+                objective += self.L1(x_arr[k], v)
                 k += 1
         return objective
 

@@ -1,10 +1,10 @@
 import time
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 from ocean import ConstraintProgrammingExplainer, MixedIntegerProgramExplainer
 from ocean.datasets import load_adult
-
 
 plot_anytime_distances = True
 num_workers = 8  # Both CP and MILP solving support multithreading
@@ -87,9 +87,7 @@ if explanation_oceancp is not None:
         rf.predict([explanation_oceancp.to_numpy()])[0],
         ")",
     )
-    print(
-        "CP Sollist = ", cp_model.get_anytime_solutions()
-    ) 
+    print("CP Sollist = ", cp_model.get_anytime_solutions())
 else:
     print("CP: No CF found.")
 
