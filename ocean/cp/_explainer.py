@@ -43,7 +43,7 @@ class Explainer(Model, BaseExplainer):
         self.solver = ENV.solver
 
     def get_objective_value(self) -> float:
-        return self.solver.objective_value / self._obj_scale
+        return self.solver.ObjectiveValue() / self._obj_scale
 
     def get_solving_status(self) -> str:
         return self.Status
@@ -64,7 +64,7 @@ class Explainer(Model, BaseExplainer):
         max_time: int = 60,
         num_workers: int | None = None,
         random_seed: int = 42,
-    ) -> Explanation:
+    ) -> Explanation | None:
         self.solver.parameters.log_search_progress = verbose
         self.solver.parameters.max_time_in_seconds = max_time
         self.solver.parameters.random_seed = random_seed
@@ -81,14 +81,33 @@ class Explainer(Model, BaseExplainer):
         status = self.solver.status_name()
         self.Status = status
         if status == "INFEASIBLE":
-            msg = "Model is infeasible. Please check the model constraints."
-            raise RuntimeError(msg)
-        if status != "OPTIMAL":
-            msg = f"Failed to optimize the model. Status: {status}"
+            msg = "There are no feasible counterfactuals for this query."
+            msg += " If there should be one, please check the model "
+            msg += "constraints or report this issue to the developers."
             warnings.warn(msg, category=UserWarning, stacklevel=2)
-            if status != "FEASIBLE":
-                msg += " No solution found. Try to increase the time limit."
-                raise RuntimeError(msg)
+            return None
+        elif status == "MODEL_INVALID":
+            msg = "The constraint programming model is invalid. "
+            msg += "Please check the model constraints or report"
+            msg += " this issue to the developers."
+            raise RuntimeError(msg)
+        elif status == "UNKNOWN":
+            msg = "The constraint programming solver could "
+            msg += "not find any valid CF within the given time frame."
+            msg += " Try increasing the time limit."
+            warnings.warn(msg, category=UserWarning, stacklevel=2)
+            return None
+        elif status == "FEASIBLE":
+            msg = "A valid CF was found, but it might be " 
+            msg += "suboptimal as the constraint programming " 
+            msg += "solver could not prove optimality within "
+            msg += "the given time frame. \n It can however certify"
+            msg += " that no counterfactual can be closer than"
+            msg += f" {self.solver.BestObjectiveBound()}."
+            warnings.warn(msg, category=UserWarning, stacklevel=2)
+        elif status != "OPTIMAL":
+            msg = "Unexpected solver status: " + status
+            raise RuntimeError(msg)
         self.explanation.query = x
         return self.explanation
 

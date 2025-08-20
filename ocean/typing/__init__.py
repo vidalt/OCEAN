@@ -91,7 +91,7 @@ class BaseExplainer(Protocol):
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
-    ) -> BaseExplanation: ...
+    ) -> BaseExplanation | None: ...
 
 
 __all__ = [
