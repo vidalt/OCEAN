@@ -11,7 +11,10 @@ readme.file = "README.md"
 requires-python = ">=3.12"
 license = {file = "LICENSE"}
 authors = [
-    { name = "Youssouf Emine", email = "youssouf.emine@polymtl.ca" }
+    { name = "Youssouf Emine", email = "youssouf.emine@polymtl.ca" },
+    { name = "Awa Khouna", email = "awa.khouna@polymtl.ca" },
+    { name = "Julien Ferry", email = "julien.ferry@polymtl.ca" },
+    { name = "Thibaut Vidal", email = "thibaut.vidal@polymtl.ca" }
 ]
 
 classifiers = [
@@ -29,7 +32,7 @@ dependencies = [
     "anytree",
     "gurobipy",
     "numpy",
-    "ortools",
+    "ortools>=9.12",
     "pandas",
     "pydantic",
     "scikit-learn",
