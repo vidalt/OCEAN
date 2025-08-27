@@ -140,7 +140,7 @@ class MixedIntegerProgramBuilder(ModelBuilder):
         #   :: mu[j] <= 1 - flow[node.left],
         #   :: mu[j] >= epsilon * flow[node.right].
 
-        epsilon = self._find_best_epsilon(model, var)
+        epsilon = self._find_best_epsilon(model, var, self._epsilon)
         threshold = node.threshold
         j = int(np.searchsorted(var.levels, threshold))
 
@@ -227,9 +227,14 @@ class MixedIntegerProgramBuilder(ModelBuilder):
         model.addConstr(x >= tree[node.right.node_id])
 
     @staticmethod
-    def _find_best_epsilon(model: BaseModel, var: FeatureVar) -> float:
+    def _find_best_epsilon(
+        model: BaseModel,
+        var: FeatureVar,
+        epsilon: float,
+    ) -> float:
         # Find the best epsilon value for the given feature variable.
-        # This
+        # This is done by finding the minimum difference between
+        # the split levels and the tolerance of the solver.
         tol: float = model.getParamInfo("FeasibilityTol")[2]
         min_tol: float = 1e-9
         delta: float = min(*np.diff(var.levels))
@@ -242,6 +247,8 @@ class MixedIntegerProgramBuilder(ModelBuilder):
             msg += " Consider not scaling the data or using bigger intervals."
             warnings.warn(msg, category=UserWarning, stacklevel=2)
             return eps
+        if delta * epsilon > tol:
+            return epsilon
         while 2 * tol / delta >= 1.0:
             tol /= 2
         feas_tol = model.getParamInfo("FeasibilityTol")[2]
