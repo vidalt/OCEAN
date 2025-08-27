@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Iterable
 from typing import Protocol
 
@@ -139,7 +140,7 @@ class MixedIntegerProgramBuilder(ModelBuilder):
         #   :: mu[j] <= 1 - flow[node.left],
         #   :: mu[j] >= epsilon * flow[node.right].
 
-        epsilon = self._epsilon
+        epsilon = self._find_best_epsilon(model, var)
         threshold = node.threshold
         j = int(np.searchsorted(var.levels, threshold))
 
@@ -224,6 +225,29 @@ class MixedIntegerProgramBuilder(ModelBuilder):
         x = var.xget(node.code)
         model.addConstr(x <= 1 - tree[node.left.node_id])
         model.addConstr(x >= tree[node.right.node_id])
+
+    @staticmethod
+    def _find_best_epsilon(model: BaseModel, var: FeatureVar) -> float:
+        # Find the best epsilon value for the given feature variable.
+        # This
+        tol: float = model.getParamInfo("FeasibilityTol")[2]
+        min_tol: float = 1e-9
+        delta: float = min(*np.diff(var.levels))
+        eps: float = 1.0 - min_tol
+        if delta <= 2 * min_tol:
+            msg = "The difference between the split levels"
+            msg += f" is too small (={delta}) compared to"
+            msg += f" the tolerance minimum of Gurobi ({min_tol})."
+            msg += " There could be some precision errors."
+            msg += " Consider not scaling the data or using bigger intervals."
+            warnings.warn(msg, category=UserWarning, stacklevel=2)
+            return eps
+        while 2 * tol / delta >= 1.0:
+            tol /= 2
+        feas_tol = model.getParamInfo("FeasibilityTol")[2]
+        if feas_tol != tol:
+            model.setParam("FeasibilityTol", min(feas_tol, tol))
+        return 2 * tol / delta
 
 
 class ModelBuilderFactory:
