@@ -130,7 +130,6 @@ class TestNoIsolation:
             assert model.Status == gp.GRB.OPTIMAL
 
             explanation = model.explanation
-
             validate_solution(explanation)
             validate_paths(*model.trees, explanation=explanation)
             validate_sklearn_paths(clf, explanation, model.trees)
