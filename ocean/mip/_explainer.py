@@ -2,7 +2,6 @@ import time
 import warnings
 
 import gurobipy as gp
-import numpy as np
 from sklearn.ensemble import IsolationForest
 
 from ..abc import Mapper
@@ -47,22 +46,12 @@ class Explainer(Model, BaseExplainer):
             max_samples=max_samples,
             name=name,
             env=env,
-            epsilon=self.__find_best_num_epsilon(epsilon, mapper),
+            epsilon=epsilon,
             num_epsilon=num_epsilon,
             model_type=model_type,
             flow_type=flow_type,
         )
         self.build()
-
-    @staticmethod
-    def __find_best_num_epsilon(
-        epsilon: float, mapper: Mapper[Feature]
-    ) -> float:
-        eps = epsilon
-        for f in mapper.values():
-            if f.is_numeric:
-                eps = min(eps, *np.diff(f.levels) / 2.0)
-        return eps
 
     def get_objective_value(self) -> float:
         return self.ObjVal
