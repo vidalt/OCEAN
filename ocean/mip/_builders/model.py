@@ -246,6 +246,7 @@ class MixedIntegerProgramBuilder(ModelBuilder):
             msg += " There could be some precision errors."
             msg += " Consider not scaling the data or using bigger intervals."
             warnings.warn(msg, category=UserWarning, stacklevel=2)
+            model.setParam("FeasibilityTol", min_tol)
             return eps
         if delta * epsilon > tol:
             return epsilon
