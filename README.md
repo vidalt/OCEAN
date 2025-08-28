@@ -2,16 +2,19 @@
 
 ![Logo](https://github.com/eminyous/ocean/blob/main/logo.svg?raw=True)
 
-This repository provides methods to generate optimal counterfactual explanations in tree ensembles.
-It is based on the paper *Optimal Counterfactual Explanations in Tree Ensemble* by Axel Parmentier and Thibaut Vidal in the *Proceedings of the thirty-eighth International Conference on Machine Learning*, 2021, in press. The article is [available here](http://proceedings.mlr.press/v139/parmentier21a/parmentier21a.pdf).
+**ocean** is a full package dedicated to counterfactual explanations for **tree ensembles**.  
+It builds on the paper *Optimal Counterfactual Explanations in Tree Ensemble* by Axel Parmentier and Thibaut Vidal in the *Proceedings of the thirty-eighth International Conference on Machine Learning*, 2021, in press. The article is [available here](http://proceedings.mlr.press/v139/parmentier21a/parmentier21a.pdf).  
+Beyond the original MIP approach, ocean includes a new **constraint programming (CP)** method and will grow to cover additional formulations and heuristics.
+
 
 ## Installation
 
-This project requires the gurobi solver. You can request for a free academic license [here](https://www.gurobi.com/academia/academic-program-and-licenses/). Once you have installed gurobi, you can install the package with the following command:
+You can install the package with the following command:
 
 ```bash
 pip install oceanpy
 ```
+*Note : The MIP method requires the gurobi solver access. You can request for a free academic license [here](https://www.gurobi.com/academia/academic-program-and-licenses/). Once you have installed gurobi, you can install the package with the command above. However, you can also use the CP method without gurobi.*
 
 ## Usage
 
@@ -80,3 +83,21 @@ Relationship     : 0
 Sex              : 0
 WorkClass        : 6
 ```
+
+
+
+
+
+## Feature Preview & Roadmap
+
+| Area                            | Status     | Notes / References                         |
+| ------------------------------- | ---------- | ------------------------------------------ |
+| **MIP formulation**             | ✅ Done     | Based on Parmentier & Vidal (2020/2021).   |
+| **Constraint Programming (CP)** | ✅ Done     | Based on an upcoming paper.                |
+| **MaxSAT formulation**          | ⏳ Upcoming | Planned addition to the toolbox.           |
+| **Heuristics**                  | ⏳ Upcoming | Fast approximate methods.                  |
+| **Other methods**               | ⏳ Upcoming | Additional formulations under exploration. |
+| **Random Forest support**       | ✅ Ready    | Fully supported in ocean.                  |
+| **XGBoost support**             | ⏳ Upcoming | Implementation planned.                    |
+
+> Legend: ✅ available · ⏳ upcoming
