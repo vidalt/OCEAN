@@ -113,6 +113,7 @@ class Explainer(Model, BaseExplainer):
                 msg = "Unexpected solver status: " + status
                 raise RuntimeError(msg)
         self.explanation.query = x
+        self.cleanup()
         return self.explanation
 
 
