@@ -80,7 +80,7 @@ class Explainer(Model, BaseExplainer):
         _ = self.solver.Solve(self, solution_callback=self.callback)
         status = self.solver.status_name()
         self.Status = status
-
+        cf_status_ok = True
         match status:
             case "OPTIMAL":
                 pass
@@ -97,7 +97,7 @@ class Explainer(Model, BaseExplainer):
                 msg += " If there should be one, please check the model "
                 msg += "constraints or report this issue to the developers."
                 warnings.warn(msg, category=UserWarning, stacklevel=2)
-                return None
+                cf_status_ok = False
             case "MODEL_INVALID":
                 msg = "The constraint programming model is invalid. "
                 msg += "Please check the model constraints or report"
@@ -108,13 +108,18 @@ class Explainer(Model, BaseExplainer):
                 msg += "not find any valid CF within the given time frame."
                 msg += " Try increasing the time limit."
                 warnings.warn(msg, category=UserWarning, stacklevel=2)
-                return None
+                cf_status_ok = False
             case _:
                 msg = "Unexpected solver status: " + status
                 raise RuntimeError(msg)
-        self.explanation.query = x
-        self.cleanup()
-        return self.explanation
+        
+        if not cf_status_ok:
+            self.cleanup()
+            return None
+        else:
+            self.explanation.query = x
+            self.cleanup()
+            return self.explanation
 
 
 class MySolCallback(cp.CpSolverSolutionCallback):
