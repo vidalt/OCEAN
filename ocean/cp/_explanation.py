@@ -11,7 +11,7 @@ from ._variables import FeatureVar
 
 
 class Explanation(Mapper[FeatureVar], BaseExplanation):
-    _epsilon: float = 1e-6
+    _epsilon: float = float(np.finfo(np.float32).eps)
     _x: Array1D = np.zeros((0,), dtype=int)
 
     def vget(self, i: int) -> cp.IntVar:
@@ -73,7 +73,6 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         return self.reduce(get)
 
     def format_value(self, f: int, idx: int, levels: list[float]) -> float:
-        eps = min(self._epsilon, 0.5 * min(np.diff(levels)))
         if self.query.shape[0] == 0:
             return float(levels[idx] + levels[idx + 1]) / 2
         j = 0
@@ -83,9 +82,9 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         if j == idx:
             value = float(query_arr[f])
         elif j < idx:
-            value = float(levels[idx]) + eps
+            value = float(levels[idx]) + self._epsilon
         else:
-            value = float(levels[idx + 1]) - eps
+            value = float(levels[idx + 1]) - self._epsilon
         return value
 
     @property
