@@ -112,14 +112,13 @@ class Explainer(Model, BaseExplainer):
             case _:
                 msg = "Unexpected solver status: " + status
                 raise RuntimeError(msg)
-        
+
         if not cf_status_ok:
             self.cleanup()
             return None
-        else:
-            self.explanation.query = x
-            self.cleanup()
-            return self.explanation
+        self.explanation.query = x
+        self.cleanup()
+        return self.explanation
 
 
 class MySolCallback(cp.CpSolverSolutionCallback):
