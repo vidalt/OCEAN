@@ -1,20 +1,6 @@
 name: Test
 
 on:
-  push:
-    paths-ignore:
-      - "**/*.md"
-      - "**/*.rst"
-      - "**/*.txt"
-      - "**/LICENSE*"
-      - "**/.gitignore"
-      - "**/docs/**"
-      - "**/examples/**"
-      - "**/htmlcov/**"
-      - "**/*.yml"
-      - "**/*.yaml"
-      - "logo.*"
-      - "coverage.xml"
   pull_request:
     paths-ignore:
       - "**/*.md"
@@ -45,7 +31,7 @@ jobs:
         python-version: ["3.12", "3.13"]
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    name: Python ${{ matrix.python-version }} • ${{ matrix.os }}
+    name: Test Python ${{ matrix.python-version }} • ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,7 +46,7 @@ jobs:
       - name: Install tox
         run: python -m pip install --upgrade pip tox
       
-      - name: Run tests
+      - name: Run tests (no coverage)
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
         run: tox -e py${PYTHON_VERSION//./}
@@ -69,6 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Coverage Report
     needs: test
+    if: ${{ always() && contains(needs.test.result, 'success') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,13 +69,14 @@ jobs:
       - name: Install tox
         run: python -m pip install --upgrade pip tox
       
-      - name: Generate coverage reports
+      - name: Run tests with coverage (Ubuntu Python 3.12 only)
         run: tox -e coverage
       
-      - name: Upload coverage to artifacts
+      - name: Upload coverage reports
         uses: actions/upload-artifact@v4
+        if: success()
         with:
-          name: coverage-reports
+          name: coverage-reports-py${{ env.PYTHON_DEFAULT }}
           path: |
             coverage.xml
             htmlcov/

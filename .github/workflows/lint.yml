@@ -1,18 +1,6 @@
 name: Lint
 
 on:
-  push:
-    paths-ignore:
-      - "**/*.md"
-      - "**/*.rst"
-      - "**/*.txt"
-      - "**/LICENSE*"
-      - "**/.gitignore"
-      - "**/docs/**"
-      - "**/examples/**"
-      - "**/htmlcov/**"
-      - "logo.*"
-      - "coverage.xml"
   pull_request:
     paths-ignore:
       - "**/*.md"
