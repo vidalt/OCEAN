@@ -1,3 +1,77 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools >= 61.0", "wheel", "setuptools_scm[toml]"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "oceanpy"
+dynamic = ["version"]
+description = "A simple Python package Optimal Counterfactual Explanations in Tree Ensembles"
+readme.content-type = "text/markdown"
+readme.file = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    { name = "Youssouf Emine", email = "youssouf.emine@polymtl.ca" },
+    { name = "Awa Khouna", email = "awa.khouna@polymtl.ca" },
+    { name = "Julien Ferry", email = "julien.ferry@polymtl.ca" },
+    { name = "Thibaut Vidal", email = "thibaut.vidal@polymtl.ca" },
+    { name = "Alexandre Forel", email = "alexandre.forel@polymtl.ca"}
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
+dependencies = [
+    "anytree",
+    "gurobipy",
+    "numpy",
+    "ortools>=9.12",
+    "pandas",
+    "pydantic",
+    "scikit-learn",
+]
+
+optional-dependencies.dev = [
+    "coverage",
+    "mypy",
+    "pandas-stubs",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "scipy-stubs",
+    "tox",
+]
+
+optional-dependencies.test = [
+    "coverage",
+    "mypy",
+    "pandas-stubs",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "scipy-stubs",
+    "tox",
+]
+
+optional-dependencies.example = [
+    "rich",
+]
+
+urls.Homepage = "https://github.com/eminyous/ocean"
+urls.Repository = "https://github.com/eminyous/ocean"
+urls.Issues = "https://github.com/eminyous/ocean/issues"
+
+[tool.setuptools_scm]
+
+[tool.pyproject-fmt]
+max_supported_python = "3.13"
