@@ -67,9 +67,9 @@ optional-dependencies.example = [
     "rich",
 ]
 
-urls.Homepage = "https://github.com/eminyous/ocean"
-urls.Repository = "https://github.com/eminyous/ocean"
-urls.Issues = "https://github.com/eminyous/ocean/issues"
+urls.Homepage = "https://github.com/vidalt/OCEAN"
+urls.Repository = "https://github.com/vidalt/OCEAN"
+urls.Issues = "https://github.com/vidalt/OCEAN/issues"
 
 [tool.setuptools_scm]
 
