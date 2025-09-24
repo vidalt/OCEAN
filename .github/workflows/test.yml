@@ -2,6 +2,19 @@ name: Test
 
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.rst"
+      - "**/*.txt"
+      - "**/LICENSE*"
+      - "**/.gitignore"
+      - "**/docs/**"
+      - "**/examples/**"
+      - "**/htmlcov/**"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "logo.*"
+      - "coverage.xml"
   workflow_call:
 
 permissions:
