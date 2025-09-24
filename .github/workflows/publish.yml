@@ -3,26 +3,26 @@ name: Release and Publish to PyPI
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
 
 jobs:
-  tests:
-    uses: ./.github/workflows/test.yml
-
   release:
     name: Create GitHub Release
-    needs: tests
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
       - name: Create release notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
         run: |
           gh release create "$tag" \
-            --title "${{ github.repository }} ${tag#v}" \
+            --repo="$GITHUB_REPOSITORY" \
+            --title="${GITHUB_REPOSITORY#*/} ${tag#v}" \
             --generate-notes
 
   publish:
