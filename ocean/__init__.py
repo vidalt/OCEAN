@@ -7,6 +7,7 @@ __all__ = [
     "ConstraintProgrammingExplainer",
     "MixedIntegerProgramExplainer",
     "abc",
+    "cp",
     "datasets",
     "feature",
     "mip",
