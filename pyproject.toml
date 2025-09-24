@@ -26,7 +26,6 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
 ]
 
@@ -75,4 +74,4 @@ urls.Issues = "https://github.com/vidalt/OCEAN/issues"
 [tool.setuptools_scm]
 
 [tool.pyproject-fmt]
-max_supported_python = "3.14"
+max_supported_python = "3.13"
