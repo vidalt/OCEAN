@@ -1,0 +1,21 @@
+{
+    "typeCheckingMode": "strict",
+    "reportMissingTypeStubs": "none",
+    "reportUnknownMemberType": "none",
+    "reportUnknownVariableType": "none",
+    "ignore": [
+        "sklearn",
+        "anytree"
+    ],
+    "executionEnvironments": [
+        {
+            "root": "./examples",
+            "extraPaths": [
+                "../ocean"
+            ],
+            "reportArgumentType": "none",
+            "reportUnknownArgumentType": "none",
+            "reportUnknownVariableType": "none"
+        }
+    ]
+}

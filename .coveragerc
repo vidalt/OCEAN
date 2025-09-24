@@ -1,0 +1,18 @@
+[run]
+source = ocean
+omit = tests/*
+
+[report]
+show_missing = True
+omit =
+    *tests/*
+    ocean/**/keeper.py
+    ocean/datasets/**/*.py
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+
+exclude_also =
+    ^\s*def _.*\(.*\):
