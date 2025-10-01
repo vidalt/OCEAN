@@ -139,7 +139,7 @@ class Mapper[V: Value](Mapping[Key, V]):
         if isinstance(mapping, Mapper):
             columns = mapping.columns
         elif columns is None:
-            columns = pd.Index([])
+            columns = pd.Index([], dtype=object)
 
         return mapping, columns
 
