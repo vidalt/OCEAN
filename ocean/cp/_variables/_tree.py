@@ -24,8 +24,9 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, cp.IntVar]):
     def build(self, model: BaseModel) -> None:
         name = self.PATH_VAR_NAME_FMT.format(name=self._name)
         self._path = self._add_path(model=model, name=name)
-        model.Add(cp.LinearExpr.Sum(*self._path.values()) == 1)
-
+        #model.Add(cp.LinearExpr.Sum(*self._path.values()) == 1) # Old, manual way
+        model.AddExactlyOne(*self._path.values())  # Allows for more efficient propagation
+        
     def __len__(self) -> int:
         return self.n_nodes
 
