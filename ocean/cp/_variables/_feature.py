@@ -33,8 +33,7 @@ class FeatureVar(Var, FeatureKeeper):
             self._mu = mu
         elif self.is_one_hot_encoded:
             u = self._add_u(model)
-            #model.Add(cp.LinearExpr.Sum(list(u.values())) == 1) # Old, manual way
-            model.AddExactlyOne(list(u.values()))  # Allows for more efficient propagation
+            model.AddExactlyOne(list(u.values()))
             self._u = u
             return
 
