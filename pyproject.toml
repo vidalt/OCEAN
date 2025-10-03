@@ -65,6 +65,7 @@ optional-dependencies.test = [
 
 optional-dependencies.example = [
     "rich",
+    "matplotlib",
 ]
 
 urls.Homepage = "https://github.com/vidalt/OCEAN"
