@@ -47,7 +47,9 @@ def _parse(
         if column in discrete:
             series = series.astype(float)
             levels = tuple(set(series.dropna()))
-            feature = Feature(Feature.Type.DISCRETE, levels=levels)
+            feature = Feature(
+                Feature.Type.DISCRETE, levels=levels, thresholds=[]
+            )
         elif (column in encoded) or not (is_binary or is_numeric):
             frame = pd.get_dummies(series).astype(int)
             codes = tuple(set(series))
