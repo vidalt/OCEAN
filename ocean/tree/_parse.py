@@ -36,8 +36,7 @@ def _build_node(
 
     if mapper[name].is_numeric:
         threshold = float(tree.threshold[node_id])
-        if mapper[name].is_continuous:
-            mapper[name].add(threshold)
+        mapper[name].add(threshold)
     elif mapper[name].is_one_hot_encoded:
         code = mapper.codes[idx]
 
