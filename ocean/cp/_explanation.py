@@ -109,8 +109,8 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         j_x = np.searchsorted(thresholds, query_arr[f], side="left")
         j_val = np.searchsorted(thresholds, val, side="left")
         if j_x != j_val:
-            return val
-        return query_arr[f]
+            return float(val)
+        return float(query_arr[f])
 
     @property
     def query(self) -> Array1D:
