@@ -9,14 +9,14 @@ from sklearn.ensemble import IsolationForest, RandomForestClassifier
 type BaseExplainableEnsemble = RandomForestClassifier
 type ParsableEnsemble = BaseExplainableEnsemble | IsolationForest
 
-Number = float
-NonNegativeNumber = Annotated[Number, Field(ge=0.0)]
-PositiveInt = Annotated[int, Field(ge=1)]
-NonNegativeInt = Annotated[int, Field(ge=0)]
-NonNegative = Annotated[np.float64, Field(ge=0.0)]
-Unit = Annotated[float, Field(gt=0.0, lt=1.0)]
-UnitO = Annotated[float, Field(ge=0.0, lt=1.0)]
-NodeId = Annotated[np.int64, Field(ge=-1)]
+type Number = float
+type NonNegativeNumber = Annotated[Number, Field(ge=0.0)]
+type PositiveInt = Annotated[int, Field(ge=1)]
+type NonNegativeInt = Annotated[int, Field(ge=0)]
+type NonNegative = Annotated[np.float64, Field(ge=0.0)]
+type Unit = Annotated[float, Field(gt=0.0, lt=1.0)]
+type UnitO = Annotated[float, Field(ge=0.0, lt=1.0)]
+type NodeId = Annotated[np.int64, Field(ge=-1)]
 
 # Key alias:
 # - This is used to represent the name of a feature

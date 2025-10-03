@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from ortools.sat.python import cp_model as cp
 
 from ...feature import Feature
@@ -10,7 +12,7 @@ class FeatureVar(Var, FeatureKeeper):
     X_VAR_NAME_FMT: str = "x[{name}]"
 
     _x: cp.IntVar
-    _u: dict[Key, cp.IntVar]
+    _u: Mapping[Key, cp.IntVar]
     _mu: list[cp.IntVar]
     _objvar: cp.IntVar
 
@@ -21,21 +23,12 @@ class FeatureVar(Var, FeatureKeeper):
     def build(self, model: BaseModel) -> None:
         if not self.is_one_hot_encoded:
             self._x = self._add_x(model)
+
         if self.is_numeric:
-            if self.is_continuous:
-                mu = self._set_mu(model, m=len(self.levels) - 1)
-            else:
-                mu = self._set_mu(model, m=len(self.levels))
-                self._objvar = model.NewIntVar(
-                    0, len(self.levels) - 1, f"u_{self._name}"
-                )
-            model.add_map_domain(self.xget(), mu)
-            self._mu = mu
+            self._mu = self._add_mu(model)
+            model.add_map_domain(self.xget(), self._mu)
         elif self.is_one_hot_encoded:
-            u = self._add_u(model)
-            model.AddExactlyOne(list(u.values()))
-            self._u = u
-            return
+            self._u = self._add_u(model)
 
     def xget(self, code: Key | None = None) -> cp.IntVar:
         if self.is_one_hot_encoded:
@@ -77,18 +70,28 @@ class FeatureVar(Var, FeatureKeeper):
 
         return self._add_discrete(model, name)
 
-    def _add_u(self, model: BaseModel) -> dict[Key, cp.IntVar]:
+    def _add_u(self, model: BaseModel) -> Mapping[Key, cp.IntVar]:
         name = self._name.format(name=self._name)
-        return self._add_one_hot_encoded(model=model, name=name)
+        u = self._add_one_hot_encoded(model=model, name=name)
+        model.AddExactlyOne(u.values())
+        return u
 
     def _set_mu(self, model: BaseModel, m: int) -> list[cp.IntVar]:
         return [model.NewBoolVar(f"{self._name}_mu_{i}") for i in range(m)]
+
+    def _add_mu(self, model: BaseModel) -> list[cp.IntVar]:
+        m = len(self.levels) - (1 if self.is_continuous else 0)
+        mu = self._set_mu(model, m=m)
+        if not self.is_continuous:
+            obj_name = f"u_{self._name}"
+            self._objvar = model.NewIntVar(0, m - 1, obj_name)
+        return mu
 
     def _add_one_hot_encoded(
         self,
         model: BaseModel,
         name: str,
-    ) -> dict[Key, cp.IntVar]:
+    ) -> Mapping[Key, cp.IntVar]:
         return {
             code: model.NewBoolVar(f"{name}[{code}]") for code in self.codes
         }
