@@ -11,7 +11,7 @@ from .._base import BaseModel, Var
 class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, cp.IntVar]):
     PATH_VAR_NAME_FMT: str = "{name}_path"
 
-    _path: dict[NonNegativeInt, cp.IntVar]
+    _path: Mapping[NonNegativeInt, cp.IntVar]
 
     def __init__(
         self,
@@ -40,7 +40,7 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, cp.IntVar]):
         self,
         model: BaseModel,
         name: str,
-    ) -> dict[NonNegativeInt, cp.IntVar]:
+    ) -> Mapping[NonNegativeInt, cp.IntVar]:
         return {
             leaf.node_id: model.NewBoolVar(name=f"{name}[{leaf.node_id}]")
             for leaf in self.leaves
