@@ -4,6 +4,13 @@ import pandas as pd
 
 from ocean.abc import Mapper
 from ocean.feature import Feature, parse_features
+from ocean.typing import Array1D
+
+
+def get_thresholds_from_levels(levels: Array1D) -> Array1D:
+    return np.array([
+        (levels[i] + levels[i + 1]) / 2 for i in range(len(levels) - 1)
+    ])
 
 
 def generate_data(
@@ -19,7 +26,7 @@ def generate_data(
 
     discrete_values = {
         "discrete_0": generator.integers(0, 4, n_samples),
-        "discrete_1": generator.choice([0.5, 3.5, 8.75, 9.25], n_samples),
+        "discrete_1": generator.choice([1, 3, 8, 9], n_samples),
     }
 
     binary_values = {
