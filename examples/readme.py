@@ -25,6 +25,9 @@ mip_explanation = mip_model.explain(x, y=1 - y, norm=1)
 cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
 cp_explanation = cp_model.explain(x, y=1 - y, norm=1)
 
-# Show the explanation
-print("MIP", mip_explanation)
-print("CP", cp_explanation)
+# Show the explanations and their objective values
+print("MIP objective value:", mip_model.get_objective_value())
+print("MIP", mip_explanation, "\n")
+
+print("CP objective value:", cp_model.get_objective_value())
+print("CP", cp_explanation, "\n")
