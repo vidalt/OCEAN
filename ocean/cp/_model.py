@@ -43,7 +43,6 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         epsilon: int = DEFAULT_EPSILON,
         model_type: Type = Type.CP,
     ) -> None:
-        # Initialize the super models.
         BaseModel.__init__(self)
         TreeManager.__init__(
             self,
