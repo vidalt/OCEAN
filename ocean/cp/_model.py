@@ -133,6 +133,19 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 k += 1
         return objective
 
+    def get_intervals_cost(self, levels: Array1D, x: float) -> list[int]:
+        intervals_cost = np.zeros(len(levels) - 1, dtype=int)
+        for i in range(len(intervals_cost)):
+            if levels[i] < x <= levels[i + 1]:
+                continue
+            if levels[i] > x:
+                intervals_cost[i] = int(abs(x - levels[i]) * self._obj_scale)
+            elif levels[i + 1] < x:
+                intervals_cost[i] = int(
+                    abs(x - levels[i + 1]) * self._obj_scale
+                )
+        return intervals_cost.tolist()
+
     def L1(
         self,
         x: np.float64,
@@ -142,20 +155,15 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         obj_exprs: list[cp.LinearExpr] = []
         obj_coefs: list[int] = []
         if v.is_numeric:
-            variables = [v.mget(i) for i in range(len(v.levels) - 1)]
-            intervals_cost = np.zeros(len(v.levels) - 1, dtype=int)
-            for i in range(len(intervals_cost)):
-                if v.levels[i] < x <= v.levels[i + 1]:
-                    continue
-                if v.levels[i] > x:
-                    intervals_cost[i] = int(
-                        abs(x - v.levels[i]) * self._obj_scale
-                    )
-                elif v.levels[i + 1] < x:
-                    intervals_cost[i] = int(
-                        abs(x - v.levels[i + 1]) * self._obj_scale
-                    )
-            obj_expr = cp.LinearExpr.WeightedSum(variables, intervals_cost)
+            if v.is_continuous:
+                intervals_cost = self.get_intervals_cost(v.levels, x)
+                variables = [v.mget(i) for i in range(len(v.levels) - 1)]
+                obj_expr = cp.LinearExpr.WeightedSum(variables, intervals_cost)
+            else:
+                obj_expr = v.objvarget()
+                self.add_garbage(
+                    self.AddAbsEquality(obj_expr, int(x) - v.xget())
+                )
             obj_exprs.append(obj_expr)
             obj_coefs.append(1)
         elif v.is_one_hot_encoded:

@@ -33,8 +33,9 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                     f, int(value), list(self[name].levels)
                 )
             elif self[name].is_discrete:
-                value = self[name].levels[value]
-                values[f] = value
+                values[f] = self.format_discrete_value(
+                    f, value, self[name].thresholds
+                )
         return pd.Series(values, index=self.columns)
 
     def to_numpy(self) -> Array1D:
@@ -60,19 +61,28 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                 for code in v.codes:
                     if np.isclose(solver.Value(v.xget(code)), 1.0):
                         return code
-            if v.is_discrete:
-                idx = int(solver.Value(v.xget()))
-                return float(v.levels[idx])
-            if v.is_continuous:
+            if v.is_numeric:
                 f = [val for _, val in self.items()].index(v)
+                if v.is_discrete:
+                    val = int(solver.Value(v.xget()))
+                    return self.format_discrete_value(f, val, v.thresholds)
                 idx = int(solver.Value(v.xget()))
-                return self.format_value(f, idx, list(v.levels))
+                return self.format_value(
+                    f,
+                    idx,
+                    list(v.levels),
+                )
             x = v.xget()
             return solver.Value(x)
 
         return self.reduce(get)
 
-    def format_value(self, f: int, idx: int, levels: list[float]) -> float:
+    def format_value(
+        self,
+        f: int,
+        idx: int,
+        levels: list[float],
+    ) -> float:
         if self.query.shape[0] == 0:
             return float(levels[idx] + levels[idx + 1]) / 2
         j = 0
@@ -86,6 +96,21 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         else:
             value = float(levels[idx + 1]) - self._epsilon
         return value
+
+    def format_discrete_value(
+        self,
+        f: int,
+        val: int,
+        thresholds: Array1D,
+    ) -> float:
+        if self.query.shape[0] == 0:
+            return val
+        query_arr = np.asarray(self.query, dtype=float).ravel()
+        j_x = np.searchsorted(thresholds, query_arr[f], side="left")
+        j_val = np.searchsorted(thresholds, val, side="left")
+        if j_x != j_val:
+            return val
+        return query_arr[f]
 
     @property
     def query(self) -> Array1D:

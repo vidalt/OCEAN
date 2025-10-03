@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 
+import numpy as np
 from ortools.sat.python import cp_model as cp
 
 from ...feature import Feature
@@ -23,8 +24,7 @@ class FeatureVar(Var, FeatureKeeper):
     def build(self, model: BaseModel) -> None:
         if not self.is_one_hot_encoded:
             self._x = self._add_x(model)
-
-        if self.is_numeric:
+        if self.is_continuous:
             self._mu = self._add_mu(model)
             model.add_map_domain(self.xget(), self._mu)
         elif self.is_one_hot_encoded:
@@ -39,8 +39,8 @@ class FeatureVar(Var, FeatureKeeper):
         return self._x
 
     def mget(self, key: int) -> cp.IntVar:
-        if not self.is_numeric:
-            msg = "The 'mget' method is only supported for numeric features"
+        if not self.is_continuous:
+            msg = "The 'mget' method is only supported for continuous features"
             raise ValueError(msg)
         return self._mu[key]
 
@@ -80,12 +80,11 @@ class FeatureVar(Var, FeatureKeeper):
         return [model.NewBoolVar(f"{self._name}_mu_{i}") for i in range(m)]
 
     def _add_mu(self, model: BaseModel) -> list[cp.IntVar]:
-        m = len(self.levels) - (1 if self.is_continuous else 0)
-        mu = self._set_mu(model, m=m)
         if not self.is_continuous:
-            obj_name = f"u_{self._name}"
-            self._objvar = model.NewIntVar(0, m - 1, obj_name)
-        return mu
+            msg = "Mu variables are only supported for continuous features"
+            raise ValueError(msg)
+        m = len(self.levels) - 1
+        return self._set_mu(model, m=m)
 
     def _add_one_hot_encoded(
         self,
@@ -105,8 +104,15 @@ class FeatureVar(Var, FeatureKeeper):
         return model.NewIntVar(0, m - 2, name)
 
     def _add_discrete(self, model: BaseModel, name: str) -> cp.IntVar:
-        m = len(self.levels)
-        return model.NewIntVar(0, m - 1, name)
+        if len(self.thresholds) != 0:
+            values = [
+                val for v in self.thresholds for val in [int(v), int(v) + 1]
+            ]
+        else:
+            values = np.asarray(self.levels).astype(int).tolist()
+        val = cp.Domain.FromValues(values)
+        self._objvar = model.NewIntVar(0, int(self.levels[-1]), f"u_{name}")
+        return model.NewIntVarFromDomain(val, name)
 
     def _xget_one_hot_encoded(self, code: Key | None) -> cp.IntVar:
         if code is None:
