@@ -54,12 +54,11 @@ class TestNoIsolation:
                 feature_vars += len(feature.levels)
                 feature_constraints += 2 * (len(feature.levels) - 1)
             elif feature.is_discrete:
-                feature_vars += len(feature.levels) + 2
-                feature_constraints += 2 * len(feature.levels)
+                feature_vars += 2
             else:
                 feature_vars += len(feature.codes)
                 feature_constraints += 1
-        lb = 2 * (n_nodes - n_leaves)
+        lb = n_nodes - n_leaves
         ub = (n_nodes - n_leaves) * (n_nodes - n_leaves + 1)
         lb += feature_constraints + n_estimators
         ub += feature_constraints + n_estimators
@@ -69,7 +68,9 @@ class TestNoIsolation:
 
         solver = ENV.solver
         status = solver.Solve(model)
-        assert status == cp.OPTIMAL
+        assert status == cp.OPTIMAL, (
+            f"Solver satus {status}, status name {solver.StatusName()}"
+        )
 
         explanation = model.explanation
 

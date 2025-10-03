@@ -5,7 +5,13 @@ from ortools.sat.python import cp_model as cp
 from ocean.cp import ENV, BaseModel, FeatureVar
 from ocean.feature import Feature
 
-from ....feature.utils import BOUNDS, CHOICES, N_CODES, N_LEVELS, SEEDS
+from ....feature.utils import (
+    BOUNDS,
+    CHOICES,
+    N_CODES,
+    N_LEVELS,
+    SEEDS,
+)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -43,25 +49,30 @@ def test_discrete(
     upper: int,
 ) -> None:
     generator = np.random.default_rng(seed)
-    levels = generator.uniform(lower, upper, n_levels)
+    levels = generator.integers(lower, upper, n_levels)
     levels = np.sort(levels)
+    thresholds = generator.choice(levels, size=2, replace=False)
+
     model = BaseModel()
-    feature = Feature(Feature.Type.DISCRETE, levels=levels)
+    feature = Feature(
+        Feature.Type.DISCRETE, levels=levels, thresholds=thresholds
+    )
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
 
     v = var.xget()
     val = generator.choice(levels)
-    j = int(np.searchsorted(levels, val, side="left"))  # pyright: ignore[reportUnknownArgumentType]
-    u = model.NewIntVar(0, n_levels - 1, f"u_{j}")
-    model.AddAbsEquality(u, v - j)
+    u = model.NewIntVar(0, n_levels - 1, f"u_{v.name}")
+    model.AddAbsEquality(u, v - val)
     objective = u
     model.Minimize(objective)
     solver = ENV.solver
     solver.Solve(model)
-    value = levels[solver.Value(v)]
-    assert np.isclose(value, val), (
-        f"Expected {val}, but got {value}, with levels {levels} and j={j}"
+    value = solver.Value(v)
+    closest_threshold = min(thresholds, key=lambda t: abs(t - val))
+    assert 0 <= value - closest_threshold <= 1, (
+        f"Expected {val}, but got {value}, with levels {levels}"
+        f" and thresholds {thresholds}"
         f" and u={solver.Value(u)} and v={solver.Value(v)}"
         f" and solver status {solver.StatusName()}"
     )

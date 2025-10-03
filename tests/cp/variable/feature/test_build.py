@@ -6,6 +6,7 @@ from ocean.cp import BaseModel, FeatureVar
 from ocean.feature import Feature
 
 from ....feature.utils import BOUNDS, CHOICES, N_CODES, N_LEVELS, SEEDS
+from ....utils import get_thresholds_from_levels
 
 
 def test_binary() -> None:
@@ -15,7 +16,7 @@ def test_binary() -> None:
     var.build(model)
     v = var.xget()
     assert isinstance(v, cp.IntVar)
-    msg = r"The 'mget' method is only supported for numeric features"
+    msg = r"The 'mget' method is only supported for continuous features"
     with pytest.raises(ValueError, match=msg):
         _ = var.mget(0)
 
@@ -29,21 +30,20 @@ def test_binary() -> None:
 @pytest.mark.parametrize(("lower", "upper"), BOUNDS)
 def test_discrete(seed: int, n_levels: int, lower: int, upper: int) -> None:
     generator = np.random.default_rng(seed)
-    levels = generator.uniform(lower, upper, n_levels)
+    levels = generator.integers(lower, upper, n_levels)
+    thresholds = get_thresholds_from_levels(np.asarray(levels, dtype=float))
     model = BaseModel()
-    feature = Feature(Feature.Type.DISCRETE, levels=levels)
+    feature = Feature(
+        Feature.Type.DISCRETE, levels=levels, thresholds=thresholds
+    )
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
     v = var.xget()
     assert isinstance(v, cp.IntVar)
-    n = len(var.levels)
-    for i in range(n - 1):
-        mu = var.mget(i)
-        assert isinstance(mu, cp.IntVar)
 
     msg = r"Get by code is only supported for one-hot encoded features"
     with pytest.raises(ValueError, match=msg):
-        _ = var.xget("a")
+        _ = var.xget(code="a")
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -78,7 +78,7 @@ def test_one_hot_encoded(seed: int, n_codes: int) -> None:
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
 
-    msg = r"The 'mget' method is only supported for numeric features"
+    msg = r"The 'mget' method is only supported for continuous features"
     with pytest.raises(ValueError, match=msg):
         _ = var.mget(0)
 

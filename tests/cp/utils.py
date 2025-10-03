@@ -45,8 +45,18 @@ def validate_solution(explanation: Explanation) -> None:
         elif feature.is_continuous:
             assert feature.levels[0] <= value <= feature.levels[-1]
         elif feature.is_discrete:
-            assert np.any(np.isclose(value, feature.levels)), (
-                f"Value {value} not in levels {feature.levels}"
+            if len(feature.thresholds) == 0:
+                continue
+            min_diff: float = np.min(
+                np.abs(np.asarray(feature.thresholds, dtype=np.float64) - value)
+            )
+            assert (
+                0.0 <= min_diff <= 1.0
+                or explanation.query.shape[0] == 0
+                or np.isclose(value, explanation.query[i])
+            ), (
+                f"Value {value} not in close to thresholds {feature.thresholds}"
+                f" min diff is {min_diff} xp[i] = {explanation.query[i]}"
             )
 
     for value in codes.values():
@@ -69,7 +79,7 @@ def check_leafs(tree: TreeVar, explanation: Explanation) -> None:
     x_id_leaf = find_leaf(tree, explanation)
     assert id_leaf == x_id_leaf, (
         f"Expected leaf {id_leaf}, but found {x_id_leaf}."
-        f" explanation {explanation}"
+        f" explanation {explanation}",
     )
 
 
@@ -124,10 +134,13 @@ def validate_sklearn_paths(
                 active_leaf = node.node_id
                 break
         lf = find_leaf(tree, explanation)
-        assert active_leaf == lf
+        assert active_leaf == lf, (
+            f"Expected leaf {lf} to be active, but found {active_leaf}, "
+            f"in tree {t}",
+        )
         assert v == 1.0, (
             f"Expected leaf {leaf_id} to be active, but found {active_leaf}, "
-            f"in tree {t}"
+            f"in tree {t} with value {v}",
         )
 
 
