@@ -141,16 +141,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
     ) -> cp.LinearExpr:
         obj_exprs: list[cp.LinearExpr] = []
         obj_coefs: list[int] = []
-        if v.is_discrete:
-            j = int(np.searchsorted(v.levels, x, side="left"))
-            u = v.objvarget()
-            # self.add_garbage(self.AddAbsEquality(u, j- v.xget())) noqa: ERA001
-            self.add_garbage(self.Add(u >= j - v.xget()))
-            self.add_garbage(self.Add(u >= v.xget() - j))
-            obj_exprs.append(u)
-            obj_coefs.append(self._obj_scale)
-        elif v.is_continuous:
-            j = int(np.searchsorted(v.levels, x, side="left"))
+        if v.is_numeric:
             variables = [v.mget(i) for i in range(len(v.levels) - 1)]
             intervals_cost = np.zeros(len(v.levels) - 1, dtype=int)
             for i in range(len(intervals_cost)):

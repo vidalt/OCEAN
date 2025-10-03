@@ -50,7 +50,7 @@ x = x.to_numpy().flatten()
 cp_explanation = cp_model.explain(x, y=1 - y, norm=1)
 
 # Show the explanation
-print("MIP: ",mip_explanation)
+print("MIP: ",mip_explanation, "\n")
 print("CP : ",cp_explanation)
 
 ```
@@ -58,6 +58,7 @@ print("CP : ",cp_explanation)
 Expected output:
 
 ```plaintext
+MIP objective value: 5.0
 MIP Explanation:
 Age              : 39.0
 CapitalGain      : 2174.0
@@ -69,9 +70,11 @@ NativeCountry    : 0
 Occupation       : 1
 Relationship     : 0
 Sex              : 0
-WorkClass        : 6
+WorkClass        : 6 
+
+CP objective value: 5.0
 CP Explanation:
-Age              : 39.0
+Age              : 38.0
 CapitalGain      : 2174.0
 CapitalLoss      : 0.0
 EducationNumber  : 13.0
