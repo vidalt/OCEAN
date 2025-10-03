@@ -75,10 +75,6 @@ def test_discrete(seed: int, n_levels: int, lower: int, upper: int) -> None:
     with pytest.raises(AttributeError, match=msg):
         _ = feature.codes
 
-    msg = r"Levels can only be added to continuous features."
-    with pytest.raises(AttributeError, match=msg):
-        feature.add(0)
-
 
 @pytest.mark.parametrize("seed", SEEDS)
 @pytest.mark.parametrize("n_codes", N_CODES)

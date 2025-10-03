@@ -140,12 +140,11 @@ class ConstraintProgramBuilder(ModelBuilder):
         sigma: bool,
     ) -> None:
         threshold = node.threshold
-        j = int(np.searchsorted(v.levels, threshold, side="left"))
         x = v.xget()
         if sigma:
-            model.Add(x <= j - 1).OnlyEnforceIf(y)
+            model.Add(x <= int(threshold)).OnlyEnforceIf(y)
         else:
-            model.Add(x >= j).OnlyEnforceIf(y)
+            model.Add(x >= int(threshold) + 1).OnlyEnforceIf(y)
 
     @staticmethod
     def _eset(

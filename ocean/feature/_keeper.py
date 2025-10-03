@@ -33,5 +33,11 @@ class FeatureKeeper:
         return self._feature.levels
 
     @property
+    def thresholds(self) -> Array1D:
+        if self._feature.is_continuous:
+            return self.levels
+        return self._feature.thresholds
+
+    @property
     def codes(self) -> tuple[Key, ...]:
         return self._feature.codes

@@ -32,7 +32,10 @@ def create_discrete_feature(
 ) -> Feature:
     if levels is None:
         levels = np.array([1, 2, 3])
-    return Feature(Feature.Type.DISCRETE, levels=levels)
+        thresholds = np.array([1.5, 2.5])
+    else:
+        thresholds = levels
+    return Feature(Feature.Type.DISCRETE, levels=levels, thresholds=thresholds)
 
 
 def create_one_hot_feature(
@@ -197,15 +200,15 @@ class TestConstraintProgramBuilder:
         feature_var = FeatureVar(feature=feature, name="x")
         tree_var = TreeVar(tree=tree, name="tree")
 
-        feature_var.build(model)  # 4 variables and 6 constraints
+        feature_var.build(model)  # 2 variables and 0 constraints
         tree_var.build(model)  # 4 variables and 1 constraint
 
         mapper = Mapper[FeatureVar]({"x": feature_var}, columns=pd.Index(["x"]))
 
         builder.build(model, trees=[tree_var], mapper=mapper)  # 8 constraints
 
-        assert len(model.Proto().constraints) == 15
-        assert len(model.Proto().variables) == 9
+        assert len(model.Proto().constraints) == 9
+        assert len(model.Proto().variables) == 6
 
     @staticmethod
     def test_build_one_hot_feature(
@@ -256,7 +259,7 @@ class TestConstraintProgramBuilder:
 
         tree_var = TreeVar(tree=tree, name="tree")
         for feature_var in feature_vars:
-            # 6 variables and 3 constraints
+            # 6 variables and 1 constraints
             feature_var.build(model)
 
         tree_var.build(model)  # 6 variables and 1 constraint
@@ -271,8 +274,8 @@ class TestConstraintProgramBuilder:
             columns=pd.Index(["b", "c", "d", "e"]),
         )
         builder.build(model, trees=[tree_var], mapper=mapper)  # 16 constraints
-        assert len(model.Proto().constraints) == 20
-        assert len(model.Proto().variables) == 13
+        assert len(model.Proto().constraints) == 18
+        assert len(model.Proto().variables) == 12
 
     @staticmethod
     def test_build_multiple_trees(
@@ -302,10 +305,10 @@ class TestConstraintProgramBuilder:
             TreeVar(tree=tree, name=f"tree_{i}") for i, tree in enumerate(trees)
         ]
         for feature_var in feature_vars:
-            # 7 variables and 3 constraints
+            # 6 variables and 1 constraints
             feature_var.build(model)
         for tree_var in tree_vars:
-            # 18 variables and 3 constraint
+            # 18 variables and 3 constraints
             tree_var.build(model)
 
         mapper = Mapper[FeatureVar](
@@ -319,5 +322,5 @@ class TestConstraintProgramBuilder:
         )
         builder.build(model, trees=tree_vars, mapper=mapper)
         # 48 constraints
-        assert len(model.Proto().constraints) == 54
-        assert len(model.Proto().variables) == 25
+        assert len(model.Proto().constraints) == 52
+        assert len(model.Proto().variables) == 24

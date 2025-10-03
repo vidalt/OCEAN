@@ -16,6 +16,7 @@ class Feature:
 
     _ftype: Type
     _levels: Array1D
+    _thresholds: Array1D
     _codes: tuple[Key, ...]
 
     @overload
@@ -32,6 +33,15 @@ class Feature:
     @overload
     def __init__(
         self,
+        ftype: Literal[Type.DISCRETE],
+        *,
+        levels: Iterable[Number] = (),
+        thresholds: Iterable[Number] = (),
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
         ftype: Literal[Type.ONE_HOT_ENCODED],
         *,
         codes: Iterable[Key] = (),
@@ -42,11 +52,15 @@ class Feature:
         ftype: Type,
         *,
         levels: Iterable[Number] = (),
+        thresholds: Iterable[Number] = (),
         codes: Iterable[Key] = (),
     ) -> None:
         self._ftype = ftype
         lvls = list(set(levels))
         self._levels = np.sort(lvls).flatten().astype(np.float64)
+        self._thresholds = (
+            np.sort(list(set(thresholds))).flatten().astype(np.float64)
+        )
         self._codes = tuple(sorted(set(codes)))
 
     @property
@@ -84,6 +98,15 @@ class Feature:
         return self._levels
 
     @property
+    def thresholds(self) -> Array1D:
+        if not self.is_numeric:
+            msg = "Thresholds can only be accessed for non-numeric features."
+            raise AttributeError(msg)
+        if self.is_continuous:
+            return self.levels
+        return self._thresholds
+
+    @property
     def codes(self) -> tuple[Key, ...]:
         if not self.is_one_hot_encoded:
             msg = "Codes can only be accessed for one-hot encoded features."
@@ -94,11 +117,17 @@ class Feature:
         return self._codes
 
     def add(self, *levels: Number) -> None:
-        if not self.is_continuous:
-            msg = "Levels can only be added to continuous features."
+        if not self.is_numeric:
+            msg = "Levels can only be added to numeric features."
             raise AttributeError(msg)
         if np.any(np.isnan(levels)):
             msg = "Levels cannot contain NaN values."
             raise ValueError(msg)
-        lvls = list(set(self._levels) | set(levels))
-        self._levels = np.sort(lvls).flatten().astype(np.float64)
+        if self.is_discrete:
+            thlds = list(set(self._thresholds) | set(levels))
+            self._thresholds = (
+                np.sort(np.unique(thlds)).flatten().astype(np.float64)
+            )
+        else:
+            lvls = list(set(self._levels) | set(levels))
+            self._levels = np.sort(lvls).flatten().astype(np.float64)
