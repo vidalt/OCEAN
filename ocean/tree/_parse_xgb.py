@@ -14,7 +14,7 @@ def _get_column_value(
     xgb_tree: XGBTree, node_id: NonNegativeInt, column: str
 ) -> str | float | int:
     mask = xgb_tree["Node"] == node_id
-    return xgb_tree.loc[mask, column].to_numpy().item()  # type: ignore[no-any-return]
+    return xgb_tree.loc[mask, column].values[0]
 
 
 def _build_xgb_leaf(
