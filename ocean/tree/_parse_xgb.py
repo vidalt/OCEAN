@@ -14,11 +14,7 @@ def _get_column_value(
     xgb_tree: XGBTree, node_id: NonNegativeInt, column: str
 ) -> str | float | int:
     mask = xgb_tree["Node"] == node_id
-    try:
-        return xgb_tree.loc[mask, column].to_numpy().item()
-    except Exception as exc:  # pragma: no cover - defensive
-        msg = f"unable to read {column} for node {node_id}: {exc}"
-        raise ValueError(msg) from exc
+    return xgb_tree.loc[mask, column].to_numpy().item()  # type: ignore[no-any-return]
 
 
 def _build_xgb_leaf(
