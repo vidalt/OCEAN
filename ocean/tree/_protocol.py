@@ -10,6 +10,7 @@ from ..typing import (
     NonNegativeIntArray1D,
     PositiveInt,
     SKLearnTree,
+    XGBTree,
 )
 
 
@@ -40,4 +41,5 @@ __all__ = [
     "SKLearnTree",
     "SKLearnTreeProtocol",
     "TreeProtocol",
+    "XGBTree",
 ]
