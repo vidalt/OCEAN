@@ -207,7 +207,6 @@ def run_queries_verbose(
         total=len(queries),
         description="[bold blue]Running queries[/bold blue]",
     ):
-        print(f"Running query {i + 1}/{len(queries)}, x= {x}, target={y}")
         start = time.time()
         explainer.explain(x, y=y, norm=1)
         explainer.cleanup()
