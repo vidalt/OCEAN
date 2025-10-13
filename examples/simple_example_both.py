@@ -29,8 +29,9 @@ rf.fit(X_train, y_train)
 
 from sklearn.tree import plot_tree
 import matplotlib.pyplot as plt
+
 # Plot the first tree of the forest
-plt.figure(figsize=(20,10))
+plt.figure(figsize=(20, 10))
 plot_tree(rf.estimators_[0], filled=True)
 plt.title("First tree of the Random Forest")
 plt.savefig("./first_tree_rf.png")
@@ -39,7 +40,7 @@ plt.close()
 liste_thresholds = []
 for tree in rf.estimators_:
     liste_thresholds.extend(tree.tree_.threshold[tree.tree_.feature == 25])
-print("Tree thresholds for feature 25:", sorted(liste_thresholds) )
+print("Tree thresholds for feature 25:", sorted(liste_thresholds))
 
 print("RF train acc= ", rf.score(X_train, y_train))
 print("RF test acc= ", rf.score(X_test, y_test))
@@ -50,9 +51,10 @@ print(
 )
 
 # Define a CF query using the qid-th element of the test set
-#qid = 1
-#query = X_test.iloc[qid]
-import numpy as np 
+# qid = 1
+# query = X_test.iloc[qid]
+import numpy as np
+
 qid = 10
 query = X_test.iloc[qid]
 query_pred = rf.predict([np.asarray(query)])[0]
@@ -60,7 +62,7 @@ print("Query: ", query, "(class ", query_pred, ")")
 
 # Use the MILP formulation to generate a CF
 milp_model = MixedIntegerProgramExplainer(rf, mapper=mapper)
-#print("milp_model._num_epsilon", milp_model._num_epsilon)
+# print("milp_model._num_epsilon", milp_model._num_epsilon)
 start_ = time.time()
 explanation_ocean = milp_model.explain(
     query,
@@ -73,7 +75,7 @@ explanation_ocean = milp_model.explain(
 )
 milp_time = time.time() - start_
 cf = explanation_ocean
-#cf[4] += 0.0001
+# cf[4] += 0.0001
 if explanation_ocean is not None:
     print(
         "MILP : ",
@@ -82,7 +84,7 @@ if explanation_ocean is not None:
         rf.predict([explanation_ocean.to_numpy()])[0],
         ")",
     )
-    #print("MILP Sollist = ", milp_model.get_anytime_solutions())
+    # print("MILP Sollist = ", milp_model.get_anytime_solutions())
 else:
     print("MILP: No CF found.")
 
@@ -107,10 +109,16 @@ if print_paths:
                     sample_id = 0
                     # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
                     node_index = node_indicator.indices[
-                        node_indicator.indptr[sample_id] : node_indicator.indptr[sample_id + 1]
+                        node_indicator.indptr[
+                            sample_id
+                        ] : node_indicator.indptr[sample_id + 1]
                     ]
 
-                    print("[Tree {i}] Rules used to predict sample {id} with features values close to threshold:\n".format(i=i, id=sample_id))
+                    print(
+                        "[Tree {i}] Rules used to predict sample {id} with features values close to threshold:\n".format(
+                            i=i, id=sample_id
+                        )
+                    )
                     for node_id in node_index:
                         # continue to the next node if it is a leaf node
                         if leaf_id[sample_id] == node_id:
@@ -121,7 +129,10 @@ if print_paths:
                             threshold_sign = "<="
                         else:
                             threshold_sign = ">"
-                        if np.abs(cf[feature[node_id]] - threshold[node_id]) < 1e-3:
+                        if (
+                            np.abs(cf[feature[node_id]] - threshold[node_id])
+                            < 1e-3
+                        ):
                             print(
                                 "decision node {node} : (cf[{feature}] = {value}) "
                                 "{inequality} {threshold})".format(
@@ -161,7 +172,7 @@ if explanation_oceancp is not None:
         rf.predict([explanation_oceancp.to_numpy()])[0],
         ")",
     )
-    #print("CP Sollist = ", cp_model.get_anytime_solutions())
+    # print("CP Sollist = ", cp_model.get_anytime_solutions())
 else:
     print("CP: No CF found.")
 
@@ -185,10 +196,16 @@ if print_paths:
                     sample_id = 0
                     # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
                     node_index = node_indicator.indices[
-                        node_indicator.indptr[sample_id] : node_indicator.indptr[sample_id + 1]
+                        node_indicator.indptr[
+                            sample_id
+                        ] : node_indicator.indptr[sample_id + 1]
                     ]
                     print(node_index)
-                    print("[Tree {i}] Rules used to predict sample {id} with features values close to threshold:\n".format(i=i, id=sample_id))
+                    print(
+                        "[Tree {i}] Rules used to predict sample {id} with features values close to threshold:\n".format(
+                            i=i, id=sample_id
+                        )
+                    )
                     for node_id in node_index:
                         # continue to the next node if it is a leaf node
                         if leaf_id[sample_id] == node_id:
@@ -199,7 +216,10 @@ if print_paths:
                             threshold_sign = "<="
                         else:
                             threshold_sign = ">"
-                        if np.abs(cf[feature[node_id]] - threshold[node_id]) < 1e-3:
+                        if (
+                            np.abs(cf[feature[node_id]] - threshold[node_id])
+                            < 1e-3
+                        ):
                             print(
                                 "decision node {node} : (cf[{feature}] = {value}) "
                                 "{inequality} {threshold})".format(

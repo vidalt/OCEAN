@@ -9,6 +9,7 @@ from rich.progress import track
 from rich.table import Table
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+from xgboost import XGBClassifier
 
 from ocean import (
     ConstraintProgrammingExplainer,
@@ -19,7 +20,19 @@ from ocean.datasets import load_adult, load_compas, load_credit
 from ocean.feature import Feature
 from ocean.typing import Array1D, BaseExplainer
 
-Loaded = tuple[tuple[pd.DataFrame, "pd.Series[int]"], Mapper[Feature]]
+# Global constants
+ENV = gp.Env(empty=True)
+ENV.setParam("OutputFlag", 0)
+ENV.start()
+CONSOLE = Console()
+EXPLAINERS = {
+    "mip": MixedIntegerProgramExplainer,
+    "cp": ConstraintProgrammingExplainer,
+}
+MODELS = {
+    "rf": RandomForestClassifier,
+    "xgb": XGBClassifier,
+}
 
 
 @dataclass
@@ -29,9 +42,11 @@ class Args:
     max_depth: int
     n_examples: int
     dataset: str
+    explainers: list[str]
+    models: list[str]
 
 
-def parse_args() -> Args:
+def create_argument_parser() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
@@ -53,6 +68,30 @@ def parse_args() -> Args:
         choices=["adult", "compas", "credit"],
         default="compas",
     )
+    parser.add_argument(
+        "-e",
+        "--exp",
+        "--explainer",
+        help="List of explainers to use",
+        type=str,
+        nargs="+",
+        choices=["mip", "cp"],
+        default=["mip", "cp"],
+    )
+    parser.add_argument(
+        "-m",
+        "--model",
+        help="List of models to use",
+        type=str,
+        nargs="+",
+        choices=["rf", "xgb"],
+        default=["rf"],
+    )
+    return parser
+
+
+def parse_args() -> Args:
+    parser = create_argument_parser()
     args = parser.parse_args()
     return Args(
         seed=args.seed,
@@ -60,10 +99,14 @@ def parse_args() -> Args:
         max_depth=args.max_depth,
         n_examples=args.n_examples,
         dataset=args.dataset,
+        explainers=args.exp,
+        models=args.model,
     )
 
 
-def load(dataset: str) -> Loaded:
+def load_dataset(
+    dataset: str,
+) -> tuple[tuple[pd.DataFrame, pd.Series], Mapper[Feature]]:
     if dataset == "credit":
         return load_credit()
     if dataset == "adult":
@@ -74,71 +117,61 @@ def load(dataset: str) -> Loaded:
     raise ValueError(msg)
 
 
-ENV = gp.Env(empty=True)
-ENV.setParam("OutputFlag", 0)
-ENV.start()
-CONSOLE = Console()
-
-
-def main(explainers: dict[str, type[BaseExplainer]]) -> None:
-    args = parse_args()
-    data, target, mapper = load_data(args)
-    rf = fit_model(args, data, target)
-    times: dict[str, pd.Series[float]] = {}
-    for name, explainer in explainers.items():
-        exp = build_explainer(name, explainer, args, rf, mapper)
-        queries = generate_queries(args, rf, data)
-        times[name] = run_queries(exp, queries)
-    display_statistics(times)
-
-
-def load_data(
-    args: Args,
-) -> tuple[pd.DataFrame, "pd.Series[int]", Mapper[Feature]]:
+def load_data(args: Args) -> tuple[pd.DataFrame, pd.Series, Mapper[Feature]]:
     with CONSOLE.status("[bold blue]Loading the data[/bold blue]"):
-        (data, target), mapper = load(args.dataset)
+        (data, target), mapper = load_dataset(args.dataset)
     CONSOLE.print("[bold green]Data loaded[/bold green]")
     return data, target, mapper
 
 
-def fit_model(
+def fit_model_with_console(
     args: Args,
     data: pd.DataFrame,
-    target: "pd.Series[int]",
-) -> RandomForestClassifier:
+    target: pd.Series,
+    model_class: type[RandomForestClassifier] | type[XGBClassifier],
+    model_name: str,
+    **model_kwargs: str | float | bool | None,
+) -> RandomForestClassifier | XGBClassifier:
     X_train, _, y_train, _ = train_test_split(
         data,
         target,
         test_size=0.2,
         random_state=args.seed,
     )
-    with CONSOLE.status("[bold blue]Fitting a Random Forest model[/bold blue]"):
-        rf = RandomForestClassifier(
+    with CONSOLE.status(f"[bold blue]Fitting a {model_name} model[/bold blue]"):
+        model = model_class(
             n_estimators=args.n_estimators,
             random_state=args.seed,
             max_depth=args.max_depth,
+            **model_kwargs,
         )
-        rf.fit(X_train, y_train)
+        model.fit(X_train, y_train)
     CONSOLE.print("[bold green]Model fitted[/bold green]")
-    return rf
+    return model
 
 
 def build_explainer(
-    name: str,
-    explainer: type[BaseExplainer],
+    explainer_name: str,
+    explainer_class: type[MixedIntegerProgramExplainer]
+    | type[ConstraintProgrammingExplainer],
     args: Args,
-    rf: RandomForestClassifier,
+    model: RandomForestClassifier | XGBClassifier,
     mapper: Mapper[Feature],
 ) -> BaseExplainer:
     with CONSOLE.status("[bold blue]Building the Explainer[/bold blue]"):
         start = time.time()
-        if name == "mip":
+        if explainer_class is MixedIntegerProgramExplainer:
             ENV.setParam("Seed", args.seed)
-            exp = explainer(rf, mapper=mapper, env=ENV)  # type: ignore  # noqa: PGH003
+            exp = explainer_class(model, mapper=mapper, env=ENV)
+        elif explainer_class is ConstraintProgrammingExplainer:
+            exp = explainer_class(model, mapper=mapper)
         else:
-            exp = explainer(rf, mapper=mapper)  # type: ignore  # noqa: PGH003
+            msg = f"Unknown explainer type: {explainer_class}"
+            raise ValueError(msg)
         end = time.time()
-    CONSOLE.print(f"[bold green]{name.upper()} Explainer built[/bold green]")
+    CONSOLE.print(
+        f"[bold green]{explainer_name.upper()} Explainer built[/bold green]"
+    )
     msg = f"Build time: {end - start:.2f} seconds"
     CONSOLE.print(f"\t[bold yellow]{msg}[/bold yellow]")
     return exp
@@ -146,7 +179,7 @@ def build_explainer(
 
 def generate_queries(
     args: Args,
-    rf: RandomForestClassifier,
+    model: RandomForestClassifier | XGBClassifier,
     data: pd.DataFrame,
 ) -> list[tuple[Array1D, int]]:
     _, X_test = train_test_split(
@@ -155,7 +188,7 @@ def generate_queries(
         random_state=args.seed,
     )
     X_test = pd.DataFrame(X_test)
-    y_pred = rf.predict(X_test)
+    y_pred = model.predict(X_test)
     with CONSOLE.status("[bold blue]Generating queries[/bold blue]"):
         queries: list[tuple[Array1D, int]] = [
             (X_test.iloc[i].to_numpy().flatten(), 1 - y_pred[i])
@@ -165,7 +198,7 @@ def generate_queries(
     return queries
 
 
-def run_queries(
+def run_queries_verbose(
     explainer: BaseExplainer, queries: list[tuple[Array1D, int]]
 ) -> "pd.Series[float]":
     times: pd.Series[float] = pd.Series()
@@ -174,6 +207,7 @@ def run_queries(
         total=len(queries),
         description="[bold blue]Running queries[/bold blue]",
     ):
+        print(f"Running query {i + 1}/{len(queries)}, x= {x}, target={y}")
         start = time.time()
         explainer.explain(x, y=y, norm=1)
         explainer.cleanup()
@@ -205,6 +239,7 @@ def create_table_row(
 
 
 def display_statistics(times: dict[str, "pd.Series[float]"]) -> None:
+    """Display timing statistics in a table."""
     CONSOLE.print("[bold blue]Statistics:[/bold blue]")
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Metric", style="dim", width=30)
@@ -226,9 +261,35 @@ def display_statistics(times: dict[str, "pd.Series[float]"]) -> None:
     CONSOLE.print("[bold green]Done[/bold green]")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    args = parse_args()
+    data, target, mapper = load_data(args)
     explainers = {
-        "mip": MixedIntegerProgramExplainer,
-        "cp": ConstraintProgrammingExplainer,
+        name: explainer
+        for name, explainer in EXPLAINERS.items()
+        if name in args.explainers
     }
-    main(explainers)
+    models = {
+        name: model for name, model in MODELS.items() if name in args.models
+    }
+    for model_name, model_class in models.items():
+        CONSOLE.print(
+            f"[bold blue]Running experiment with {model_name}: [/bold blue]"
+        )
+        model = fit_model_with_console(
+            args, data, target, model_class, model_name
+        )
+        for explainer_name, explainer_class in explainers.items():
+            CONSOLE.print(
+                f"[bold blue]Running for {explainer_name}[/bold blue]"
+            )
+            exp = build_explainer(
+                explainer_name, explainer_class, args, model, mapper
+            )
+            queries = generate_queries(args, model, data)
+            times = run_queries_verbose(exp, queries)
+            display_statistics({explainer_name: times})
+
+
+if __name__ == "__main__":
+    main()
