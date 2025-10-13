@@ -27,11 +27,11 @@ def _build_xgb_leaf(
     weight = float(_get_column_value(xgb_tree, node_id, "Gain"))
 
     if num_trees_per_round == 1:
-        value = np.array([weight, -weight])
+        value = np.array([[weight, -weight]])
     else:
         k = int(tree_id % num_trees_per_round)
-        value = np.zeros(int(num_trees_per_round), dtype=float)
-        value[k] = weight
+        value = np.zeros((1, int(num_trees_per_round)), dtype=float)
+        value[0, k] = weight
 
     return Node(node_id, n_samples=0, value=value)
 
