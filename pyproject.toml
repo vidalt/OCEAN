@@ -37,6 +37,7 @@ dependencies = [
     "pandas",
     "pydantic",
     "scikit-learn",
+    "xgboost",
 ]
 
 optional-dependencies.dev = [

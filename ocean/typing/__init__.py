@@ -3,11 +3,12 @@ from typing import Annotated, Protocol
 
 import numpy as np
 import pandas as pd
+import xgboost as xgb
 from pydantic import Field
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
-type BaseExplainableEnsemble = RandomForestClassifier
-type ParsableEnsemble = BaseExplainableEnsemble | IsolationForest
+type BaseExplainableEnsemble = RandomForestClassifier | xgb.XGBClassifier
+type ParsableEnsemble = BaseExplainableEnsemble | IsolationForest | xgb.Booster
 
 type Number = float
 type NonNegativeNumber = Annotated[Number, Field(ge=0.0)]
@@ -75,6 +76,9 @@ class SKLearnTree(Protocol):
     value: Array
 
 
+type XGBTree = pd.DataFrame
+
+
 class BaseExplanation(Protocol):
     @property
     def x(self) -> Array1D: ...
@@ -92,6 +96,8 @@ class BaseExplainer(Protocol):
         y: NonNegativeInt,
         norm: PositiveInt,
     ) -> BaseExplanation | None: ...
+
+    def cleanup(self) -> None: ...
 
 
 __all__ = [

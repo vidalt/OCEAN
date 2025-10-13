@@ -3,16 +3,21 @@ from collections.abc import Iterable
 from functools import partial
 from itertools import chain
 
+import xgboost as xgb
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 from ..abc import Mapper
 from ..feature import Feature
-from ..typing import NonNegativeInt, ParsableEnsemble
+from ..typing import NonNegativeInt, ParsableEnsemble, SKLearnTree
 from ._node import Node
-from ._protocol import SKLearnTree, SKLearnTreeProtocol, TreeProtocol
+from ._parse_xgb import parse_xgb_ensemble
+from ._protocol import (
+    SKLearnTreeProtocol,
+    TreeProtocol,
+)
 from ._tree import Tree
 
-type DecisionTree = DecisionTreeClassifier | DecisionTreeRegressor
+type SKLearnDecisionTree = DecisionTreeClassifier | DecisionTreeRegressor
 
 
 def _build_leaf(tree: TreeProtocol, node_id: NonNegativeInt) -> Node:
@@ -70,13 +75,13 @@ def _parse_tree(sklearn_tree: SKLearnTree, *, mapper: Mapper[Feature]) -> Tree:
     return Tree(root=root)
 
 
-def parse_tree(tree: DecisionTree, *, mapper: Mapper[Feature]) -> Tree:
+def parse_tree(tree: SKLearnDecisionTree, *, mapper: Mapper[Feature]) -> Tree:
     getter = operator.attrgetter("tree_")
     return _parse_tree(getter(tree), mapper=mapper)
 
 
 def parse_trees(
-    trees: Iterable[DecisionTree],
+    trees: Iterable[SKLearnDecisionTree],
     *,
     mapper: Mapper[Feature],
 ) -> tuple[Tree, ...]:
@@ -84,9 +89,21 @@ def parse_trees(
     return tuple(map(parser, trees))
 
 
+def parse_ensemble(
+    ensemble: ParsableEnsemble,
+    *,
+    mapper: Mapper[Feature],
+) -> tuple[Tree, ...]:
+    if isinstance(ensemble, xgb.Booster):
+        return parse_xgb_ensemble(ensemble, mapper=mapper)
+    if isinstance(ensemble, xgb.XGBClassifier):
+        return parse_xgb_ensemble(ensemble.get_booster(), mapper=mapper)
+    return parse_trees(ensemble, mapper=mapper)
+
+
 def parse_ensembles(
     *ensembles: ParsableEnsemble,
     mapper: Mapper[Feature],
 ) -> tuple[Tree, ...]:
-    parser = partial(parse_trees, mapper=mapper)
+    parser = partial(parse_ensemble, mapper=mapper)
     return tuple(chain.from_iterable(map(parser, ensembles)))
