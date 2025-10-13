@@ -7,7 +7,7 @@ import xgboost as xgb
 from pydantic import Field
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
-type BaseExplainableEnsemble = RandomForestClassifier
+type BaseExplainableEnsemble = RandomForestClassifier | xgb.XGBClassifier
 type ParsableEnsemble = BaseExplainableEnsemble | IsolationForest | xgb.Booster
 
 type Number = float
@@ -96,6 +96,8 @@ class BaseExplainer(Protocol):
         y: NonNegativeInt,
         norm: PositiveInt,
     ) -> BaseExplanation | None: ...
+
+    def cleanup(self) -> None: ...
 
 
 __all__ = [

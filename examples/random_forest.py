@@ -10,11 +10,14 @@ from rich.table import Table
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
-from ocean import MixedIntegerProgramExplainer
+from ocean import (
+    ConstraintProgrammingExplainer,
+    MixedIntegerProgramExplainer,
+)
 from ocean.abc import Mapper
 from ocean.datasets import load_adult, load_compas, load_credit
 from ocean.feature import Feature
-from ocean.typing import Array1D
+from ocean.typing import Array1D, BaseExplainer
 
 Loaded = tuple[tuple[pd.DataFrame, "pd.Series[int]"], Mapper[Feature]]
 
@@ -77,13 +80,15 @@ ENV.start()
 CONSOLE = Console()
 
 
-def main() -> None:
+def main(explainers: dict[str, type[BaseExplainer]]) -> None:
     args = parse_args()
     data, target, mapper = load_data(args)
     rf = fit_model(args, data, target)
-    mip = build_explainer(args, rf, mapper)
-    queries = generate_queries(args, rf, data)
-    times = run_queries(mip, queries)
+    times: dict[str, pd.Series[float]] = {}
+    for name, explainer in explainers.items():
+        exp = build_explainer(name, explainer, args, rf, mapper)
+        queries = generate_queries(args, rf, data)
+        times[name] = run_queries(exp, queries)
     display_statistics(times)
 
 
@@ -119,19 +124,24 @@ def fit_model(
 
 
 def build_explainer(
+    name: str,
+    explainer: type[BaseExplainer],
     args: Args,
     rf: RandomForestClassifier,
     mapper: Mapper[Feature],
-) -> MixedIntegerProgramExplainer:
+) -> BaseExplainer:
     with CONSOLE.status("[bold blue]Building the Explainer[/bold blue]"):
-        ENV.setParam("Seed", args.seed)
         start = time.time()
-        mip = MixedIntegerProgramExplainer(rf, mapper=mapper, env=ENV)
+        if name == "mip":
+            ENV.setParam("Seed", args.seed)
+            exp = explainer(rf, mapper=mapper, env=ENV)  # type: ignore  # noqa: PGH003
+        else:
+            exp = explainer(rf, mapper=mapper)  # type: ignore  # noqa: PGH003
         end = time.time()
-    CONSOLE.print("[bold green]Explainer built[/bold green]")
+    CONSOLE.print(f"[bold green]{name.upper()} Explainer built[/bold green]")
     msg = f"Build time: {end - start:.2f} seconds"
-    CONSOLE.print(f"[bold yellow]{msg}[/bold yellow]")
-    return mip
+    CONSOLE.print(f"\t[bold yellow]{msg}[/bold yellow]")
+    return exp
 
 
 def generate_queries(
@@ -156,7 +166,7 @@ def generate_queries(
 
 
 def run_queries(
-    mip: MixedIntegerProgramExplainer, queries: list[tuple[Array1D, int]]
+    explainer: BaseExplainer, queries: list[tuple[Array1D, int]]
 ) -> "pd.Series[float]":
     times: pd.Series[float] = pd.Series()
     for i, (x, y) in track(
@@ -165,27 +175,60 @@ def run_queries(
         description="[bold blue]Running queries[/bold blue]",
     ):
         start = time.time()
-        mip.explain(x, y=y, norm=1)
-        mip.cleanup()
+        explainer.explain(x, y=y, norm=1)
+        explainer.cleanup()
         end = time.time()
         times[i] = end - start
     return times
 
 
-def display_statistics(times: "pd.Series[int]") -> None:
+def create_table_row(
+    metric: str, times: dict[str, "pd.Series[float]"]
+) -> list[str]:
+    row = [metric]
+    for t in times.values():
+        if metric == "Number of queries":
+            row.append(str(len(t)))
+        elif metric == "Total time (seconds)":
+            row.append(f"{t.sum():.2f}")
+        elif metric == "Mean time per query (seconds)":
+            row.append(f"{t.mean():.2f}")
+        elif metric == "Std of time per query (seconds)":
+            row.append(f"{t.std():.2f}")
+        elif metric == "Maximum time per query (seconds)":
+            row.append(f"{t.max():.2f}")
+        elif metric == "Minimum time per query (seconds)":
+            row.append(f"{t.min():.2f}")
+        else:
+            row.append("N/A")
+    return row
+
+
+def display_statistics(times: dict[str, "pd.Series[float]"]) -> None:
     CONSOLE.print("[bold blue]Statistics:[/bold blue]")
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Metric", style="dim", width=30)
-    table.add_column("Value")
-    table.add_row("Number of queries", str(len(times)))
-    table.add_row("Total time (seconds)", f"{times.sum():.2f}")
-    table.add_row("Mean time per query (seconds)", f"{times.mean():.2f}")
-    table.add_row("Std of time per query (seconds)", f"{times.std():.2f}")
-    table.add_row("Maximum time per query (seconds)", f"{times.max():.2f}")
-    table.add_row("Minimum time per query (seconds)", f"{times.min():.2f}")
+    names = list(times.keys())
+    for name in names:
+        table.add_column(name.upper())
+    metrics = [
+        "Number of queries",
+        "Total time (seconds)",
+        "Mean time per query (seconds)",
+        "Std of time per query (seconds)",
+        "Maximum time per query (seconds)",
+        "Minimum time per query (seconds)",
+    ]
+    for metric in metrics:
+        row = create_table_row(metric, times)
+        table.add_row(*row)
     CONSOLE.print(table)
     CONSOLE.print("[bold green]Done[/bold green]")
 
 
 if __name__ == "__main__":
-    main()
+    explainers = {
+        "mip": MixedIntegerProgramExplainer,
+        "cp": ConstraintProgrammingExplainer,
+    }
+    main(explainers)
