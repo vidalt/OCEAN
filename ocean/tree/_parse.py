@@ -96,7 +96,7 @@ def parse_ensemble(
 ) -> tuple[Tree, ...]:
     if isinstance(ensemble, xgb.Booster):
         return parse_xgb_ensemble(ensemble, mapper=mapper)
-    return parse_trees(ensemble, mapper=mapper)
+    return parse_trees(ensemble, mapper=mapper)  # type: ignore[reportArgumentType]
 
 
 def parse_ensembles(
@@ -104,4 +104,9 @@ def parse_ensembles(
     mapper: Mapper[Feature],
 ) -> tuple[Tree, ...]:
     parser = partial(parse_ensemble, mapper=mapper)
+    if all(isinstance(e, xgb.XGBClassifier) for e in ensembles):
+        xgb_ensembles = tuple(
+            e for e in ensembles if isinstance(e, xgb.XGBClassifier)
+        )
+        ensembles = tuple(e.get_booster() for e in xgb_ensembles)
     return tuple(chain.from_iterable(map(parser, ensembles)))

@@ -155,7 +155,7 @@ def test_parse_xgb_classifier(
     assert model is not None
     booster = model.get_booster()
     assert booster is not None
-    trees = parse_ensembles(booster, mapper=mapper)
+    trees = parse_ensembles(model, mapper=mapper)
     assert len(trees) == n_estimators * (1 if n_classes == 2 else n_classes)
     for i, tree in enumerate(trees):
         assert tree.root is not None
