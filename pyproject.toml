@@ -38,6 +38,7 @@ dependencies = [
     "pydantic",
     "scikit-learn",
     "xgboost",
+    "python-sat",
 ]
 
 optional-dependencies.dev = [
