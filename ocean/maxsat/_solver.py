@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 try:
     from pysat.examples.rc2 import RC2
     from pysat.formula import WCNF
@@ -29,7 +31,7 @@ class MaxSATSolver:
 
     def solve(self, w: WCNF) -> list[int]:
         with RC2(w, solver=self.solver_name, adapt=True) as rc2:
-            model = rc2.compute()
+            model = cast("list[int] | None", rc2.compute())
             if model is None:
                 msg = "UNSAT: no counterfactual found."
                 raise RuntimeError(msg)

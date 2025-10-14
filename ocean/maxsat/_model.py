@@ -49,7 +49,6 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self._set_weights(weights=weights)
         self._max_samples = max_samples
         self._epsilon = epsilon
-        self._scores = {}
         self._set_builder(model_type=model_type)
 
     def build(self) -> None:
