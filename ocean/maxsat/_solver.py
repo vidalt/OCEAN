@@ -2,13 +2,8 @@ from __future__ import annotations
 
 from typing import cast
 
-try:
-    from pysat.examples.rc2 import RC2
-    from pysat.formula import WCNF
-except Exception as e:
-    msg = "PySAT not available."
-    msg += " Install it using pip or use another method (CP, MIP)."
-    raise ImportError(msg) from e
+from pysat.examples.rc2 import RC2
+from pysat.formula import WCNF
 
 
 class MaxSATSolver:
