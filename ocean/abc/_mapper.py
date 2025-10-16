@@ -103,7 +103,7 @@ class Mapper[V: Value](Mapping[Key, V]):
                 msg = "No one-hot encoded features found"
                 raise ValueError(msg)
             codes: Index1L = self.columns.get_level_values(self.CODE_LEVEL)
-            self._codes = tuple(codes)
+            self._codes = tuple(codes.map(str))
         return self._codes
 
     @property
@@ -169,7 +169,7 @@ class Mapper[V: Value](Mapping[Key, V]):
             if not value.is_one_hot_encoded:
                 continue
             matched = names == name
-            if set(value.codes) != set(codes[matched]):
+            if set(value.codes) != set(codes[matched].map(str)):
                 msg = "Mapping codes must match column codes"
                 raise ValueError(msg)
 

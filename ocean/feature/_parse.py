@@ -52,7 +52,7 @@ def _parse(
             )
         elif (column in encoded) or not (is_binary or is_numeric):
             frame = pd.get_dummies(series).astype(int)
-            codes = tuple(set(series))
+            codes = tuple(set(series.map(str)))
             feature = Feature(Feature.Type.ONE_HOT_ENCODED, codes=codes)
         elif is_binary:
             frame = (
