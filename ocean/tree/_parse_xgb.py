@@ -13,10 +13,12 @@ from ._tree import Tree
 
 
 def _parse_base_score(cfg: dict[str, Any]) -> Array1D:
-    base_score_str = cfg["learner"]["learner_model_param"]["base_score"]
-    if isinstance(base_score_str, float):
-        return np.array([float(base_score_str)])
-    return np.array([float(s) for s in json.loads(base_score_str)])
+    base_score_values = json.loads(
+        cfg["learner"]["learner_model_param"]["base_score"]
+    )
+    if isinstance(base_score_values, float):
+        return np.array([float(base_score_values)])
+    return np.array([float(s) for s in base_score_values])
 
 
 def _logit(p: Array1D) -> Array1D:
