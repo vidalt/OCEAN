@@ -29,6 +29,12 @@ class TreeManager:
     # Scale for the scores.
     _score_scale: int = DEFAULT_SCORE_SCALE
 
+    # Base score for the ensemble.
+    _logit: float = 0.0
+
+    # Flag to indicate if the model is using XGBoost trees.
+    _xgboost: bool = False
+
     def __init__(
         self,
         trees: Iterable[Tree],
@@ -89,6 +95,9 @@ class TreeManager:
     ) -> None:
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
+            if tree.xgboost:
+                self._logit = tree.logit
+                self._xgboost = tree.xgboost
             name = self.TREE_VAR_FMT.format(t=t)
             return TreeVar(tree, name=name)
 
@@ -131,6 +140,8 @@ class TreeManager:
                     tree_exprs.append(tree_expr)
                     tree_weights.append(int(weight))
                 expr = cp.LinearExpr.WeightedSum(tree_exprs, tree_weights)
+                if self._xgboost and n_classes == 2 and c == 1:  # noqa: PLR2004
+                    expr += int(self._logit * scale)
                 exprs[op, c] = expr
         return exprs
 
