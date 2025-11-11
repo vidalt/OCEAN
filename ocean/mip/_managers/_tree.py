@@ -36,6 +36,12 @@ class TreeManager:
     # Function of the ensemble.
     _function: gp.MLinExpr
 
+    # Base score for the ensemble.
+    _logit: float = 0.0
+
+    # Flag to indicate if the model is using XGBoost trees.
+    _xgboost: bool = False
+
     def __init__(
         self,
         trees: Iterable[Tree],
@@ -120,6 +126,19 @@ class TreeManager:
         zeros = gp.MLinExpr.zeros(self.shape)
         return sum(map(weighted, self.estimators, weights), zeros)
 
+    def xgb_margin_function(
+        self,
+        weights: NonNegativeArray1D,
+    ) -> gp.MLinExpr:
+        margin_values = gp.MLinExpr.zeros(self.shape)
+        if self.n_classes == 2:  # noqa: PLR2004
+            margin_values += weights[0] * self._logit * np.array([[0.0, 1.0]])
+
+        for tree, weight in zip(self.estimators, weights, strict=True):
+            margin_values += weight * tree.value
+
+        return margin_values
+
     def _set_trees(
         self,
         trees: Iterable[Tree],
@@ -128,6 +147,9 @@ class TreeManager:
     ) -> None:
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
+            if tree.xgboost:
+                self._logit = tree.logit
+                self._xgboost = tree.xgboost
             name = self.TREE_VAR_FMT.format(t=t)
             return TreeVar(tree, name=name, flow_type=flow_type)
 
@@ -152,4 +174,6 @@ class TreeManager:
         return sum((tree.length for tree in self.isolators), gp.LinExpr())
 
     def _get_function(self) -> gp.MLinExpr:
+        if self._xgboost:
+            return self.xgb_margin_function(weights=self.weights)
         return self.weighted_function(weights=self.weights)
