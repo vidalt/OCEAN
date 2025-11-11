@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterable
 
 import numpy as np
@@ -27,12 +28,11 @@ def _build_xgb_leaf(
     weight = float(_get_column_value(xgb_tree, node_id, "Gain"))
 
     if num_trees_per_round == 1:
-        value = np.array([[weight, -weight]])
+        value = np.array([[0.0, weight]])
     else:
         k = int(tree_id % num_trees_per_round)
         value = np.zeros((1, int(num_trees_per_round)), dtype=float)
-        value[0, k] = weight
-
+        value[0, k] += weight
     return Node(node_id, n_samples=0, value=value)
 
 
@@ -90,7 +90,7 @@ def _build_xgb_node(
 
     threshold = None
     if mapper[name].is_numeric:
-        threshold = float(_get_column_value(xgb_tree, node_id, "Split"))
+        threshold = float(_get_column_value(xgb_tree, node_id, "Split")) - 1e-8
         mapper[name].add(threshold)
 
     left_id = _get_child_id(xgb_tree, node_id, "Yes")
@@ -150,6 +150,7 @@ def _parse_xgb_tree(
     tree_id: NonNegativeInt,
     num_trees_per_round: NonNegativeInt,
     mapper: Mapper[Feature],
+    base_score_prob: float = 0.0,
 ) -> Tree:
     root = _parse_xgb_node(
         xgb_tree,
@@ -158,7 +159,10 @@ def _parse_xgb_tree(
         num_trees_per_round=num_trees_per_round,
         mapper=mapper,
     )
-    return Tree(root=root)
+    tree = Tree(root=root)
+    tree.logit = np.log(base_score_prob / (1 - base_score_prob))
+    tree.xgboost = True
+    return tree
 
 
 def parse_xgb_tree(
@@ -167,12 +171,14 @@ def parse_xgb_tree(
     tree_id: NonNegativeInt,
     num_trees_per_round: NonNegativeInt,
     mapper: Mapper[Feature],
+    base_score_prob: float = 0.0,
 ) -> Tree:
     return _parse_xgb_tree(
         xgb_tree,
         tree_id=tree_id,
         num_trees_per_round=num_trees_per_round,
         mapper=mapper,
+        base_score_prob=base_score_prob,
     )
 
 
@@ -181,6 +187,7 @@ def parse_xgb_trees(
     *,
     num_trees_per_round: NonNegativeInt,
     mapper: Mapper[Feature],
+    base_score_prob: float = 0.0,
 ) -> tuple[Tree, ...]:
     return tuple(
         parse_xgb_tree(
@@ -188,6 +195,7 @@ def parse_xgb_trees(
             tree_id=tree_id,
             num_trees_per_round=num_trees_per_round,
             mapper=mapper,
+            base_score_prob=base_score_prob,
         )
         for tree_id, tree in enumerate(trees)
     )
@@ -197,6 +205,7 @@ def parse_xgb_ensemble(
     ensemble: xgb.Booster, *, mapper: Mapper[Feature]
 ) -> tuple[Tree, ...]:
     df = ensemble.trees_to_dataframe()
+    cfg = json.loads(ensemble.save_config())
     groups = df.groupby("Tree")
     trees = tuple(
         groups.get_group(tree_id).reset_index(drop=True)
@@ -205,7 +214,10 @@ def parse_xgb_ensemble(
 
     num_rounds = ensemble.num_boosted_rounds() or 1
     num_trees_per_round = max(1, len(trees) // num_rounds)
-
+    base_score_prob = float(cfg["learner"]["learner_model_param"]["base_score"])
     return parse_xgb_trees(
-        trees, num_trees_per_round=num_trees_per_round, mapper=mapper
+        trees,
+        num_trees_per_round=num_trees_per_round,
+        mapper=mapper,
+        base_score_prob=base_score_prob,
     )
