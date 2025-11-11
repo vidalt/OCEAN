@@ -6,6 +6,7 @@ import numpy as np
 from ...tree import Tree
 from ...tree._utils import average_length
 from ...typing import (
+    Array1D,
     NonNegativeArray1D,
     NonNegativeInt,
     NonNegativeNumber,
@@ -17,6 +18,7 @@ from .._variables import TreeVar
 
 class TreeManager:
     TREE_VAR_FMT: str = "tree[{t}]"
+    NUM_BINARY_CLASS: int = 2
 
     # Tree variables in the ensemble.
     _trees: tuple[TreeVar, *tuple[TreeVar, ...]]
@@ -37,7 +39,7 @@ class TreeManager:
     _function: gp.MLinExpr
 
     # Base score for the ensemble.
-    _logit: float = 0.0
+    _logit: Array1D
 
     # Flag to indicate if the model is using XGBoost trees.
     _xgboost: bool = False
@@ -130,9 +132,11 @@ class TreeManager:
         self,
         weights: NonNegativeArray1D,
     ) -> gp.MLinExpr:
-        margin_values = gp.MLinExpr.zeros(self.shape)
-        if self.n_classes == 2:  # noqa: PLR2004
-            margin_values += weights[0] * self._logit * np.array([[0.0, 1.0]])
+        margin_values = gp.MLinExpr.zeros(self.shape) + self._logit
+        if self.n_classes == self.NUM_BINARY_CLASS:
+            margin_values += (
+                weights[0] * self._logit[0] * np.array([[0.0, 1.0]])
+            )
 
         for tree, weight in zip(self.estimators, weights, strict=True):
             margin_values += weight * tree.value

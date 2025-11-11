@@ -4,11 +4,7 @@ import numpy as np
 from ortools.sat.python import cp_model as cp
 
 from ...tree import Tree
-from ...typing import (
-    NonNegativeArray1D,
-    NonNegativeInt,
-    PositiveInt,
-)
+from ...typing import Array1D, NonNegativeArray1D, NonNegativeInt, PositiveInt
 from .._base import BaseModel
 from .._variables import TreeVar
 
@@ -16,6 +12,8 @@ from .._variables import TreeVar
 class TreeManager:
     TREE_VAR_FMT: str = "tree[{t}]"
     DEFAULT_SCORE_SCALE: int = int(1e10)
+    XGBOOST_DEFAULT_CLASS: int = 1
+    NUM_BINARY_CLASS: int = 2
 
     # Tree variables in the ensemble.
     _trees: tuple[TreeVar, *tuple[TreeVar, ...]]
@@ -30,7 +28,7 @@ class TreeManager:
     _score_scale: int = DEFAULT_SCORE_SCALE
 
     # Base score for the ensemble.
-    _logit: float = 0.0
+    _logit: Array1D
 
     # Flag to indicate if the model is using XGBoost trees.
     _xgboost: bool = False
@@ -140,8 +138,14 @@ class TreeManager:
                     tree_exprs.append(tree_expr)
                     tree_weights.append(int(weight))
                 expr = cp.LinearExpr.WeightedSum(tree_exprs, tree_weights)
-                if self._xgboost and n_classes == 2 and c == 1:  # noqa: PLR2004
-                    expr += int(self._logit * scale)
+                if self._xgboost:
+                    if (
+                        n_classes == self.NUM_BINARY_CLASS
+                        and c == self.XGBOOST_DEFAULT_CLASS
+                    ):
+                        expr += int(self._logit[0] * scale)
+                    elif n_classes > self.NUM_BINARY_CLASS:
+                        expr += int(self._logit[c] * scale)
                 exprs[op, c] = expr
         return exprs
 
