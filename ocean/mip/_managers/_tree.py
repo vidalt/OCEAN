@@ -6,6 +6,7 @@ import numpy as np
 from ...tree import Tree
 from ...tree._utils import average_length
 from ...typing import (
+    Array1D,
     NonNegativeArray1D,
     NonNegativeInt,
     NonNegativeNumber,
@@ -17,6 +18,7 @@ from .._variables import TreeVar
 
 class TreeManager:
     TREE_VAR_FMT: str = "tree[{t}]"
+    NUM_BINARY_CLASS: int = 2
 
     # Tree variables in the ensemble.
     _trees: tuple[TreeVar, *tuple[TreeVar, ...]]
@@ -35,6 +37,12 @@ class TreeManager:
 
     # Function of the ensemble.
     _function: gp.MLinExpr
+
+    # Base score for the ensemble.
+    _logit: Array1D
+
+    # Flag to indicate if the model is using XGBoost trees.
+    _xgboost: bool = False
 
     def __init__(
         self,
@@ -120,6 +128,21 @@ class TreeManager:
         zeros = gp.MLinExpr.zeros(self.shape)
         return sum(map(weighted, self.estimators, weights), zeros)
 
+    def xgb_margin_function(
+        self,
+        weights: NonNegativeArray1D,
+    ) -> gp.MLinExpr:
+        margin_values = gp.MLinExpr.zeros(self.shape) + self._logit
+        if self.n_classes == self.NUM_BINARY_CLASS:
+            margin_values += (
+                weights[0] * self._logit[0] * np.array([[0.0, 1.0]])
+            )
+
+        for tree, weight in zip(self.estimators, weights, strict=True):
+            margin_values += weight * tree.value
+
+        return margin_values
+
     def _set_trees(
         self,
         trees: Iterable[Tree],
@@ -128,6 +151,9 @@ class TreeManager:
     ) -> None:
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
+            if tree.xgboost:
+                self._logit = tree.logit
+                self._xgboost = tree.xgboost
             name = self.TREE_VAR_FMT.format(t=t)
             return TreeVar(tree, name=name, flow_type=flow_type)
 
@@ -152,4 +178,6 @@ class TreeManager:
         return sum((tree.length for tree in self.isolators), gp.LinExpr())
 
     def _get_function(self) -> gp.MLinExpr:
+        if self._xgboost:
+            return self.xgb_margin_function(weights=self.weights)
         return self.weighted_function(weights=self.weights)

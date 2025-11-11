@@ -2,13 +2,14 @@ from collections.abc import Iterator
 
 from pydantic import validate_call
 
-from ..typing import NonNegativeInt, PositiveInt
+from ..typing import Array1D, NonNegativeInt, PositiveInt
 from ._node import Node
 
 
 class Tree:
     root: Node
     _shape: tuple[NonNegativeInt, ...]
+    _xgboost: bool = False
 
     def __init__(self, root: Node) -> None:
         self.root = root
@@ -29,6 +30,22 @@ class Tree:
     @property
     def shape(self) -> tuple[NonNegativeInt, ...]:
         return self._shape
+
+    @property
+    def logit(self) -> Array1D:
+        return self._base_score_prob
+
+    @logit.setter
+    def logit(self, value: Array1D) -> None:
+        self._base_score_prob = value
+
+    @property
+    def xgboost(self) -> bool:
+        return self._xgboost
+
+    @xgboost.setter
+    def xgboost(self, value: bool) -> None:
+        self._xgboost = value
 
     @validate_call
     def nodes_at(self, depth: NonNegativeInt) -> Iterator[Node]:
