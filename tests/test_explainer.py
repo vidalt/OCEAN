@@ -35,7 +35,7 @@ def test_mip_explain(
     x = data.iloc[0, :].to_numpy().astype(float).flatten()
     # pyright: ignore[reportUnknownVariableType]
     y = clf.predict([x])[0]
-    classes = np.unique(clf.predict(data.to_numpy()))
+    classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
         try:
             exp = model.explain(
@@ -82,7 +82,7 @@ def test_mip_explain_xgb(
     x = data.iloc[0, :].to_numpy().astype(float).flatten()
     # pyright: ignore[reportUnknownVariableType]
     y = clf.predict([x])[0]
-    classes = np.unique(clf.predict(data.to_numpy()))
+    classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
         try:
             exp = model.explain(
@@ -129,7 +129,7 @@ def test_cp_explain(
     x = data.iloc[0, :].to_numpy().astype(float).flatten()
     # pyright: ignore[reportUnknownVariableType]
     y = clf.predict([x])[0]
-    classes = np.unique(clf.predict(data.to_numpy()))
+    classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
         try:
             exp = model.explain(
@@ -175,7 +175,7 @@ def test_cp_explain_xgb(
     x = data.iloc[0, :].to_numpy().astype(float).flatten()
     # pyright: ignore[reportUnknownVariableType]
     y = clf.predict([x])[0]
-    classes = np.unique(clf.predict(data.to_numpy()))
+    classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
         try:
             exp = model.explain(

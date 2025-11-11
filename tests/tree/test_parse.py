@@ -75,7 +75,7 @@ def _check_xgb_tree(
             feature_name = str(row["Feature"].values[0]).strip()
             if feature.is_numeric:
                 assert feature_name == node.feature
-                assert node.threshold == float(row["Split"].values[0]) - 1e-8
+                assert node.threshold == float(row["Split"].values[0] - 1e-8)
             if feature.is_one_hot_encoded:
                 assert feature_name == f"{node.feature} {node.code}"
                 assert node.code in feature.codes
