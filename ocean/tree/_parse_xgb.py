@@ -1,14 +1,27 @@
 import json
 from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import xgboost as xgb
 
 from ..abc import Mapper
 from ..feature import Feature
-from ..typing import NonNegativeInt, XGBTree
+from ..typing import Array1D, NonNegativeInt, XGBTree
 from ._node import Node
 from ._tree import Tree
+
+
+def _parse_base_score(cfg: dict[str, Any]) -> Array1D:
+    base_score_str = cfg["learner"]["learner_model_param"]["base_score"]
+    if isinstance(base_score_str, float):
+        return np.array([float(base_score_str)])
+    return np.array([float(s) for s in json.loads(base_score_str)])
+
+
+def _logit(p: Array1D) -> Array1D:
+    p = np.clip(p, 1e-12, 1 - 1e-12)
+    return np.log(p / (1 - p))
 
 
 def _get_column_value(
@@ -150,7 +163,7 @@ def _parse_xgb_tree(
     tree_id: NonNegativeInt,
     num_trees_per_round: NonNegativeInt,
     mapper: Mapper[Feature],
-    base_score_prob: float = 0.0,
+    base_score_margin: Array1D,
 ) -> Tree:
     root = _parse_xgb_node(
         xgb_tree,
@@ -160,7 +173,11 @@ def _parse_xgb_tree(
         mapper=mapper,
     )
     tree = Tree(root=root)
-    tree.logit = np.log(base_score_prob / (1 - base_score_prob))
+    tree.logit = (
+        base_score_margin
+        if len(base_score_margin) > 1
+        else _logit(base_score_margin)
+    )
     tree.xgboost = True
     return tree
 
@@ -171,14 +188,14 @@ def parse_xgb_tree(
     tree_id: NonNegativeInt,
     num_trees_per_round: NonNegativeInt,
     mapper: Mapper[Feature],
-    base_score_prob: float = 0.0,
+    base_score_margin: Array1D,
 ) -> Tree:
     return _parse_xgb_tree(
         xgb_tree,
         tree_id=tree_id,
         num_trees_per_round=num_trees_per_round,
         mapper=mapper,
-        base_score_prob=base_score_prob,
+        base_score_margin=base_score_margin,
     )
 
 
@@ -187,7 +204,7 @@ def parse_xgb_trees(
     *,
     num_trees_per_round: NonNegativeInt,
     mapper: Mapper[Feature],
-    base_score_prob: float = 0.0,
+    base_score_margin: Array1D,
 ) -> tuple[Tree, ...]:
     return tuple(
         parse_xgb_tree(
@@ -195,7 +212,7 @@ def parse_xgb_trees(
             tree_id=tree_id,
             num_trees_per_round=num_trees_per_round,
             mapper=mapper,
-            base_score_prob=base_score_prob,
+            base_score_margin=base_score_margin,
         )
         for tree_id, tree in enumerate(trees)
     )
@@ -214,10 +231,10 @@ def parse_xgb_ensemble(
 
     num_rounds = ensemble.num_boosted_rounds() or 1
     num_trees_per_round = max(1, len(trees) // num_rounds)
-    base_score_prob = float(cfg["learner"]["learner_model_param"]["base_score"])
+    base_score_margin = _parse_base_score(cfg)
     return parse_xgb_trees(
         trees,
         num_trees_per_round=num_trees_per_round,
         mapper=mapper,
-        base_score_prob=base_score_prob,
+        base_score_margin=base_score_margin,
     )

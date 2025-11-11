@@ -2,7 +2,7 @@ from collections.abc import Iterator
 
 from pydantic import validate_call
 
-from ..typing import NonNegativeInt, PositiveInt
+from ..typing import Array1D, NonNegativeInt, PositiveInt
 from ._node import Node
 
 
@@ -32,11 +32,11 @@ class Tree:
         return self._shape
 
     @property
-    def logit(self) -> float:
+    def logit(self) -> Array1D:
         return self._base_score_prob
 
     @logit.setter
-    def logit(self, value: float) -> None:
+    def logit(self, value: Array1D) -> None:
         self._base_score_prob = value
 
     @property
