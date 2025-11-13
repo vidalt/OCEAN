@@ -159,17 +159,18 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 intervals_cost = self.get_intervals_cost(v.levels, x)
                 variables = [v.mget(i) for i in range(len(v.levels) - 1)]
                 obj_expr = cp.LinearExpr.WeightedSum(variables, intervals_cost)
+                obj_coefs.append(1)
             else:
                 obj_expr = v.objvarget()
                 self.add_garbage(
                     self.AddAbsEquality(obj_expr, int(x) - v.xget())
                 )
+                obj_coefs.append(self._obj_scale)
             obj_exprs.append(obj_expr)
-            obj_coefs.append(1)
         elif v.is_one_hot_encoded:
             obj_expr = v.xget(code) if x == 0.0 else 1 - v.xget(code)
             obj_exprs.append(obj_expr)
-            obj_coefs.append(self._obj_scale)
+            obj_coefs.append(self._obj_scale // 2)
         else:
             obj_expr = v.xget() if x == 0.0 else 1 - v.xget()
             obj_exprs.append(obj_expr)
