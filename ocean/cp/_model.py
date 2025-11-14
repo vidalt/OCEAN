@@ -125,7 +125,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         k = 0
         for v in variables:
             if v.is_one_hot_encoded:
-                for code in v.codes:
+                for code in sorted(v.codes, key=int):
                     objective += self.L1(x_arr[k], v, code=code)
                     k += 1
             else:
@@ -157,10 +157,28 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         if v.is_numeric:
             if v.is_continuous:
                 intervals_cost = self.get_intervals_cost(v.levels, x)
-                variables = [v.mget(i) for i in range(len(v.levels) - 1)]
-                obj_expr = cp.LinearExpr.WeightedSum(variables, intervals_cost)
+                # tighten domain of objvar based on x itself ----------
+                v.objvarget().Proto().domain[:] = []
+                v.objvarget().Proto().domain.extend( cp.Domain(min(intervals_cost), max(intervals_cost)).FlattenedIntervals())    
+                # -----------------------------------------------------
+                obj_expr = v.objvarget()
+                self.add_garbage(
+                    self.AddElement(v.xget(), list(intervals_cost), obj_expr)
+                )
                 obj_coefs.append(1)
             else:
+                # include the value of x itself on the domain ---------
+                if len(v.thresholds) != 0:
+                    values = [
+                        val for v in v.thresholds for val in [int(v), int(v) + 1]
+                    ]
+                else:
+                    values = np.asarray(v.levels).astype(int).tolist()
+                values.append(int(x))
+                #print("new values for discrete feature ", v._name, ": ", values) # debug
+                v.xget().Proto().domain[:] = []
+                v.xget().Proto().domain.extend( cp.Domain.FromValues(values).FlattenedIntervals())    
+                # -----------------------------------------------------
                 obj_expr = v.objvarget()
                 self.add_garbage(
                     self.AddAbsEquality(obj_expr, int(x) - v.xget())
