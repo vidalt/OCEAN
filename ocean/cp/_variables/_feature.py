@@ -80,7 +80,7 @@ class FeatureVar(Var, FeatureKeeper):
         return model.NewBoolVar(name)
 
     def _add_continuous(self, model: BaseModel, name: str) -> cp.IntVar:
-        self._objvar = model.NewIntVar(0, int(self.levels[-1]), f"u_{name}")
+        self._objvar = model.NewIntVar(0, 42, f"u_{name}") # arbitrary, will be adapted for each query
         m = len(self.levels)
         return model.NewIntVar(0, m - 2, name)
 
