@@ -121,12 +121,15 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         x_arr = np.asarray(x, dtype=float).ravel()
 
         variables = self.mapper.values()
+        names = [n for n, _ in self.mapper.items()]
         objective: cp.LinearExpr = 0  # type: ignore[assignment]
         k = 0
-        for v in variables:
+        indexer = self.mapper.idx
+        for v, name in zip(variables, names, strict=True):
             if v.is_one_hot_encoded:
-                for code in sorted(v.codes, key=int):
-                    objective += self.L1(x_arr[k], v, code=code)
+                for code in v.codes:
+                    idx = indexer.get(name, code)
+                    objective += self.L1(x_arr[idx], v, code=code)
                     k += 1
             else:
                 objective += self.L1(x_arr[k], v)
@@ -159,7 +162,11 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 intervals_cost = self.get_intervals_cost(v.levels, x)
                 # tighten domain of objvar based on x itself ----------
                 v.objvarget().Proto().domain[:] = []
-                v.objvarget().Proto().domain.extend( cp.Domain(min(intervals_cost), max(intervals_cost)).FlattenedIntervals())    
+                v.objvarget().Proto().domain.extend(
+                    cp.Domain(
+                        min(intervals_cost), max(intervals_cost)
+                    ).FlattenedIntervals()
+                )
                 # -----------------------------------------------------
                 obj_expr = v.objvarget()
                 self.add_garbage(
@@ -170,14 +177,17 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 # include the value of x itself on the domain ---------
                 if len(v.thresholds) != 0:
                     values = [
-                        val for v in v.thresholds for val in [int(v), int(v) + 1]
+                        val
+                        for v in v.thresholds
+                        for val in [int(v), int(v) + 1]
                     ]
                 else:
                     values = np.asarray(v.levels).astype(int).tolist()
                 values.append(int(x))
-                #print("new values for discrete feature ", v._name, ": ", values) # debug
                 v.xget().Proto().domain[:] = []
-                v.xget().Proto().domain.extend( cp.Domain.FromValues(values).FlattenedIntervals())    
+                v.xget().Proto().domain.extend(
+                    cp.Domain.FromValues(values).FlattenedIntervals()
+                )
                 # -----------------------------------------------------
                 obj_expr = v.objvarget()
                 self.add_garbage(
@@ -186,11 +196,11 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 obj_coefs.append(self._obj_scale)
             obj_exprs.append(obj_expr)
         elif v.is_one_hot_encoded:
-            obj_expr = v.xget(code) if x == 0.0 else 1 - v.xget(code)
+            obj_expr = v.xget(code) if x == 0.0 else 1 - v.xget(code)  # type: ignore[assignment]
             obj_exprs.append(obj_expr)
             obj_coefs.append(self._obj_scale // 2)
         else:
-            obj_expr = v.xget() if x == 0.0 else 1 - v.xget()
+            obj_expr = v.xget() if x == 0.0 else 1 - v.xget()  # type: ignore[assignment]
             obj_exprs.append(obj_expr)
             obj_coefs.append(self._obj_scale)
         return cp.LinearExpr.WeightedSum(obj_exprs, obj_coefs)

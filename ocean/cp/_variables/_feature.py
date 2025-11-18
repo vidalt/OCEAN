@@ -35,10 +35,9 @@ class FeatureVar(Var, FeatureKeeper):
         return self._x
 
     def objvarget(self) -> cp.IntVar:
-        if not self.is_discrete and not self.is_continuous:
-            msg = (
-                "The 'objvarget' method is only supported for continuous and discrete features"
-            )
+        if not self.is_numeric:
+            msg = "The 'objvarget' method is only supported"
+            msg += " for continuous and discrete features"
             raise ValueError(msg)
         return self._objvar
 
@@ -80,7 +79,9 @@ class FeatureVar(Var, FeatureKeeper):
         return model.NewBoolVar(name)
 
     def _add_continuous(self, model: BaseModel, name: str) -> cp.IntVar:
-        self._objvar = model.NewIntVar(0, 42, f"u_{name}") # arbitrary, will be adapted for each query
+        self._objvar = model.NewIntVar(
+            0, 42, f"u_{name}"
+        )  # arbitrary, will be adapted for each query
         m = len(self.levels)
         return model.NewIntVar(0, m - 2, name)
 
@@ -91,7 +92,6 @@ class FeatureVar(Var, FeatureKeeper):
             ]
         else:
             values = np.asarray(self.levels).astype(int).tolist()
-        #print("values for discrete feature ", self._name, ": ", values) #debug
         val = cp.Domain.FromValues(values)
         self._objvar = model.NewIntVar(0, int(self.levels[-1]), f"u_{name}")
         return model.NewIntVarFromDomain(val, name)
