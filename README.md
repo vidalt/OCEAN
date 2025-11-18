@@ -67,33 +67,33 @@ print("CP : ",cp_explanation)
 Expected output:
 
 ```plaintext
-MIP objective value: 5.0
+MIP objective value: 3.0
 MIP Explanation:
 Age              : 39.0
 CapitalGain      : 2174.0
 CapitalLoss      : 0
 EducationNumber  : 13.0
-HoursPerWeek     : 41.0
+HoursPerWeek     : 40.0
 MaritalStatus    : 3
 NativeCountry    : 0
-Occupation       : 1
+Occupation       : 10
 Relationship     : 0
 Sex              : 0
 WorkClass        : 6 
 
-CP objective value: 5.0
+CP objective value: 3.0
 CP Explanation:
-Age              : 38.0
+Age              : 39.0
 CapitalGain      : 2174.0
 CapitalLoss      : 0.0
 EducationNumber  : 13.0
-HoursPerWeek     : 41.0
+HoursPerWeek     : 40.0
 MaritalStatus    : 3
 NativeCountry    : 0
 Occupation       : 1
 Relationship     : 0
 Sex              : 0
-WorkClass        : 6
+WorkClass        : 4
 ```
 
 
