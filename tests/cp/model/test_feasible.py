@@ -51,7 +51,7 @@ class TestNoIsolation:
             if feature.is_binary:
                 feature_vars += 1
             elif feature.is_continuous:
-                feature_vars += len(feature.levels)
+                feature_vars += 2
                 feature_constraints += 2 * (len(feature.levels) - 1)
             elif feature.is_discrete:
                 feature_vars += 2
@@ -60,7 +60,7 @@ class TestNoIsolation:
                 feature_constraints += 1
         lb = n_nodes - n_leaves
         ub = (n_nodes - n_leaves) * (n_nodes - n_leaves + 1)
-        lb += feature_constraints + n_estimators
+        lb += n_estimators
         ub += feature_constraints + n_estimators
         assert len(model.Proto().variables) == n_leaves + feature_vars
         assert len(model.Proto().constraints) >= lb

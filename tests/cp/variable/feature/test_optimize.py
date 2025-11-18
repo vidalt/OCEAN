@@ -96,7 +96,6 @@ def test_continuous(seed: int, n_levels: int, lower: int, upper: int) -> None:
         var.build(model)
         scale = int(1e6)
         v = var.xget()
-        variables = [var.mget(i) for i in range(len(levels) - 1)]
         intervals_cost = np.zeros(len(levels) - 1, dtype=int)
         for i in range(len(intervals_cost)):
             if levels[i] < val <= levels[i + 1]:
@@ -105,21 +104,24 @@ def test_continuous(seed: int, n_levels: int, lower: int, upper: int) -> None:
                 intervals_cost[i] = int(abs(val - levels[i]) * scale)
             elif levels[i + 1] < val:
                 intervals_cost[i] = int(abs(val - levels[i + 1]) * scale)
+        # tighten domain of objvar based on val itself ----------
+        var.objvarget().Proto().domain[:] = []
+        var.objvarget().Proto().domain.extend(
+            cp.Domain(
+                min(intervals_cost), max(intervals_cost)
+            ).FlattenedIntervals()
+        )
+        # -----------------------------------------------------
 
-        objective = cp.LinearExpr.WeightedSum(variables, intervals_cost)
+        objective = var.objvarget()
+        model.AddElement(v, list(intervals_cost), objective)
         model.Minimize(objective)
         solver.Solve(model)
         value = levels[solver.Value(v) + 1]
-        mu_values = [solver.Value(mu) for mu in variables]
-        assert sum(mu_values) == 1.0, (
-            f"Solver status {solver.StatusName()}, "
-            f"mu values {mu_values}, "
-            f"model variables {model.Proto().variables}, "
-        )
         assert np.isclose(value, expected), (
             f"Expected {expected}, but got {value}, with levels {levels} "
             f"and val={val} and solver status {solver.StatusName()}"
-            f" v = {solver.Value(v)} and mu_values {mu_values}"
+            f" v = {solver.Value(v)}, obj_value = {solver.Value(objective)}"
         )
 
     # Test within bounds
