@@ -14,7 +14,6 @@ class FeatureVar(Var, FeatureKeeper):
 
     _x: cp.IntVar
     _u: Mapping[Key, cp.IntVar]
-    _mu: list[cp.IntVar]
     _objvar: cp.IntVar
 
     def __init__(self, feature: Feature, name: str) -> None:
@@ -24,10 +23,7 @@ class FeatureVar(Var, FeatureKeeper):
     def build(self, model: BaseModel) -> None:
         if not self.is_one_hot_encoded:
             self._x = self._add_x(model)
-        if self.is_continuous:
-            self._mu = self._add_mu(model)
-            model.add_map_domain(self.xget(), self._mu)
-        elif self.is_one_hot_encoded:
+        if self.is_one_hot_encoded:
             self._u = self._add_u(model)
 
     def xget(self, code: Key | None = None) -> cp.IntVar:
@@ -38,17 +34,10 @@ class FeatureVar(Var, FeatureKeeper):
             raise ValueError(msg)
         return self._x
 
-    def mget(self, key: int) -> cp.IntVar:
-        if not self.is_continuous:
-            msg = "The 'mget' method is only supported for continuous features"
-            raise ValueError(msg)
-        return self._mu[key]
-
     def objvarget(self) -> cp.IntVar:
-        if not self.is_discrete:
-            msg = (
-                "The 'objvarget' method is only supported for discrete features"
-            )
+        if not self.is_numeric:
+            msg = "The 'objvarget' method is only supported"
+            msg += " for continuous and discrete features"
             raise ValueError(msg)
         return self._objvar
 
@@ -76,16 +65,6 @@ class FeatureVar(Var, FeatureKeeper):
         model.AddExactlyOne(u.values())
         return u
 
-    def _set_mu(self, model: BaseModel, m: int) -> list[cp.IntVar]:
-        return [model.NewBoolVar(f"{self._name}_mu_{i}") for i in range(m)]
-
-    def _add_mu(self, model: BaseModel) -> list[cp.IntVar]:
-        if not self.is_continuous:
-            msg = "Mu variables are only supported for continuous features"
-            raise ValueError(msg)
-        m = len(self.levels) - 1
-        return self._set_mu(model, m=m)
-
     def _add_one_hot_encoded(
         self,
         model: BaseModel,
@@ -100,6 +79,9 @@ class FeatureVar(Var, FeatureKeeper):
         return model.NewBoolVar(name)
 
     def _add_continuous(self, model: BaseModel, name: str) -> cp.IntVar:
+        self._objvar = model.NewIntVar(
+            0, 42, f"u_{name}"
+        )  # arbitrary, will be adapted for each query
         m = len(self.levels)
         return model.NewIntVar(0, m - 2, name)
 

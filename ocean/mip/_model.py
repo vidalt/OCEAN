@@ -147,19 +147,32 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         if norm not in {1, 2}:
             msg = f"Unsupported norm: {norm}"
             raise ValueError(msg)
-
+        names = self.mapper.names
+        is_ohe = [self.mapper[name].is_one_hot_encoded for name in names]
         variables = map(self.vget, range(self.n_columns))
         if norm == 1:
-            return sum(map(self.L1, x, variables), start=gp.LinExpr())
-        return sum(map(self.L2, x, variables), start=gp.QuadExpr())
+            return sum(
+                (
+                    self.L1(x, v, is_ohe=ohe)
+                    for x, v, ohe in zip(x, variables, is_ohe, strict=True)
+                ),
+                start=gp.LinExpr(),
+            )
+        return sum(
+            (
+                self.L2(x, v, is_ohe=ohe)
+                for x, v, ohe in zip(x, variables, is_ohe, strict=True)
+            ),
+            start=gp.QuadExpr(),
+        )
 
-    def L1(self, x: np.float64, v: gp.Var) -> gp.LinExpr:
+    def L1(self, x: np.float64, v: gp.Var, *, is_ohe: bool) -> gp.LinExpr:
         u = self.addVar()
         neg = self.addConstr(u >= v - x)
         pos = self.addConstr(u >= x - v)
         self.add_garbage(u, pos, neg)
-        return gp.LinExpr(u)
+        return gp.LinExpr(u) / 2.0 if is_ohe else gp.LinExpr(u)
 
     @staticmethod
-    def L2(x: np.float64, v: gp.Var) -> gp.QuadExpr:
-        return (v - x) ** 2
+    def L2(x: np.float64, v: gp.Var, *, is_ohe: bool) -> gp.QuadExpr:
+        return ((v - x) ** 2) / 2.0 if is_ohe else (v - x) ** 2

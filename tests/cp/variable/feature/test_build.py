@@ -16,9 +16,6 @@ def test_binary() -> None:
     var.build(model)
     v = var.xget()
     assert isinstance(v, cp.IntVar)
-    msg = r"The 'mget' method is only supported for continuous features"
-    with pytest.raises(ValueError, match=msg):
-        _ = var.mget(0)
 
     msg = r"Get by code is only supported for one-hot encoded features"
     with pytest.raises(ValueError, match=msg):
@@ -58,10 +55,6 @@ def test_continuous(seed: int, n_levels: int, lower: int, upper: int) -> None:
     var.build(model)
     v = var.xget()
     assert isinstance(v, cp.IntVar)
-    n = len(var.levels)
-    for i in range(n - 1):
-        mu = var.mget(i)
-        assert isinstance(mu, cp.IntVar)
 
     msg = r"Get by code is only supported for one-hot encoded features"
     with pytest.raises(ValueError, match=msg):
@@ -77,10 +70,6 @@ def test_one_hot_encoded(seed: int, n_codes: int) -> None:
     feature = Feature(ftype=Feature.Type.ONE_HOT_ENCODED, codes=codes)
     var = FeatureVar(feature=feature, name="x")
     var.build(model)
-
-    msg = r"The 'mget' method is only supported for continuous features"
-    with pytest.raises(ValueError, match=msg):
-        _ = var.mget(0)
 
     msg = r"Code is required for one-hot encoded features get"
     with pytest.raises(ValueError, match=msg):
