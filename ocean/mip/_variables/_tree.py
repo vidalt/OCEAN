@@ -1,5 +1,6 @@
 from collections.abc import Iterator, Mapping
 from enum import Enum
+import numpy as np 
 
 import gurobipy as gp
 from pydantic import validate_call
@@ -29,11 +30,12 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
         name: str,
         *,
         flow_type: FlowType = FlowType.CONTINUOUS,
+        _adaboost: bool = False,
     ) -> None:
         Var.__init__(self, name=name)
         TreeKeeper.__init__(self, tree=tree)
         self._set_builder(flow_type=flow_type)
-
+        self._adaboost = _adaboost
     @property
     def value(self) -> gp.MLinExpr:
         return self._value
@@ -87,7 +89,14 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
     def _get_value(self) -> gp.MLinExpr:
         value = gp.MLinExpr.zeros(self.shape)
         for leaf in self.leaves:
-            value += self._flow[leaf.node_id] * leaf.value
+            if self._adaboost:
+                # one-hot encode the confidence vector
+                val = np.zeros(leaf.value.shape[1])
+                val[np.argmax(leaf.value)] = 1
+            else:
+                val = leaf.value
+            value += self._flow[leaf.node_id] * val
+            
         return value
 
     def _get_length(self) -> gp.LinExpr:
