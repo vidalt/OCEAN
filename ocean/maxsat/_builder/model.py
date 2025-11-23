@@ -1,6 +1,8 @@
 from collections.abc import Iterable
 from typing import Protocol
 
+import numpy as np
+
 from ...abc import Mapper
 from ...tree._node import Node
 from .._base import BaseModel
@@ -69,7 +71,7 @@ class MaxSATBuilder(ModelBuilder):
         *,
         node: Node,
         mapper: Mapper[FeatureVar],
-        y: object,
+        y: int,
     ) -> None:
         parent = node.parent
         if parent is None:
@@ -83,7 +85,7 @@ class MaxSATBuilder(ModelBuilder):
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
@@ -100,45 +102,63 @@ class MaxSATBuilder(ModelBuilder):
     def _bset(
         model: BaseModel,
         *,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        msg = "Raise NotImplementedError"
-        raise NotImplementedError(msg)
+        if sigma:
+            model.add_hard([-y, v.xget()])
+        else:
+            model.add_hard([-y, -v.xget()])
 
     @staticmethod
     def _cset(
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        raise NotImplementedError
+        threshold = node.threshold
+        j = int(np.searchsorted(v.levels, threshold, side="left"))
+        mu = v.xget(mu=j - 1)
+        if sigma:
+            model.add_hard([-y, mu])
+        else:
+            model.add_hard([-y, -mu])
 
     @staticmethod
     def _dset(
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        raise NotImplementedError
+        threshold = node.threshold
+        j = int(np.searchsorted(v.levels, threshold, side="left"))
+        x = v.xget(mu=j)
+        if sigma:
+            model.add_hard([-y, x])
+        else:
+            model.add_hard([-y, x])
 
     @staticmethod
     def _eset(
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        raise NotImplementedError
+        x = v.xget(code=node.code)
+        if sigma:
+            model.add_hard([-y, x])
+        else:
+            model.add_hard([-y, -x])
 
 
 class ModelBuilderFactory:
