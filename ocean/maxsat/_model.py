@@ -19,10 +19,9 @@ if TYPE_CHECKING:
 
 @dataclass
 class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
-    DEFAULT_EPSILON: int = 1
-
     # Model builder for the ensemble.
-    _builder: ModelBuilder | None = None
+    _builder: ModelBuilder
+    DEFAULT_EPSILON: int = 1
 
     class Type(Enum):
         MAXSAT = "MAXSAT"
@@ -32,10 +31,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         trees: Iterable[Tree],
         mapper: Mapper[Feature],
         *,
-        model_type: Type = Type.MAXSAT,
         weights: NonNegativeArray1D | None = None,
         max_samples: NonNegativeInt = 0,
         epsilon: int = DEFAULT_EPSILON,
+        model_type: Type = Type.MAXSAT,
     ) -> None:
         BaseModel.__init__(self)
         TreeManager.__init__(
@@ -52,7 +51,9 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self._set_builder(model_type=model_type)
 
     def build(self) -> None:
-        raise NotImplementedError
+        self.build_features(self)
+        self.build_trees(self)
+        self._builder.build(self, trees=self.trees, mapper=self.mapper)
 
     def _set_builder(self, model_type: Type) -> None:
         match model_type:
