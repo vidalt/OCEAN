@@ -33,6 +33,9 @@ class TreeManager:
     # Flag to indicate if the model is using XGBoost trees.
     _xgboost: bool = False
 
+    # Flag to indicate if the model is using AdaBoost trees.
+    _adaboost: bool = False
+
     def __init__(
         self,
         trees: Iterable[Tree],
@@ -96,6 +99,8 @@ class TreeManager:
             if tree.xgboost:
                 self._logit = tree.logit
                 self._xgboost = tree.xgboost
+            if tree.adaboost:
+                self._adaboost = tree.adaboost
             name = self.TREE_VAR_FMT.format(t=t)
             return TreeVar(tree, name=name)
 
@@ -132,11 +137,23 @@ class TreeManager:
                     coefs: list[int] = []
                     variables: list[cp.IntVar] = []
                     for leaf in tree.leaves:
-                        coefs.append(int(leaf.value[op, c] * scale))
+                        if self._adaboost:
+                            # no need to scale since values are 0/1
+                            # scaling is done later for tree weights
+                            if np.argmax(leaf.value[op, :]) == c:
+                                coeff = 1
+                            else:
+                                coeff = 0
+                        else:
+                            coeff = int(leaf.value[op, c] * scale)
+                        coefs.append(coeff)
                         variables.append(tree[leaf.node_id])
                     tree_expr = cp.LinearExpr.WeightedSum(variables, coefs)
                     tree_exprs.append(tree_expr)
-                    tree_weights.append(int(weight))
+                    if self._adaboost:
+                        tree_weights.append(int(weight * scale)) 
+                    else:
+                        tree_weights.append(int(weight))
                 expr = cp.LinearExpr.WeightedSum(tree_exprs, tree_weights)
                 if self._xgboost:
                     if (

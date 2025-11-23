@@ -31,6 +31,8 @@ class Explainer(Model, BaseExplainer):
     ) -> None:
         ensembles = (ensemble,)
         trees = parse_ensembles(*ensembles, mapper=mapper)
+        if trees[0].adaboost:
+            weights = ensemble.estimator_weights_
         Model.__init__(
             self,
             trees,

@@ -10,6 +10,7 @@ class Tree:
     root: Node
     _shape: tuple[NonNegativeInt, ...]
     _xgboost: bool = False
+    _adaboost: bool = False
 
     def __init__(self, root: Node) -> None:
         self.root = root
@@ -46,6 +47,14 @@ class Tree:
     @xgboost.setter
     def xgboost(self, value: bool) -> None:
         self._xgboost = value
+
+    @property
+    def adaboost(self) -> bool:
+        return self._adaboost
+
+    @adaboost.setter
+    def adaboost(self, value: bool) -> None:
+        self._adaboost = value
 
     @validate_call
     def nodes_at(self, depth: NonNegativeInt) -> Iterator[Node]:

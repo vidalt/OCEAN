@@ -5,9 +5,9 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from pydantic import Field
-from sklearn.ensemble import IsolationForest, RandomForestClassifier
+from sklearn.ensemble import IsolationForest, RandomForestClassifier, AdaBoostClassifier
 
-type BaseExplainableEnsemble = RandomForestClassifier | xgb.XGBClassifier
+type BaseExplainableEnsemble = RandomForestClassifier | xgb.XGBClassifier | AdaBoostClassifier
 type ParsableEnsemble = BaseExplainableEnsemble | IsolationForest | xgb.Booster
 
 type Number = float

@@ -44,6 +44,9 @@ class TreeManager:
     # Flag to indicate if the model is using XGBoost trees.
     _xgboost: bool = False
 
+    # Flag to indicate if the model is using AdaBoost trees.
+    _adaboost: bool = False
+
     def __init__(
         self,
         trees: Iterable[Tree],
@@ -154,8 +157,10 @@ class TreeManager:
             if tree.xgboost:
                 self._logit = tree.logit
                 self._xgboost = tree.xgboost
+            if tree.adaboost:
+                self._adaboost = tree.adaboost
             name = self.TREE_VAR_FMT.format(t=t)
-            return TreeVar(tree, name=name, flow_type=flow_type)
+            return TreeVar(tree, name=name, flow_type=flow_type, _adaboost=self._adaboost)
 
         tree_vars = tuple(map(create, enumerate(trees)))
         if len(tree_vars) == 0:

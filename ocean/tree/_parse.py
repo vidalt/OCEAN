@@ -5,6 +5,7 @@ from itertools import chain
 
 import xgboost as xgb
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.ensemble import AdaBoostClassifier
 
 from ..abc import Mapper
 from ..feature import Feature
@@ -69,23 +70,29 @@ def _parse_node(
     return _build_node(tree, node_id, mapper=mapper)
 
 
-def _parse_tree(sklearn_tree: SKLearnTree, *, mapper: Mapper[Feature]) -> Tree:
+def _parse_tree(sklearn_tree: SKLearnTree, *, 
+                mapper: Mapper[Feature], 
+                is_adaboost: bool = False) -> Tree:
     tree = SKLearnTreeProtocol(sklearn_tree)
     root = _parse_node(tree, 0, mapper=mapper)
-    return Tree(root=root)
+    tree = Tree(root=root)
+    if is_adaboost:
+        tree.adaboost = True
+    return tree
 
-
-def parse_tree(tree: SKLearnDecisionTree, *, mapper: Mapper[Feature]) -> Tree:
+def parse_tree(tree: SKLearnDecisionTree, *, 
+               mapper: Mapper[Feature], 
+               is_adaboost: bool = False) -> Tree:
     getter = operator.attrgetter("tree_")
-    return _parse_tree(getter(tree), mapper=mapper)
-
+    return _parse_tree(getter(tree), mapper=mapper, is_adaboost=is_adaboost)
 
 def parse_trees(
     trees: Iterable[SKLearnDecisionTree],
     *,
     mapper: Mapper[Feature],
+    is_adaboost: bool = False,
 ) -> tuple[Tree, ...]:
-    parser = partial(parse_tree, mapper=mapper)
+    parser = partial(parse_tree, mapper=mapper, is_adaboost=is_adaboost)
     return tuple(map(parser, trees))
 
 
@@ -98,6 +105,8 @@ def parse_ensemble(
         return parse_xgb_ensemble(ensemble, mapper=mapper)
     if isinstance(ensemble, xgb.XGBClassifier):
         return parse_xgb_ensemble(ensemble.get_booster(), mapper=mapper)
+    if isinstance(ensemble, AdaBoostClassifier):
+        return parse_trees(ensemble, mapper=mapper, is_adaboost=True)
     return parse_trees(ensemble, mapper=mapper)
 
 

@@ -109,6 +109,7 @@ See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) fo
 | **MaxSAT formulation**          | ⏳ Upcoming | Planned addition to the toolbox.           |
 | **Heuristics**                  | ⏳ Upcoming | Fast approximate methods.                  |
 | **Other methods**               | ⏳ Upcoming | Additional formulations under exploration. |
+| **AdaBoost support**            | ✅ Ready    | Fully supported in ocean.                  |
 | **Random Forest support**       | ✅ Ready    | Fully supported in ocean.                  |
 | **XGBoost support**             | ✅ Ready    | Fully supported in ocean.                  |
 

@@ -37,6 +37,8 @@ class Explainer(Model, BaseExplainer):
         ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
         n_isolators, max_samples = self._get_isolation_params(isolation)
         trees = parse_ensembles(*ensembles, mapper=mapper)
+        if trees[0].adaboost:
+            weights = ensemble.estimator_weights_
         Model.__init__(
             self,
             trees,
