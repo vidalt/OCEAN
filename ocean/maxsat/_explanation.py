@@ -16,8 +16,16 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
     _x: Array1D = np.zeros((0,), dtype=int)
 
     def vget(self, i: int) -> int:
-        msg = "Not implemented."
-        raise NotImplementedError(msg)
+        name = self.names[i]
+        if self[name].is_one_hot_encoded:
+            code = self.codes[i]
+            return self[name].xget(code=code)
+        if self[name].is_numeric:
+            j = int(
+                np.searchsorted(self[name].levels, self._x[i], side="left")  # type: ignore[arg-type]
+            )
+            return self[name].xget(mu=j)
+        return self[name].xget()
 
     def to_series(self) -> "pd.Series[float]":
         msg = "Not implemented."
