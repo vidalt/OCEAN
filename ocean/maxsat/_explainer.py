@@ -10,8 +10,8 @@ from ..typing import (
     NonNegativeInt,
     PositiveInt,
 )
+from ._env import ENV
 from ._model import Model
-from ._solver import MaxSATSolver
 
 if TYPE_CHECKING:
     from ..abc import Mapper
@@ -40,7 +40,7 @@ class Explainer(Model, BaseExplainer):
             model_type=model_type,
         )
         self.build()
-        self.solver = MaxSATSolver
+        self.solver = ENV.solver
 
     def get_objective_value(self) -> float:
         raise NotImplementedError

@@ -1,14 +1,12 @@
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 
 from ..abc import Mapper
 from ..typing import Array1D, BaseExplanation, Key, Number
+from ._env import ENV
 from ._variables import FeatureVar
-
-if TYPE_CHECKING:
-    import pandas as pd
 
 
 class Explanation(Mapper[FeatureVar], BaseExplanation):
@@ -21,15 +19,28 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             code = self.codes[i]
             return self[name].xget(code=code)
         if self[name].is_numeric:
-            j = int(
-                np.searchsorted(self[name].levels, self._x[i], side="left")  # type: ignore[arg-type]
+            j: int = int(
+                np.searchsorted(self[name].levels, self._x[i], side="left")  # pyright: ignore[reportUnknownArgumentType]
             )
             return self[name].xget(mu=j)
         return self[name].xget()
 
     def to_series(self) -> "pd.Series[float]":
-        msg = "Not implemented."
-        raise NotImplementedError(msg)
+        values: list[float] = [
+            ENV.solver.model(v) for v in map(self.vget, range(self.n_columns))
+        ]
+        for f in range(self.n_columns):
+            name = self.names[f]
+            value = ENV.solver.model(self.vget(f))
+            if self[name].is_continuous:
+                values[f] = self.format_continuous_value(
+                    f, int(value), list(self[name].levels)
+                )
+            elif self[name].is_discrete:
+                values[f] = self.format_discrete_value(
+                    f, int(value), self[name].thresholds
+                )
+        return pd.Series(values, index=self.columns)
 
     def to_numpy(self) -> Array1D:
         return (
@@ -50,7 +61,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         msg = "Not implemented."
         raise NotImplementedError(msg)
 
-    def format_value(
+    def format_continuous_value(
         self,
         f: int,
         idx: int,

@@ -21,13 +21,13 @@ class BaseModel(ABC, WCNF):
         if name in self.vpool.obj2id:  # var has been already created
             msg = f"Variable with name '{name}' already exists."
             raise ValueError(msg)
-        return self.vpool.id(f"{name}")
+        return self.vpool.id(f"{name}")  # type: ignore[no-any-return]
 
     def get_var(self, name: str) -> int:
         if name not in self.vpool.obj2id:  # var has not been created
             msg = f"Variable with name '{name}' does not exist."
             raise ValueError(msg)
-        return self.vpool.obj2id[name]
+        return self.vpool.obj2id[name]  # type: ignore[no-any-return]
 
     def add_hard(self, lits: list[int]) -> None:
         """Add a hard clause (must be satisfied)."""
