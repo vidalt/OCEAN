@@ -13,6 +13,7 @@ from xgboost import XGBClassifier
 
 from ocean import (
     ConstraintProgrammingExplainer,
+    MaxSATExplainer,
     MixedIntegerProgramExplainer,
 )
 from ocean.abc import Mapper
@@ -28,6 +29,7 @@ CONSOLE = Console()
 EXPLAINERS = {
     "mip": MixedIntegerProgramExplainer,
     "cp": ConstraintProgrammingExplainer,
+    "maxsat": MaxSATExplainer,
 }
 MODELS = {
     "rf": RandomForestClassifier,
@@ -75,8 +77,8 @@ def create_argument_parser() -> ArgumentParser:
         help="List of explainers to use",
         type=str,
         nargs="+",
-        choices=["mip", "cp"],
-        default=["mip", "cp"],
+        choices=["mip", "cp", "maxsat"],
+        default=["mip", "cp", "maxsat"],
     )
     parser.add_argument(
         "-m",
@@ -153,7 +155,8 @@ def fit_model_with_console(
 def build_explainer(
     explainer_name: str,
     explainer_class: type[MixedIntegerProgramExplainer]
-    | type[ConstraintProgrammingExplainer],
+    | type[ConstraintProgrammingExplainer]
+    | type[MaxSATExplainer],
     args: Args,
     model: RandomForestClassifier | XGBClassifier,
     mapper: Mapper[Feature],
@@ -163,7 +166,10 @@ def build_explainer(
         if explainer_class is MixedIntegerProgramExplainer:
             ENV.setParam("Seed", args.seed)
             exp = explainer_class(model, mapper=mapper, env=ENV)
-        elif explainer_class is ConstraintProgrammingExplainer:
+        elif (
+            explainer_class is ConstraintProgrammingExplainer
+            or explainer_class is MaxSATExplainer
+        ):
             exp = explainer_class(model, mapper=mapper)
         else:
             msg = f"Unknown explainer type: {explainer_class}"
