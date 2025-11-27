@@ -22,6 +22,8 @@ class FeatureVar(Var, FeatureKeeper):
             self._x = self._add_x(model)
         if self.is_numeric:
             self._mu = self._add_mu(model)
+            # Add exactly-one constraint for mu variables (exactly one interval)
+            model.add_exactly_one(list(self._mu.values()))
         if self.is_one_hot_encoded:
             self._u = self._add_u(model)
 
@@ -65,9 +67,19 @@ class FeatureVar(Var, FeatureKeeper):
 
     def _add_mu(self, model: BaseModel) -> Mapping[Key, int]:
         name = self._name.format(name=self._name)
+        if self.is_discrete:
+            # For discrete features: one mu variable per level (value)
+            # mu[i] means value == levels[i]
+            n_values = len(self.levels)
+            return {
+                lv: model.add_var(name=f"{name}[{lv}]")
+                for lv in range(n_values)
+            }
+        # For continuous features: n-1 mu variables for n levels (intervals)
+        # mu[i] means value in interval (levels[i], levels[i+1]]
+        n_intervals = len(self.levels) - 1
         return {
-            lv: model.add_var(name=f"{name}[{lv}]")
-            for lv in range(len(self.levels))
+            lv: model.add_var(name=f"{name}[{lv}]") for lv in range(n_intervals)
         }
 
     @staticmethod
@@ -85,9 +97,18 @@ class FeatureVar(Var, FeatureKeeper):
 
     def _xget_numeric(self, mu: Key | None) -> int:
         if mu is None:
-            msg = "Mu is required for numeric features get"
+            msg = "mu is required to get numeric features"
             raise ValueError(msg)
-        if mu not in range(len(self.levels)):
-            msg = f"Mu '{mu}' not found in the feature levels"
-            raise ValueError(msg)
+        if self.is_discrete:
+            # For discrete: mu[i] represents value levels[i]
+            n_values = len(self.levels)
+            if mu not in range(n_values):
+                msg = f"mu '{mu}' not in values (0 to {n_values - 1})"
+                raise ValueError(msg)
+        else:
+            # For continuous: mu[i] represents interval (levels[i], levels[i+1]]
+            n_intervals = len(self.levels) - 1
+            if mu not in range(n_intervals):
+                msg = f"mu '{mu}' not in intervals (0 to {n_intervals - 1})"
+                raise ValueError(msg)
         return self._mu[mu]
