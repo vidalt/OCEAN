@@ -5,10 +5,11 @@ from pysat.formula import WCNF, IDPool
 
 
 class BaseModel(ABC, WCNF):
-    vpool: IDPool = IDPool()
+    vpool: IDPool
 
     def __init__(self) -> None:
         WCNF.__init__(self)
+        self.vpool = IDPool()  # Create new pool for each instance
 
     def __setattr__(self, name: str, value: Any) -> None:  # noqa: ANN401
         object.__setattr__(self, name, value)
@@ -44,6 +45,12 @@ class BaseModel(ABC, WCNF):
         for i in range(len(lits)):
             for j in range(i + 1, len(lits)):
                 self.add_hard([-lits[i], -lits[j]])  # at most one
+
+    def _clean_soft(self) -> None:
+        """Reset the model to only contain hard constraints."""
+        self.soft.clear()
+        self.wght.clear()
+        self.topw = 1
 
 
 class Var(Protocol):

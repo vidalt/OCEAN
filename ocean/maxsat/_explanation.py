@@ -25,21 +25,61 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             return self[name].xget(mu=j)
         return self[name].xget()
 
+    def _get_active_mu_index(
+        self,
+        name: Key,
+        for_discrete: bool = False,  # noqa: FBT001, FBT002
+    ) -> int:
+        """
+        Find which mu variable is set to true for a numeric feature.
+
+        Returns:
+            Index of the active mu variable, or 0 if none found.
+
+        """
+        if for_discrete:
+            # For discrete: one mu per level
+            n_vars = len(self[name].levels)
+        else:
+            # For continuous: one mu per interval
+            n_vars = len(self[name].levels) - 1
+        for mu_idx in range(n_vars):
+            var = self[name].xget(mu=mu_idx)
+            if ENV.solver.model(var) > 0:
+                return mu_idx
+        return 0  # Default to first if none found
+
     def to_series(self) -> "pd.Series[float]":
-        values: list[float] = [
-            ENV.solver.model(v) for v in map(self.vget, range(self.n_columns))
-        ]
+        values: list[float] = []
         for f in range(self.n_columns):
             name = self.names[f]
-            value = ENV.solver.model(self.vget(f))
-            if self[name].is_continuous:
-                values[f] = self.format_continuous_value(
-                    f, int(value), list(self[name].levels)
+            if self[name].is_one_hot_encoded:
+                code = self.codes[f]
+                var = self[name].xget(code=code)
+                values.append(ENV.solver.model(var))
+            elif self[name].is_continuous:
+                mu_idx = self._get_active_mu_index(name, for_discrete=False)
+                values.append(
+                    self.format_continuous_value(
+                        f, mu_idx, list(self[name].levels)
+                    )
                 )
             elif self[name].is_discrete:
-                values[f] = self.format_discrete_value(
-                    f, int(value), self[name].thresholds
+                # For discrete features, mu[i] means value == levels[i]
+                mu_idx = self._get_active_mu_index(name, for_discrete=True)
+                levels = list(self[name].levels)
+                discrete_val = int(levels[mu_idx])
+                values.append(
+                    self.format_discrete_value(
+                        f, discrete_val, self[name].levels
+                    )
                 )
+            elif self[name].is_binary:
+                var = self[name].xget()
+                values.append(ENV.solver.model(var))
+            else:
+                var = self[name].xget()
+                values.append(ENV.solver.model(var))
         return pd.Series(values, index=self.columns)
 
     def to_numpy(self) -> Array1D:

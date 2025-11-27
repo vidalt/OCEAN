@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
+
+from sklearn.ensemble import AdaBoostClassifier
 
 from ..tree import parse_ensembles
 from ..typing import (
@@ -20,6 +23,10 @@ if TYPE_CHECKING:
 
 
 class Explainer(Model, BaseExplainer):
+    """MaxSAT-based explainer for tree ensemble classifiers."""
+
+    Status: str = "UNKNOWN"
+
     def __init__(
         self,
         ensemble: BaseExplainableEnsemble,
@@ -31,6 +38,8 @@ class Explainer(Model, BaseExplainer):
     ) -> None:
         ensembles = (ensemble,)
         trees = parse_ensembles(*ensembles, mapper=mapper)
+        if isinstance(ensemble, AdaBoostClassifier):
+            weights = ensemble.estimator_weights_
         Model.__init__(
             self,
             trees,
@@ -43,10 +52,10 @@ class Explainer(Model, BaseExplainer):
         self.solver = ENV.solver
 
     def get_objective_value(self) -> float:
-        raise NotImplementedError
+        return self.solver.cost / self._obj_scale
 
     def get_solving_status(self) -> str:
-        raise NotImplementedError
+        return self.Status
 
     def get_anytime_solutions(self) -> list[dict[str, float]] | None:
         raise NotImplementedError
@@ -57,10 +66,35 @@ class Explainer(Model, BaseExplainer):
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
-        return_callback: bool = False,
-        verbose: bool = False,
-        max_time: int = 60,
-        num_workers: int | None = None,
-        random_seed: int = 42,
+        verbose: bool = False,  # noqa: ARG002
+        max_time: int = 60,  # noqa: ARG002
+        random_seed: int = 42,  # noqa: ARG002
     ) -> Explanation | None:
-        raise NotImplementedError
+        # Add objective soft clauses
+        self.add_objective(x, norm=norm)
+
+        # Add hard constraints for target class
+        self.set_majority_class(y=y)
+
+        try:
+            # Solve the MaxSAT problem
+            self.solver.solve(self)
+            self.Status = "OPTIMAL"
+        except RuntimeError as e:
+            if "UNSAT" in str(e):
+                self.Status = "INFEASIBLE"
+                msg = "There are no feasible counterfactuals for this query."
+                msg += " If there should be one, please check the model "
+                msg += "constraints or report this issue to the developers."
+                warnings.warn(msg, category=UserWarning, stacklevel=2)
+                self.cleanup()
+                return None
+            raise
+        else:
+            # Store the query in the explanation
+            self.explanation.query = x
+
+            # Clean up for next solve
+            self.cleanup()
+
+            return self.explanation
