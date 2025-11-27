@@ -32,7 +32,11 @@ The package provides multiple classes and functions to wrap the tree ensemble mo
 ```python
 from sklearn.ensemble import RandomForestClassifier
 
-from ocean import MixedIntegerProgramExplainer, ConstraintProgrammingExplainer
+from ocean import (
+    ConstraintProgrammingExplainer,
+    MaxSATExplainer,
+    MixedIntegerProgramExplainer,
+)
 from ocean.datasets import load_adult
 
 # Load the adult dataset
@@ -47,20 +51,28 @@ rf.fit(data, target)
 
 # Predict the class of the random instance
 y = int(rf.predict(x).item())
+x = x.to_numpy().flatten()
 
 # Explain the prediction using MIPEXplainer
 mip_model = MixedIntegerProgramExplainer(rf, mapper=mapper)
-x = x.to_numpy().flatten()
 mip_explanation = mip_model.explain(x, y=1 - y, norm=1)
 
 # Explain the prediction using CPEExplainer
 cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
-x = x.to_numpy().flatten()
 cp_explanation = cp_model.explain(x, y=1 - y, norm=1)
 
-# Show the explanation
-print("MIP: ",mip_explanation, "\n")
-print("CP : ",cp_explanation)
+maxsat_model = MaxSATExplainer(rf, mapper=mapper)
+maxsat_explanation = maxsat_model.explain(x, y=1 - y, norm=1)
+
+# Show the explanations and their objective values
+print("MIP objective value:", mip_model.get_objective_value())
+print("MIP", mip_explanation, "\n")
+
+print("CP objective value:", cp_model.get_objective_value())
+print("CP", cp_explanation, "\n")
+
+print("MaxSAT objective value:", maxsat_model.get_objective_value())
+print("MaxSAT", maxsat_explanation, "\n")
 
 ```
 
@@ -94,6 +106,20 @@ Occupation       : 1
 Relationship     : 0
 Sex              : 0
 WorkClass        : 4
+
+MaxSAT objective value: 3.0
+MaxSAT Explanation:
+Age              : 39.0
+CapitalGain      : 2174.0
+CapitalLoss      : 0.0
+EducationNumber  : 13.0
+HoursPerWeek     : 40.0
+MaritalStatus    : 3
+NativeCountry    : 0
+Occupation       : 1
+Relationship     : 0
+Sex              : 0
+WorkClass        : 4
 ```
 
 
@@ -106,7 +132,7 @@ See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) fo
 | ------------------------------- | ---------- | ------------------------------------------ |
 | **MIP formulation**             | ✅ Done     | Based on Parmentier & Vidal (2020/2021).   |
 | **Constraint Programming (CP)** | ✅ Done     | Based on an upcoming paper.                |
-| **MaxSAT formulation**          | ⏳ Upcoming | Planned addition to the toolbox.           |
+| **MaxSAT formulation**          | ✅ Done     | Planned addition to the toolbox.           |
 | **Heuristics**                  | ⏳ Upcoming | Fast approximate methods.                  |
 | **Other methods**               | ⏳ Upcoming | Additional formulations under exploration. |
 | **AdaBoost support**            | ✅ Ready    | Fully supported in ocean.                  |

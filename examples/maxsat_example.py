@@ -11,11 +11,11 @@ from ocean.datasets import load_adult
 (data, target), mapper = load_adult(scale=True)
 
 # Train a random forest classifier
-rf = RandomForestClassifier(n_estimators=5, max_depth=3, random_state=42)
+rf = RandomForestClassifier(n_estimators=20, max_depth=3, random_state=42)
 rf.fit(data, target)
 
 # Select an instance to explain from the dataset
-x = data.iloc[19].to_frame().T
+x = data.iloc[0].to_frame().T
 x_np = x.to_numpy().flatten()
 
 # Predict the class of the instance

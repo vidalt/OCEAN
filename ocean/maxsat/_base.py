@@ -30,10 +30,19 @@ class BaseModel(ABC, WCNF):
             raise ValueError(msg)
         return self.vpool.obj2id[name]  # type: ignore[no-any-return]
 
-    def add_hard(self, lits: list[int]) -> None:
-        """Add a hard clause (must be satisfied)."""
+    def add_hard(self, lits: list[int], return_id: bool = False) -> int:  # noqa: FBT001, FBT002
+        """
+        Add a hard clause (must be satisfied).
+
+        Returns:
+            The clause ID if return_id is True, otherwise -1.
+
+        """
         # weight=None => hard clause in WCNF
         self.append(lits)
+        if return_id:
+            return len(self.hard) - 1  # pyright: ignore[reportUnknownArgumentType]
+        return -1
 
     def add_soft(self, lits: list[int], weight: int = 1) -> None:
         """Add a soft clause with a given weight."""

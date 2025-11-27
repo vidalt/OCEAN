@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import itertools
 from enum import Enum
 from typing import TYPE_CHECKING
 
 import numpy as np
 from pydantic import validate_call
+from pysat.pb import PBEnc
 
 from ..typing import NonNegativeInt
 from ._base import BaseModel
 from ._builder.model import ModelBuilder, ModelBuilderFactory
-from ._managers import FeatureManager, TreeManager
+from ._managers import FeatureManager, GarbageManager, TreeManager
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from ._variables import FeatureVar
 
 
-class Model(BaseModel, FeatureManager, TreeManager):
+class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
     # Model builder for the ensemble.
     _builder: ModelBuilder
     DEFAULT_EPSILON: int = 1
@@ -48,6 +48,7 @@ class Model(BaseModel, FeatureManager, TreeManager):
             weights=weights,
         )
         FeatureManager.__init__(self, mapper=mapper)
+        GarbageManager.__init__(self)
 
         self._set_weights(weights=weights)
         self._max_samples = max_samples
@@ -246,80 +247,56 @@ class Model(BaseModel, FeatureManager, TreeManager):
         threshold: int,
     ) -> None:
         """
-        Encode constraint: sum of selected contributions >= threshold.
+        Encode: sum of contributions >= threshold using pseudo-Boolean encoding.
 
-        Uses dynamic programming to compute reachable sums and encodes
-        constraints to ensure the sum meets the threshold.
+        This approach avoids exponential enumeration.
         """
-        n_trees = len(tree_contributions)
+        lits: list[int] = []
+        weights: list[int] = []
+        shift = 0  # sum over |negative weights|
 
-        # For each tree, compute min and max contribution
-        tree_bounds: list[tuple[int, int]] = []
         for contribs in tree_contributions:
-            min_c = min(c[1] for c in contribs)
-            max_c = max(c[1] for c in contribs)
-            tree_bounds.append((min_c, max_c))
+            for leaf_var, diff in contribs:
+                if diff == 0:
+                    continue  # contributes nothing, can be ignored
 
-        # Compute global bounds
-        global_min = sum(b[0] for b in tree_bounds)
-        global_max = sum(b[1] for b in tree_bounds)
+                if diff > 0:
+                    # positive coefficient: weight * x
+                    lits.append(leaf_var)  # x
+                    weights.append(diff)
+                else:
+                    # negative coefficient: -a * x
+                    a = -diff
+                    # transform -a*x into a*(-x) and shift the bound by +a
+                    lits.append(-leaf_var)  # -x
+                    weights.append(a)
+                    shift += a
 
-        # If even the maximum sum is below threshold, UNSAT
-        if global_max < threshold:
-            self.add_hard([])
+        effective_bound = threshold + shift
+
+        if not lits:  # degenerate case
+            if effective_bound > 0:
+                self.add_hard([])  # UNSAT
             return
 
-        # If the minimum sum meets threshold, constraint is always satisfied
-        if global_min >= threshold:
-            return
+        # Encode sum(weights_i * lits_i) >= effective_bound
+        pb = PBEnc.atleast(
+            lits=lits,
+            weights=weights,
+            bound=effective_bound,
+            vpool=self.vpool,
+        )
 
-        # Compute prefix max and suffix max for bounds checking
-        prefix_max = [0] * (n_trees + 1)
-        for i in range(n_trees):
-            prefix_max[i + 1] = prefix_max[i] + tree_bounds[i][1]
-
-        suffix_max = [0] * (n_trees + 1)
-        for i in range(n_trees - 1, -1, -1):
-            suffix_max[i] = suffix_max[i + 1] + tree_bounds[i][1]
-
-        # For each leaf, check if it can possibly be part of a valid solution
-        # A leaf with contribution c at tree t is forbidden if:
-        # prefix_max[t] + c + suffix_max[t+1] < threshold  (i.e., even with
-        # best choices for all other trees, can't reach threshold)
-        for t_idx, contribs in enumerate(tree_contributions):
-            for leaf_var, contrib in contribs:
-                best_case = prefix_max[t_idx] + contrib + suffix_max[t_idx + 1]
-                if best_case < threshold:
-                    self.add_hard([-leaf_var])
-
-        # Enumerate and forbid all bad combinations
-        # A combination is bad if sum(contributions) < threshold
-        max_trees = 10
-        if n_trees <= max_trees:  # Only for small forests
-            self._enumerate_bad_combinations(tree_contributions, threshold)
-
-    def _enumerate_bad_combinations(
-        self,
-        tree_contributions: list[list[tuple[int, int]]],
-        threshold: int,
-    ) -> None:
-        """Enumerate and forbid all combinations with sum < threshold."""
-        # Get leaf indices for each tree
-        tree_leaves = [
-            [(lv, c) for lv, c in contribs] for contribs in tree_contributions
-        ]
-
-        # Enumerate all combinations
-        for combo in itertools.product(*tree_leaves):
-            total = sum(c for _, c in combo)
-            if total < threshold:
-                # This combination is bad, TODO find efficient way
-                # At least one of the leaves must NOT be selected
-                clause = [-lv for lv, _ in combo]
-                self.add_hard(clause)
+        for clause in pb.clauses:
+            self.add_garbage(
+                self.add_hard(clause, return_id=True)  # pyright: ignore[reportUnknownArgumentType]
+            )
 
     def cleanup(self) -> None:
         self._clean_soft()
+        for idx in sorted(self.garbage_list(), reverse=True):
+            self.hard.pop(idx)
+        self.remove_garbage()
 
     def _set_builder(self, model_type: Type) -> None:
         match model_type:

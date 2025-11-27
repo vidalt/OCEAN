@@ -98,8 +98,31 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
 
     @property
     def value(self) -> Mapping[Key, Key | Number]:
-        msg = "Not implemented."
-        raise NotImplementedError(msg)
+        def get(v: FeatureVar) -> Key | Number:
+            if v.is_one_hot_encoded:
+                for code in v.codes:
+                    if ENV.solver.model(v.xget(code)) > 0:
+                        return code
+            if v.is_numeric:
+                f = [val for _, val in self.items()].index(v)
+                if v.is_discrete:
+                    idx = self._get_active_mu_index(
+                        self.names[f], for_discrete=True
+                    )
+                    val = int(v.levels[idx])
+                    return self.format_discrete_value(f, val, v.levels)
+                idx = self._get_active_mu_index(
+                    self.names[f], for_discrete=False
+                )
+                return self.format_continuous_value(
+                    f,
+                    idx,
+                    list(v.levels),
+                )
+            x = v.xget()
+            return int(ENV.solver.model(x))
+
+        return self.reduce(get)
 
     def format_continuous_value(
         self,
