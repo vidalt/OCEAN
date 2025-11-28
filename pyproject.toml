@@ -38,7 +38,7 @@ dependencies = [
     "pydantic",
     "scikit-learn",
     "xgboost",
-    "python-sat",
+    "python-sat[pblib,aiger]",
 ]
 
 optional-dependencies.dev = [

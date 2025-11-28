@@ -1,5 +1,5 @@
 class GarbageManager:
-    type GarbageObject = object
+    type GarbageObject = int
 
     # Garbage collector for the model.
     # - Used to keep track of the variables and constraints created,
@@ -13,4 +13,7 @@ class GarbageManager:
         self._garbage.extend(args)
 
     def remove_garbage(self) -> None:
-        raise NotImplementedError
+        self._garbage.clear()
+
+    def garbage_list(self) -> list[GarbageObject]:
+        return self._garbage

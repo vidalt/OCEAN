@@ -3,6 +3,7 @@ import traceback
 import warnings
 
 from ortools.sat.python import cp_model as cp
+from sklearn.ensemble import AdaBoostClassifier
 
 from ..abc import Mapper
 from ..feature import Feature
@@ -11,6 +12,7 @@ from ..typing import (
     Array1D,
     BaseExplainableEnsemble,
     BaseExplainer,
+    NonNegativeArray1D,
     NonNegativeInt,
     PositiveInt,
 )
@@ -25,13 +27,13 @@ class Explainer(Model, BaseExplainer):
         ensemble: BaseExplainableEnsemble,
         *,
         mapper: Mapper[Feature],
-        weights: Array1D | None = None,
+        weights: NonNegativeArray1D | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
         model_type: Model.Type = Model.Type.CP,
     ) -> None:
         ensembles = (ensemble,)
         trees = parse_ensembles(*ensembles, mapper=mapper)
-        if trees[0].adaboost:
+        if isinstance(ensemble, AdaBoostClassifier):
             weights = ensemble.estimator_weights_
         Model.__init__(
             self,

@@ -140,10 +140,7 @@ class TreeManager:
                         if self._adaboost:
                             # no need to scale since values are 0/1
                             # scaling is done later for tree weights
-                            if np.argmax(leaf.value[op, :]) == c:
-                                coeff = 1
-                            else:
-                                coeff = 0
+                            coeff = int(np.argmax(leaf.value[op, :]) == c)
                         else:
                             coeff = int(leaf.value[op, c] * scale)
                         coefs.append(coeff)
@@ -151,7 +148,7 @@ class TreeManager:
                     tree_expr = cp.LinearExpr.WeightedSum(variables, coefs)
                     tree_exprs.append(tree_expr)
                     if self._adaboost:
-                        tree_weights.append(int(weight * scale)) 
+                        tree_weights.append(int(weight * scale))
                     else:
                         tree_weights.append(int(weight))
                 expr = cp.LinearExpr.WeightedSum(tree_exprs, tree_weights)
