@@ -38,7 +38,6 @@ dependencies = [
     "pydantic",
     "scikit-learn",
     "xgboost",
-    "python-sat",
 ]
 
 optional-dependencies.dev = [
@@ -60,6 +59,7 @@ optional-dependencies.test = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "python-sat",
     "ruff",
     "scipy-stubs",
     "tox",
@@ -68,6 +68,10 @@ optional-dependencies.test = [
 optional-dependencies.example = [
     "rich",
     "matplotlib",
+]
+
+optional-dependencies.maxsat = [
+    "python-sat[pblib,aiger]; platform_system != 'Windows'",
 ]
 
 urls.Homepage = "https://github.com/vidalt/OCEAN"

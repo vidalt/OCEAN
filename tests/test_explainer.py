@@ -4,7 +4,10 @@ import pytest
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
-from ocean import ConstraintProgrammingExplainer, MixedIntegerProgramExplainer
+from ocean import (
+    ConstraintProgrammingExplainer,
+    MixedIntegerProgramExplainer,
+)
 
 from .utils import ENV, generate_data
 
