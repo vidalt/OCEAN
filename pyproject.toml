@@ -59,6 +59,7 @@ optional-dependencies.test = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "python-sat",
     "ruff",
     "scipy-stubs",
     "tox",
