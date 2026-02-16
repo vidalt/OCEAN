@@ -36,6 +36,8 @@ dependencies = [
     "ortools==9.14.6206",
     "pandas",
     "pydantic",
+    "python-sat[pblib,aiger]; platform_system != 'Windows'",
+    "python-sat; platform_system == 'Windows'",
     "scikit-learn",
     "xgboost",
 ]
@@ -59,7 +61,8 @@ optional-dependencies.test = [
     "pyright",
     "pytest",
     "pytest-cov",
-    "python-sat",
+    "python-sat[pblib,aiger]; platform_system != 'Windows'",
+    "python-sat; platform_system == 'Windows'",
     "ruff",
     "scipy-stubs",
     "tox",
@@ -70,9 +73,6 @@ optional-dependencies.example = [
     "matplotlib",
 ]
 
-optional-dependencies.maxsat = [
-    "python-sat[pblib,aiger]; platform_system != 'Windows'",
-]
 
 urls.Homepage = "https://github.com/vidalt/OCEAN"
 urls.Repository = "https://github.com/vidalt/OCEAN"
