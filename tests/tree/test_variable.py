@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from sklearn.tree import DecisionTreeClassifier
 
@@ -11,8 +12,10 @@ def _check_node(tree: TreeVar, node: Node) -> Node:
     if node.is_leaf:
         return node
     left, right = node.left, node.right
-    assert (tree[left.node_id].X + tree[right.node_id].X) == 1.0
-    if tree[left.node_id].X == 1.0:
+    assert np.isclose(
+        tree[left.node_id].X + tree[right.node_id].X, 1.0, rtol=0.0, atol=1e-10
+    )
+    if np.isclose(tree[left.node_id].X, 1.0, rtol=0.0, atol=1e-10):
         return _check_node(tree, left)
     return _check_node(tree, right)
 

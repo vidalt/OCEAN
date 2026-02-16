@@ -2,7 +2,7 @@ import time
 import warnings
 
 import gurobipy as gp
-from sklearn.ensemble import IsolationForest
+from sklearn.ensemble import AdaBoostClassifier, IsolationForest
 
 from ..abc import Mapper
 from ..feature import Feature
@@ -37,7 +37,7 @@ class Explainer(Model, BaseExplainer):
         ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
         n_isolators, max_samples = self._get_isolation_params(isolation)
         trees = parse_ensembles(*ensembles, mapper=mapper)
-        if trees[0].adaboost:
+        if isinstance(ensemble, AdaBoostClassifier):
             weights = ensemble.estimator_weights_
         Model.__init__(
             self,

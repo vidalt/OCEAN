@@ -5,9 +5,15 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from pydantic import Field
-from sklearn.ensemble import IsolationForest, RandomForestClassifier, AdaBoostClassifier
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    IsolationForest,
+    RandomForestClassifier,
+)
 
-type BaseExplainableEnsemble = RandomForestClassifier | xgb.XGBClassifier | AdaBoostClassifier
+type BaseExplainableEnsemble = (
+    RandomForestClassifier | xgb.XGBClassifier | AdaBoostClassifier
+)
 type ParsableEnsemble = BaseExplainableEnsemble | IsolationForest | xgb.Booster
 
 type Number = float
@@ -117,7 +123,6 @@ __all__ = [
     "NonNegativeArray",
     "NonNegativeArray1D",
     "NonNegativeArray2D",
-    "NonNegativeDtype",
     "NonNegativeDtype",
     "NonNegativeInt",
     "NonNegativeIntArray",

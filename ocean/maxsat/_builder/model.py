@@ -1,6 +1,8 @@
 from collections.abc import Iterable
 from typing import Protocol
 
+import numpy as np
+
 from ...abc import Mapper
 from ...tree._node import Node
 from .._base import BaseModel
@@ -69,7 +71,7 @@ class MaxSATBuilder(ModelBuilder):
         *,
         node: Node,
         mapper: Mapper[FeatureVar],
-        y: object,
+        y: int,
     ) -> None:
         parent = node.parent
         if parent is None:
@@ -83,7 +85,7 @@ class MaxSATBuilder(ModelBuilder):
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
@@ -100,45 +102,95 @@ class MaxSATBuilder(ModelBuilder):
     def _bset(
         model: BaseModel,
         *,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        msg = "Raise NotImplementedError"
-        raise NotImplementedError(msg)
+        # sigma=True => left child (x <= 0.5, i.e., x=0)
+        # sigma=False => right child (x > 0.5, i.e., x=1)
+        if sigma:
+            model.add_hard([-y, -v.xget()])
+        else:
+            model.add_hard([-y, v.xget()])
 
     @staticmethod
     def _cset(
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        raise NotImplementedError
+        # For continuous features:
+        # j = searchsorted(levels, threshold) gives index where threshold fits
+        # sigma=True => left child (x <= threshold)
+        # sigma=False => right child (x > threshold)
+        threshold = node.threshold
+        j = int(np.searchsorted(v.levels, threshold, side="left"))
+        n_intervals = len(v.levels) - 1
+
+        if sigma:
+            # Left branch: x <= threshold, so x is in interval 0, 1, ..., j-1
+            # Forbid intervals j, j+1, ..., n-2
+            for i in range(j, n_intervals):
+                mu = v.xget(mu=i)
+                model.add_hard([-y, -mu])
+        else:
+            # Right branch: x > threshold, so x is in interval j, j+1, ..., n-2
+            # Forbid intervals 0, 1, ..., j-1
+            for i in range(j):
+                mu = v.xget(mu=i)
+                model.add_hard([-y, -mu])
 
     @staticmethod
     def _dset(
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        raise NotImplementedError
+        # For discrete features:
+        # sigma=True => left child (x <= threshold)
+        # sigma=False => right child (x > threshold)
+        #
+        # mu[i] => value == levels[i]
+        threshold = node.threshold
+        n_values = len(v.levels)
+
+        if sigma:
+            # Left branch: x <= threshold
+            # Forbid values where levels[i] > threshold
+            for i in range(n_values):
+                if v.levels[i] > threshold:
+                    mu = v.xget(mu=i)
+                    model.add_hard([-y, -mu])
+        else:
+            # Right branch: x > threshold
+            # Forbid values where levels[i] <= threshold
+            for i in range(n_values):
+                if v.levels[i] <= threshold:
+                    mu = v.xget(mu=i)
+                    model.add_hard([-y, -mu])
 
     @staticmethod
     def _eset(
         model: BaseModel,
         *,
         node: Node,
-        y: object,
+        y: int,
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        raise NotImplementedError
+        # sigma=True (left child): category != code, so u[code] = False
+        # sigma=False (right child): category == code, so u[code] = True
+        x = v.xget(code=node.code)
+        if sigma:
+            model.add_hard([-y, -x])
+        else:
+            model.add_hard([-y, x])
 
 
 class ModelBuilderFactory:

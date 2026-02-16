@@ -21,13 +21,13 @@ def test_binary(seed: int) -> None:
     objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert v.X == 0.0
+    assert np.isclose(v.X, 0.0, rtol=0.0, atol=1e-10)
 
     val = generator.uniform(0.6, 1.0)
     objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert v.X == 1.0
+    assert np.isclose(v.X, 1.0, rtol=0.0, atol=1e-10)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -109,14 +109,32 @@ def test_one_hot_encoded(seed: int, n_codes: int) -> None:
     objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert v.X == 0.0
+    assert np.isclose(v.X, 0.0, rtol=0.0, atol=1e-10)
 
-    assert sum(1 for code in var.codes if var.xget(code).X == 1.0) == 1.0
+    assert np.isclose(
+        sum(
+            1
+            for code in var.codes
+            if np.isclose(var.xget(code).X, 1.0, rtol=0.0, atol=1e-10)
+        ),
+        1.0,
+        rtol=0.0,
+        atol=1e-10,
+    )
 
     val = generator.uniform(0.6, 1.0)
     objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
-    assert v.X == 1.0
+    assert np.isclose(v.X, 1.0, rtol=0.0, atol=1e-10)
 
-    assert sum(1 for code in var.codes if var.xget(code).X == 1.0) == 1.0
+    assert np.isclose(
+        sum(
+            1
+            for code in var.codes
+            if np.isclose(var.xget(code).X, 1.0, rtol=0.0, atol=1e-10)
+        ),
+        1.0,
+        rtol=0.0,
+        atol=1e-10,
+    )

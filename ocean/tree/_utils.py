@@ -1,5 +1,5 @@
-from sklearn.ensemble._iforest import (
-    _average_path_length,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType, reportPrivateUsage, reportArgumentType] # noqa: PLC2701
+from sklearn.ensemble._iforest import (  # noqa: PLC2701
+    _average_path_length,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType, reportPrivateUsage, reportArgumentType]
 )
 
 from ..typing import NonNegativeInt, NonNegativeNumber

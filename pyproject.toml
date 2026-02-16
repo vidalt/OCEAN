@@ -33,12 +33,13 @@ dependencies = [
     "anytree",
     "gurobipy",
     "numpy",
-    "ortools>=9.12",
+    "ortools==9.14.6206",
     "pandas",
     "pydantic",
+    "python-sat[pblib,aiger]; platform_system != 'Windows'",
+    "python-sat; platform_system == 'Windows'",
     "scikit-learn",
     "xgboost",
-    "python-sat",
 ]
 
 optional-dependencies.dev = [
@@ -60,6 +61,8 @@ optional-dependencies.test = [
     "pyright",
     "pytest",
     "pytest-cov",
+    "python-sat[pblib,aiger]; platform_system != 'Windows'",
+    "python-sat; platform_system == 'Windows'",
     "ruff",
     "scipy-stubs",
     "tox",
@@ -69,6 +72,7 @@ optional-dependencies.example = [
     "rich",
     "matplotlib",
 ]
+
 
 urls.Homepage = "https://github.com/vidalt/OCEAN"
 urls.Repository = "https://github.com/vidalt/OCEAN"

@@ -160,7 +160,12 @@ class TreeManager:
             if tree.adaboost:
                 self._adaboost = tree.adaboost
             name = self.TREE_VAR_FMT.format(t=t)
-            return TreeVar(tree, name=name, flow_type=flow_type, _adaboost=self._adaboost)
+            return TreeVar(
+                tree,
+                name=name,
+                flow_type=flow_type,
+                _adaboost=self._adaboost,
+            )
 
         tree_vars = tuple(map(create, enumerate(trees)))
         if len(tree_vars) == 0:

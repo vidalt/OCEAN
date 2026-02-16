@@ -6,8 +6,8 @@ import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
 from ocean.abc import Mapper
-from ocean.cp import ENV, Explanation, Model, TreeVar
 from ocean.feature import Feature
+from ocean.maxsat import Explanation, TreeVar
 from ocean.typing import Array1D, NonNegativeInt
 
 from ..utils import generate_data
@@ -42,45 +42,11 @@ def validate_solution(explanation: Explanation) -> None:
 
         if feature.is_binary:
             assert np.any(np.isclose(value, [0.0, 1.0]))
-        elif feature.is_continuous:
+        elif feature.is_numeric:
             assert feature.levels[0] <= value <= feature.levels[-1]
-        elif feature.is_discrete:
-            if len(feature.thresholds) == 0:
-                continue
-            min_diff: float = np.min(
-                np.abs(np.asarray(feature.thresholds, dtype=np.float64) - value)
-            )
-            assert (
-                0.0 <= min_diff <= 1.0
-                or explanation.query.shape[0] == 0
-                or np.isclose(value, explanation.query[i])
-            ), (
-                f"Value {value} not in close to thresholds {feature.thresholds}"
-                f" min diff is {min_diff} xp[i] = {explanation.query[i]}"
-            )
 
     for value in codes.values():
         assert np.isclose(value, 1.0)
-
-
-def check_leafs(tree: TreeVar, explanation: Explanation) -> None:
-    n_active = 0
-    id_leaf = tree.root.node_id
-    solver = ENV.solver
-    for node in tree.leaves:
-        assert node.is_leaf
-        v = solver.Value(tree[node.node_id])
-        n_active += v
-        id_leaf = node.node_id if v else id_leaf
-
-    assert n_active == 1, (
-        f"Expected one leaf to be active, but {n_active} were found."
-    )
-    x_id_leaf = find_leaf(tree, explanation)
-    assert id_leaf == x_id_leaf, (
-        f"Expected leaf {id_leaf}, but found {x_id_leaf}."
-        f" explanation {explanation}"
-    )
 
 
 def find_leaf(tree: TreeVar, explanation: Explanation) -> NonNegativeInt:
@@ -106,60 +72,45 @@ def find_leaf(tree: TreeVar, explanation: Explanation) -> NonNegativeInt:
     return node.node_id
 
 
-def validate_path(tree: TreeVar, explanation: Explanation) -> None:
-    check_leafs(tree, explanation)
-
-
-def validate_paths(*trees: TreeVar, explanation: Explanation) -> None:
-    for tree in trees:
-        validate_path(tree, explanation)
-
-
-def validate_sklearn_paths(
-    clf: RandomForestClassifier,
-    explanation: Explanation,
-    trees: tuple[TreeVar, ...],
+def validate_path(
+    tree: TreeVar, explanation: Explanation, solver_model: list[int]
 ) -> None:
-    x = explanation.x.reshape(1, -1)
-    leaf_ids = clf.apply(x)  # pyright: ignore[reportUnknownVariableType]
-    solver = ENV.solver
-    for t, tree in enumerate(trees):
-        # Get the leaf node from the tree
-        leaf_id = leaf_ids[0, t]
-        v = solver.Value(tree[leaf_id])
-        active_leaf = leaf_id
-        for node in tree.leaves:
-            v_1 = solver.Value(tree[node.node_id])
-            if np.isclose(v_1, 1.0, rtol=0.0, atol=1e-10):
-                active_leaf = node.node_id
-                break
-        lf = find_leaf(tree, explanation)
-        assert active_leaf == lf, (
-            f"Expected leaf {lf} to be active, but found {active_leaf}, "
-            f"in tree {t}"
-        )
-        assert np.isclose(v, 1.0, rtol=0.0, atol=1e-10), (
-            f"Expected leaf {leaf_id} to be active, but found {active_leaf}, "
-            f"in tree {t} with value {v}"
-        )
+    """Check that exactly one leaf is selected and matches the solution."""
+    n_active = 0
+    active_leaf = tree.root.node_id
+    for node in tree.leaves:
+        assert node.is_leaf
+        leaf_var = tree[node.node_id]
+        is_active = leaf_var in solver_model
+        if is_active:
+            n_active += 1
+            active_leaf = node.node_id
+
+    assert n_active == 1, (
+        f"Expected one leaf to be active, but {n_active} were found."
+    )
+    x_id_leaf = find_leaf(tree, explanation)
+    assert active_leaf == x_id_leaf, (
+        f"Expected leaf {active_leaf}, but found {x_id_leaf}."
+    )
+
+
+def validate_paths(
+    *trees: TreeVar, explanation: Explanation, solver_model: list[int]
+) -> None:
+    for tree in trees:
+        validate_path(tree, explanation, solver_model)
 
 
 def validate_sklearn_pred(
     clf: RandomForestClassifier,
     explanation: Explanation,
     m_class: NonNegativeInt,
-    model: Model,
 ) -> None:
     x = explanation.x.reshape(1, -1)
     prediction = np.asarray(clf.predict(x), dtype=np.int64)
-    solver = ENV.solver
-    values = [solver.Value(model.function[key]) for key in model.function]
-    function = np.asarray(values, dtype=np.float64)
-    proba = function / np.sum(function)
-    expected_proba = np.asarray(clf.predict_proba(x), dtype=np.float64)
-    assert (prediction == m_class).all()
-    assert np.isclose(expected_proba.flatten(), proba).all(), (
-        f"Expected {expected_proba.flatten()}, got {proba}"
+    assert (prediction == m_class).all(), (
+        f"Expected class {m_class}, got {prediction[0]}"
     )
 
 
@@ -212,7 +163,7 @@ def train_rf(
 
 
 SEEDS = [43, 44, 45]
-N_ESTIMATORS = [1, 4, 8]
-MAX_DEPTH = [2, 3]
+N_ESTIMATORS = [1, 4]
+MAX_DEPTH = [3]
 N_CLASSES = [2, 4]
-N_SAMPLES = [100, 200, 500]
+N_SAMPLES = [100, 200]

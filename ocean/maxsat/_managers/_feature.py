@@ -37,7 +37,7 @@ class FeatureManager:
         return self.mapper
 
     def vget(self, i: int) -> int:
-        raise NotImplementedError
+        return self.mapper.vget(i)
 
     def _set_mapper(self, mapper: Mapper[Feature]) -> None:
         def create(key: Key, feature: Feature) -> FeatureVar:
