@@ -173,7 +173,9 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             if levels[i] > x:
                 intervals_cost[i] = int(abs(x - levels[i]) * self._obj_scale)
             elif levels[i + 1] < x:
-                intervals_cost[i] = int(abs(x - levels[i + 1]) * self._obj_scale)
+                intervals_cost[i] = int(
+                    abs(x - levels[i + 1]) * self._obj_scale
+                )  # Distance to nearest endpoint of the interval
         return intervals_cost.tolist()
 
     @validate_call
