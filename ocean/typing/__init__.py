@@ -124,7 +124,6 @@ __all__ = [
     "NonNegativeArray1D",
     "NonNegativeArray2D",
     "NonNegativeDtype",
-    "NonNegativeDtype",
     "NonNegativeInt",
     "NonNegativeIntArray",
     "NonNegativeIntArray1D",

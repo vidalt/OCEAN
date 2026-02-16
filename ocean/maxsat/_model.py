@@ -5,7 +5,11 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from pydantic import validate_call
-from pysat.pb import PBEnc
+
+try:
+    from pysat.pb import PBEnc
+except ImportError:
+    PBEnc = None
 
 from ..typing import NonNegativeInt
 from ._base import BaseModel
@@ -250,6 +254,19 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         Encode: sum of contributions >= threshold using pseudo-Boolean encoding.
 
         This approach avoids exponential enumeration.
+
+        Parameters
+        ----------
+        tree_contributions : list[list[tuple[int, int]]]
+            List of contributions for each tree.
+        threshold : int
+            Threshold for the sum of contributions.
+
+        Raises
+        ------
+        ImportError
+            If pysat.pb is not installed.
+
         """
         lits: list[int] = []
         weights: list[int] = []
@@ -280,6 +297,11 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             return
 
         # Encode sum(weights_i * lits_i) >= effective_bound
+        if PBEnc is None:
+            msg = "pysat.pb is required for this operation."
+            msg += " The pysat[pblib] extra dependency is required."
+            msg += " It does not work properly on Windows."
+            raise ImportError(msg)
         pb = PBEnc.atleast(
             lits=lits,
             weights=weights,
