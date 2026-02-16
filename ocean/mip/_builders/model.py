@@ -253,9 +253,7 @@ class MixedIntegerProgramBuilder(ModelBuilder):
             return epsilon
         while 2 * tol / delta >= 1.0:
             tol /= 2
-        feas_tol = model.getParamInfo("FeasibilityTol")[2]
-        if feas_tol != tol:
-            model.setParam("FeasibilityTol", min(feas_tol, tol))
+        model.setParam("FeasibilityTol", max(tol, min_tol))
         return 2 * tol / delta
 
 
