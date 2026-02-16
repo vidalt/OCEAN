@@ -59,7 +59,7 @@ class TestTreeManager:
         assert manager.n_estimators == n_estimators
         assert manager.n_classes == n_classes
         assert manager.weights.shape == (n_estimators,)
-        assert np.all(manager.weights == 1.0)
+        assert np.all(np.isclose(manager.weights, 1.0, rtol=0.0, atol=1e-10))
 
     @staticmethod
     def test_init_custom_weights(

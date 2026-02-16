@@ -79,7 +79,7 @@ def check_leafs(tree: TreeVar, explanation: Explanation) -> None:
     x_id_leaf = find_leaf(tree, explanation)
     assert id_leaf == x_id_leaf, (
         f"Expected leaf {id_leaf}, but found {x_id_leaf}."
-        f" explanation {explanation}",
+        f" explanation {explanation}"
     )
 
 
@@ -130,17 +130,17 @@ def validate_sklearn_paths(
         active_leaf = leaf_id
         for node in tree.leaves:
             v_1 = solver.Value(tree[node.node_id])
-            if v_1 == 1.0:
+            if np.isclose(v_1, 1.0, rtol=0.0, atol=1e-10):
                 active_leaf = node.node_id
                 break
         lf = find_leaf(tree, explanation)
         assert active_leaf == lf, (
             f"Expected leaf {lf} to be active, but found {active_leaf}, "
-            f"in tree {t}",
+            f"in tree {t}"
         )
-        assert v == 1.0, (
+        assert np.isclose(v, 1.0, rtol=0.0, atol=1e-10), (
             f"Expected leaf {leaf_id} to be active, but found {active_leaf}, "
-            f"in tree {t} with value {v}",
+            f"in tree {t} with value {v}"
         )
 
 

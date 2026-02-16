@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import xgboost as xgb
 from pydantic import ValidationError
@@ -75,7 +76,12 @@ def _check_xgb_tree(
             feature_name = str(row["Feature"].values[0]).strip()
             if feature.is_numeric:
                 assert feature_name == node.feature
-                assert node.threshold == float(row["Split"].values[0] - 1e-8)
+                assert np.isclose(
+                    node.threshold,
+                    float(row["Split"].values[0] - 1e-8),
+                    rtol=0.0,
+                    atol=1e-8,
+                )
             if feature.is_one_hot_encoded:
                 assert feature_name == f"{node.feature} {node.code}"
                 assert node.code in feature.codes

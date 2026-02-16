@@ -29,14 +29,14 @@ def test_binary(seed: int) -> None:
     model.Minimize(objective)
     solver.Solve(model)
     value = solver.Value(v)
-    assert value == 0.0
+    assert np.isclose(value, 0.0, rtol=0.0, atol=1e-10)
 
     val = generator.choice(range(5, 10))
     objective = val - v
     model.Minimize(objective)
     solver.Solve(model)
     value = solver.Value(v)
-    assert value == 1.0
+    assert np.isclose(value, 1.0, rtol=0.0, atol=1e-10)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -157,9 +157,17 @@ def test_one_hot_encoded(seed: int, n_codes: int) -> None:
     solver.Solve(model)
     value = solver.Value(v)
     assert np.isclose(value, 0)
-    assert (
-        sum(1 for code in var.codes if solver.Value(var.xget(code)) == 1.0)
-        == 1.0
+    assert np.isclose(
+        sum(
+            1
+            for code in var.codes
+            if np.isclose(
+                solver.Value(var.xget(code)), 1.0, rtol=0.0, atol=1e-10
+            )
+        ),
+        1.0,
+        rtol=0.0,
+        atol=1e-10,
     )
 
     model = BaseModel()
@@ -169,8 +177,16 @@ def test_one_hot_encoded(seed: int, n_codes: int) -> None:
     model.Minimize(objective)
     solver.Solve(model)
     value = solver.Value(v)
-    assert np.isclose(value, 1.0)
-    assert (
-        sum(1 for code in var.codes if solver.Value(var.xget(code)) == 1.0)
-        == 1.0
+    assert np.isclose(value, 1.0, rtol=0.0, atol=1e-10)
+    assert np.isclose(
+        sum(
+            1
+            for code in var.codes
+            if np.isclose(
+                solver.Value(var.xget(code)), 1.0, rtol=0.0, atol=1e-10
+            )
+        ),
+        1.0,
+        rtol=0.0,
+        atol=1e-10,
     )

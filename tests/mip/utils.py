@@ -61,8 +61,12 @@ def check_node(tree: TreeVar, node: Node, explanation: Explanation) -> None:
     left = node.left
     right = node.right
     x = explanation.x
-    next_node = left if tree[left.node_id].X == 1.0 else right
-    assert tree[next_node.node_id].X == 1.0
+    next_node = (
+        left
+        if np.isclose(tree[left.node_id].X, 1.0, rtol=0.0, atol=1e-10)
+        else right
+    )
+    assert np.isclose(tree[next_node.node_id].X, 1.0, rtol=0.0, atol=1e-10)
 
     name = node.feature
     if explanation[name].is_one_hot_encoded:
@@ -76,13 +80,13 @@ def check_node(tree: TreeVar, node: Node, explanation: Explanation) -> None:
     if explanation[name].is_numeric:
         threshold = node.threshold
         if value <= threshold:
-            assert tree[left.node_id].X == 1.0
+            assert np.isclose(tree[left.node_id].X, 1.0, rtol=0.0, atol=1e-10)
         else:
-            assert tree[right.node_id].X == 1.0
-    elif np.isclose(value, 0.0):
-        assert tree[left.node_id].X == 1.0
+            assert np.isclose(tree[right.node_id].X, 1.0, rtol=0.0, atol=1e-10)
+    elif np.isclose(value, 0.0, rtol=0.0, atol=1e-10):
+        assert np.isclose(tree[left.node_id].X, 1.0, rtol=0.0, atol=1e-10)
     else:
-        assert tree[right.node_id].X == 1.0
+        assert np.isclose(tree[right.node_id].X, 1.0, rtol=0.0, atol=1e-10)
 
     check_node(tree, next_node, explanation=explanation)
 
@@ -110,7 +114,13 @@ def validate_sklearn_paths(
         # Get the leaf node from the tree
         node = tree.root
         while not node.is_leaf:
-            node = node.left if tree[node.left.node_id].X == 1.0 else node.right
+            node = (
+                node.left
+                if np.isclose(
+                    tree[node.left.node_id].X, 1.0, rtol=0.0, atol=1e-10
+                )
+                else node.right
+            )
             is_path_valid: bool = bool(ind[0, ptr[t] + node.node_id])
             assert is_path_valid
 

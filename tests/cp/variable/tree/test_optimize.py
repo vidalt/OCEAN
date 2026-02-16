@@ -32,7 +32,7 @@ def test_optimize(seed: int) -> None:
         assert solver.ObjectiveValue() == obj_expected
         assert v1 == leaf1_expected
         assert v2 == leaf2_expected
-        assert v1 + v2 == 1.0
+        assert np.isclose(v1 + v2, 1.0, rtol=0.0, atol=1e-10)
 
     model = BaseModel()
     treevar.build(model)

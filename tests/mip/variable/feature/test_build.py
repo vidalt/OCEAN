@@ -71,8 +71,8 @@ def test_continuous(seed: int, n_levels: int, lower: int, upper: int) -> None:
         mu = var.mget(i)
         assert isinstance(mu, gp.Var)
         assert mu.VType == gp.GRB.CONTINUOUS
-        assert mu.LB == 0.0
-        assert mu.UB == 1.0
+        assert np.isclose(mu.LB, 0.0, rtol=0.0, atol=1e-10)
+        assert np.isclose(mu.UB, 1.0, rtol=0.0, atol=1e-10)
 
     msg = r"Get by code is only supported for one-hot encoded features"
     with pytest.raises(ValueError, match=msg):
