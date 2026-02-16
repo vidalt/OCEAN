@@ -8,7 +8,7 @@ from pydantic import validate_call
 
 try:
     from pysat.pb import PBEnc
-except ImportError:
+except AssertionError:
     PBEnc = None
 
 from ..typing import NonNegativeInt
@@ -173,9 +173,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             if levels[i] > x:
                 intervals_cost[i] = int(abs(x - levels[i]) * self._obj_scale)
             elif levels[i + 1] < x:
-                intervals_cost[i] = int(
-                    abs(x - levels[i + 1]) * self._obj_scale
-                )
+                intervals_cost[i] = int(abs(x - levels[i + 1]) * self._obj_scale)
         return intervals_cost.tolist()
 
     @validate_call
