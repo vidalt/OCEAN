@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pytest
 
@@ -14,6 +16,10 @@ from ..utils import (
     validate_paths,
     validate_sklearn_pred,
     validate_solution,
+)
+
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32", reason="tests for non-windows platforms"
 )
 
 
@@ -56,7 +62,9 @@ class TestNoIsolation:
 
         validate_solution(explanation)
         validate_paths(
-            *model.trees, explanation=explanation, solver_model=solver_model
+            *model.trees,
+            explanation=explanation,
+            solver_model=solver_model,
         )
         validate_sklearn_pred(clf, explanation, m_class=target_class)
 

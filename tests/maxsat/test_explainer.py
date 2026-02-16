@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pytest
 from sklearn.ensemble import RandomForestClassifier
@@ -5,6 +7,10 @@ from sklearn.ensemble import RandomForestClassifier
 from ocean import MaxSATExplainer
 
 from .utils import generate_data
+
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32", reason="tests for non-windows platforms"
+)
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])

@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pytest
 
@@ -18,6 +20,10 @@ from ..utils import (
 )
 
 P_QUERIES = 0.2
+
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32", reason="tests for non-windows platforms"
+)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -47,7 +53,9 @@ class TestNoIsolation:
         n_queries = int(data.shape[0] * P_QUERIES)
         generator = np.random.default_rng(seed)
         queries = generator.choice(
-            range(len(data)), size=n_queries, replace=False
+            range(len(data)),
+            size=n_queries,
+            replace=False,
         )
 
         for query in queries:

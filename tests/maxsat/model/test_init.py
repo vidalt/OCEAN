@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pytest
 
@@ -12,6 +14,10 @@ from ..utils import (
     N_SAMPLES,
     SEEDS,
     train_rf,
+)
+
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32", reason="tests for non-windows platforms"
 )
 
 
