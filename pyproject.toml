@@ -33,7 +33,7 @@ dependencies = [
     "anytree",
     "gurobipy",
     "numpy",
-    "ortools>=9.12",
+    "ortools==9.14.6206",
     "pandas",
     "pydantic",
     "scikit-learn",
