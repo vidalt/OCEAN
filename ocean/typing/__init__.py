@@ -1,3 +1,5 @@
+"""Shared type aliases and protocols used throughout OCEAN."""
+
 from collections.abc import Mapping
 from typing import Annotated, Protocol
 
@@ -72,6 +74,8 @@ NodeIdArray1D = np.ndarray[tuple[int], NodeIdDtype]
 # Scikit-learn Tree alias:
 # This class is only used for type hinting purposes.
 class SKLearnTree(Protocol):
+    """Protocol capturing the subset of the sklearn tree API OCEAN uses."""
+
     node_count: PositiveInt
     max_depth: NonNegativeInt
     feature: NonNegativeIntArray1D
@@ -86,6 +90,8 @@ type XGBTree = pd.DataFrame
 
 
 class BaseExplanation(Protocol):
+    """Protocol implemented by explanation containers returned by explainers."""
+
     @property
     def x(self) -> Array1D: ...
     @property
@@ -95,12 +101,20 @@ class BaseExplanation(Protocol):
 
 
 class BaseExplainer(Protocol):
+    """Protocol implemented by all public OCEAN explainers."""
+
     def explain(
         self,
         x: Array1D,
         *,
         y: NonNegativeInt,
         norm: PositiveInt,
+        return_callback: bool = False,
+        verbose: bool = False,
+        max_time: int = 60,
+        num_workers: int | None = None,
+        random_seed: int = 42,
+        clean_up: bool = True,
     ) -> BaseExplanation | None: ...
 
     def cleanup(self) -> None: ...

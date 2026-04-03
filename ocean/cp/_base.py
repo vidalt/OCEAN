@@ -5,6 +5,8 @@ from ortools.sat.python import cp_model as cp
 
 
 class BaseModel(ABC, cp.CpModel):
+    """Base OR-Tools model used by the constraint programming backend."""
+
     def __init__(self) -> None:
         cp.CpModel.__init__(self)
 

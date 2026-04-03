@@ -54,6 +54,10 @@ max-args = 15
 max-public-methods = 30
 
 [lint.per-file-ignores]
+"docs/conf.py" = [
+    "E402", # Import follows sys.path setup required by Sphinx config
+    "INP001", # Docs folder is not a Python package
+]
 "tests/**/*.py" = [
     "INP001", # No implicit namespace package
     "PLR0913", # Too many arguments.

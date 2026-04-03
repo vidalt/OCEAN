@@ -13,6 +13,14 @@ from .._variables import TreeVar
 
 
 class TreeManager:
+    r"""
+    Manage MaxSAT tree variables and the support encoding of :math:`f`.
+
+    Each :class:`TreeVar` encodes the active leaf decisions :math:`p_{t,\ell}`
+    of one tree. The stored function representation is a Boolean support view
+    of :math:`f(x)` used by the MaxSAT encoding.
+    """
+
     TREE_VAR_FMT: str = "tree[{t}]"
 
     # Tree variables in the ensemble.
@@ -27,10 +35,12 @@ class TreeManager:
         *,
         weights: NonNegativeArray1D | None = None,
     ) -> None:
+        """Initialize the tree manager and validate the estimator weights."""
         self._set_trees(trees=trees)
         self._set_weights(weights=weights)
 
     def build_trees(self, model: BaseModel) -> None:
+        r"""Create the MaxSAT tree variables and cache :math:`f(x)` support."""
         model.build_vars(*self.trees)
         self._function = self._get_function()
 
@@ -66,6 +76,15 @@ class TreeManager:
         self,
         trees: Iterable[Tree],
     ) -> None:
+        """
+        Wrap parsed trees in MaxSAT-specific :class:`TreeVar` objects.
+
+        Raises
+        ------
+        ValueError
+            If no tree is provided.
+
+        """
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
             name = self.TREE_VAR_FMT.format(t=t)
@@ -79,6 +98,15 @@ class TreeManager:
         self._trees = tree_vars[0], *tree_vars[1:]
 
     def _set_weights(self, weights: NonNegativeArray1D | None = None) -> None:
+        """
+        Validate and store the ensemble weights.
+
+        Raises
+        ------
+        ValueError
+            If the number of weights does not match the number of estimators.
+
+        """
         if weights is None:
             weights = np.ones(self.n_estimators, dtype=np.float64)
 
@@ -91,6 +119,18 @@ class TreeManager:
     def weighted_function(
         self,
     ) -> dict[tuple[NonNegativeInt, NonNegativeInt], list[int]]:
+        r"""
+        Return the Boolean support representation used for :math:`f(x)`.
+
+        Each entry ``(op, c)`` stores the leaf literals whose active leaf
+        supports class :math:`c` for output ``op``.
+
+        Returns
+        -------
+        dict[tuple[NonNegativeInt, NonNegativeInt], list[int]]
+            Boolean support literals grouped by output and class.
+
+        """
         func: dict[tuple[NonNegativeInt, NonNegativeInt], list[int]] = {}
         n_classes = self.n_classes
         n_outputs = self.shape[-2]
@@ -108,6 +148,15 @@ class TreeManager:
     def _get_function(
         self,
     ) -> dict[tuple[NonNegativeInt, NonNegativeInt], list[int]]:
+        """
+        Return the cached MaxSAT support representation.
+
+        Returns
+        -------
+        dict[tuple[NonNegativeInt, NonNegativeInt], list[int]]
+            Cached Boolean support representation.
+
+        """
         return self.weighted_function()
 
     @property

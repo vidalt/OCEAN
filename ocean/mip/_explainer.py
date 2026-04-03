@@ -20,6 +20,8 @@ from ._variables import TreeVar
 
 
 class Explainer(Model, BaseExplainer):
+    """Mixed-integer programming explainer for tree ensemble classifiers."""
+
     def __init__(
         self,
         ensemble: BaseExplainableEnsemble,
@@ -31,8 +33,8 @@ class Explainer(Model, BaseExplainer):
         env: gp.Env | None = None,
         epsilon: float = Model.DEFAULT_EPSILON,
         num_epsilon: float = Model.DEFAULT_NUM_EPSILON,
-        model_type: Model.Type = Model.Type.MIP,
-        flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
+        model_type: "Model.Type" = Model.Type.MIP,
+        flow_type: "TreeVar.FlowType" = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
         ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
         n_isolators, max_samples = self._get_isolation_params(isolation)
@@ -93,6 +95,7 @@ class Explainer(Model, BaseExplainer):
         max_time: int = 60,
         num_workers: int | None = None,
         random_seed: int = 42,
+        clean_up: bool = True,
     ) -> Explanation | None:
         self.setParam("LogToConsole", int(verbose))
         self.setParam("TimeLimit", max_time)
@@ -140,6 +143,9 @@ class Explainer(Model, BaseExplainer):
                 msg += " valid CF for an un-handled reason."
                 msg += "Unexpected solver status: " + status
                 raise RuntimeError(msg)
+        self.explanation.query = x
+        if clean_up:
+            self.cleanup()
         return self.explanation
 
     @staticmethod
@@ -152,6 +158,8 @@ class Explainer(Model, BaseExplainer):
 
 
 class SolutionCallback:
+    """Collect incumbent solutions reported by Gurobi during optimization."""
+
     def __init__(self, starttime: float) -> None:
         self.starttime = starttime
         self.sollist: list[dict[str, float]] = []

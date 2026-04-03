@@ -90,6 +90,15 @@ def parse_tree(
     mapper: Mapper[Feature],
     is_adaboost: bool = False,
 ) -> Tree:
+    """
+    Convert a fitted scikit-learn tree into an OCEAN tree.
+
+    Returns
+    -------
+    Tree
+        Parsed tree structure used by the optimization backends.
+
+    """
     getter = operator.attrgetter("tree_")
     return _parse_tree(getter(tree), mapper=mapper, is_adaboost=is_adaboost)
 
@@ -100,6 +109,15 @@ def parse_trees(
     mapper: Mapper[Feature],
     is_adaboost: bool = False,
 ) -> tuple[Tree, ...]:
+    """
+    Parse an iterable of fitted scikit-learn trees.
+
+    Returns
+    -------
+    tuple[Tree, ...]
+        Parsed tree structures in the same order as the input iterable.
+
+    """
     parser = partial(parse_tree, mapper=mapper, is_adaboost=is_adaboost)
     return tuple(map(parser, trees))
 
@@ -109,6 +127,15 @@ def parse_ensemble(
     *,
     mapper: Mapper[Feature],
 ) -> tuple[Tree, ...]:
+    """
+    Parse a supported tree ensemble model into OCEAN trees.
+
+    Returns
+    -------
+    tuple[Tree, ...]
+        Parsed tree structures extracted from the fitted ensemble.
+
+    """
     if isinstance(ensemble, xgb.Booster):
         return parse_xgb_ensemble(ensemble, mapper=mapper)
     if isinstance(ensemble, xgb.XGBClassifier):
@@ -122,5 +149,14 @@ def parse_ensembles(
     *ensembles: ParsableEnsemble,
     mapper: Mapper[Feature],
 ) -> tuple[Tree, ...]:
+    """
+    Flatten and parse one or more supported tree ensembles.
+
+    Returns
+    -------
+    tuple[Tree, ...]
+        Parsed trees from every provided ensemble, flattened into one tuple.
+
+    """
     parser = partial(parse_ensemble, mapper=mapper)
     return tuple(chain.from_iterable(map(parser, ensembles)))

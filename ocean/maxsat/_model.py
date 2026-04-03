@@ -7,8 +7,9 @@ import numpy as np
 from pydantic import validate_call
 
 try:
-    from pysat.pb import PBEnc
+    from pysat.pb import EncType, PBEnc
 except AssertionError:
+    EncType = None
     PBEnc = None
 
 from ..typing import NonNegativeInt
@@ -27,6 +28,13 @@ if TYPE_CHECKING:
 
 
 class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
+    """
+    Weighted MaxSAT formulation for tree ensemble explanations.
+
+    The Boolean feature variables encode the counterfactual point ``x`` and
+    the Boolean tree variables encode the active leaf decisions ``p_(t,l)``.
+    """
+
     # Model builder for the ensemble.
     _builder: ModelBuilder
     DEFAULT_EPSILON: int = 1
@@ -43,8 +51,29 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         weights: NonNegativeArray1D | None = None,
         max_samples: NonNegativeInt = 0,
         epsilon: int = DEFAULT_EPSILON,
-        model_type: Type = Type.MAXSAT,
+        model_type: Model.Type = Type.MAXSAT,
     ) -> None:
+        """
+        Initialize an empty weighted MaxSAT model for a parsed ensemble.
+
+        Parameters
+        ----------
+        trees
+            Parsed trees whose leaf activations define the ensemble class
+            scores.
+        mapper
+            Feature mapper aligning processed query coordinates with the
+            Boolean feature encoding.
+        weights
+            Optional tree weights.
+        max_samples
+            Reserved parameter used by compatible higher-level explainers.
+        epsilon
+            Integer tie-breaking margin used in the score constraints.
+        model_type
+            Backend builder variant.
+
+        """
         BaseModel.__init__(self)
         TreeManager.__init__(
             self,
@@ -60,6 +89,13 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         self._set_builder(model_type=model_type)
 
     def build(self) -> None:
+        r"""
+        Create the Boolean encoding of features, leaves, and path consistency.
+
+        After ``build()``, the model contains the Boolean variables encoding
+        the counterfactual point :math:`x`, the active leaves
+        :math:`p_{t,\ell}`, and the hard clauses linking both.
+        """
         self.build_features(self)
         self.build_trees(self)
         self._builder.build(self, trees=self.trees, mapper=self.mapper)
@@ -70,6 +106,26 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         *,
         norm: int = 1,
     ) -> None:
+        r"""
+        Encode the :math:`L_1` distance :math:`d_1(x, \hat{x})` as soft clauses.
+
+        Parameters
+        ----------
+        x
+            Query point :math:`\hat{x}` in the processed feature space. The
+            code parameter is named ``x``, but mathematically it represents the
+            query.
+        norm
+            Distance norm. The MaxSAT backend currently supports only
+            :math:`L_1`.
+
+        Raises
+        ------
+        ValueError
+            If ``x`` does not have the expected size or ``norm`` is
+            unsupported.
+
+        """
         if x.size != self.mapper.n_columns:
             msg = f"Expected {self.mapper.n_columns} values, got {x.size}"
             raise ValueError(msg)
@@ -102,7 +158,13 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
                 k += 1
 
     def _add_soft_l1_binary(self, x_val: float, v: FeatureVar) -> None:
-        """Add soft clause for binary feature."""
+        r"""
+        Add the soft clause corresponding to a binary coordinate of :math:`x`.
+
+        The clause penalizes a deviation from the query coordinate
+        :math:`\hat{x}_j` with weight proportional to
+        :math:`|x_j - \hat{x}_j|`.
+        """
         weight = int(self._obj_scale)
         x_var = v.xget()
         binary_threshold = 0.5
@@ -119,7 +181,12 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         v: FeatureVar,
         code: Key,
     ) -> None:
-        """Add soft clause for one-hot encoded feature."""
+        """
+        Add the soft clause for one coordinate of a one-hot block.
+
+        The weight is halved so that changing category in an unordered nominal
+        feature contributes one unit of :math:`L_1` distance instead of two.
+        """
         weight = int(self._obj_scale / 2)  # OHE uses half weight
         x_var = v.xget(code=code)
         binary_threshold = 0.5
@@ -129,7 +196,13 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             self.add_soft([-x_var], weight=weight)
 
     def _add_soft_l1_continuous(self, x_val: float, v: FeatureVar) -> None:
-        """Add soft clauses for continuous feature intervals."""
+        r"""
+        Add soft clauses for an interval-encoded continuous coordinate.
+
+        Each Boolean interval selector receives a weight equal to the scaled
+        distance between the query coordinate :math:`\hat{x}_j` and that
+        interval.
+        """
         levels = v.levels
         intervals_cost = self._get_intervals_cost(levels, x_val)
 
@@ -140,11 +213,12 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
                 self.add_soft([-mu_var], weight=cost)
 
     def _add_soft_l1_discrete(self, x_val: float, v: FeatureVar) -> None:
-        """
-        Add soft clauses for discrete feature.
+        r"""
+        Add soft clauses for an ordinal discrete feature.
 
-        For discrete features, mu[i] means value == levels[i].
-        Penalize each level based on distance from x_val.
+        If ``mu[i]`` denotes :math:`x_j = d_{j,i}`, this method assigns the
+        scaled cost :math:`|d_{j,i} - \hat{x}_j|` to every admissible level
+        different from the query value.
         """
         levels = v.levels
 
@@ -159,11 +233,17 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
                 self.add_soft([-mu_var], weight=cost)
 
     def _get_intervals_cost(self, levels: Array1D, x: float) -> list[int]:
-        """
-        Compute cost for each interval based on distance from x.
+        r"""
+        Compute interval costs relative to :math:`\hat{x}_j`.
 
-        Returns:
-            List of integer costs for each interval based on distance from x.
+        This helper is used for continuous features whose Boolean encoding
+        selects one interval between consecutive threshold levels.
+
+        Returns
+        -------
+        list[int]
+            Scaled costs for the interval selectors attached to that
+            continuous feature.
 
         """
         intervals_cost = np.zeros(len(levels) - 1, dtype=int)
@@ -185,11 +265,20 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         *,
         op: NonNegativeInt = 0,
     ) -> None:
-        """
-        Set hard constraints to enforce majority vote for class y.
+        r"""
+        Enforce the target class through hard score constraints.
 
-        Raises:
-            ValueError: If y is greater than or equal to the number of classes.
+        For every competing class, the backend encodes the pairwise dominance
+        condition
+
+        .. math::
+
+           f_y(x) \ge f_c(x) + \varepsilon_c
+
+        Raises
+        ------
+        ValueError
+            If ``y`` is not a valid class index.
 
         """
         if y >= self.n_classes:
@@ -204,18 +293,18 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         *,
         op: NonNegativeInt = 0,
     ) -> None:
-        """
-        Add hard constraints to enforce class y gets majority vote.
+        r"""
+        Encode the target-class dominance constraints in MaxSAT form.
 
-        For sklearn's RandomForestClassifier, the predicted class is the one
-        with the highest mean probability across all trees (soft voting).
+        The intended inequality is
 
-        We encode this as: for each class c != y,
-            sum(prob_y - prob_c) >= epsilon
-        where epsilon > 0 if c < y (for tie-breaking), else epsilon >= 0.
+        .. math::
 
-        Since MaxSAT doesn't directly support weighted sums, we use a
-        discretized approach with auxiliary variables.
+           f_y(x) - f_c(x) \ge \varepsilon_c,
+           \qquad \forall c \neq y.
+
+        Since MaxSAT works on Boolean clauses, the leaf contributions of each
+        tree are converted into an integer pseudo-Boolean constraint.
         """
         scale = 10000  # Scale factor for probabilities
 
@@ -250,10 +339,21 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         tree_contributions: list[list[tuple[int, int]]],
         threshold: int,
     ) -> None:
-        """
-        Encode: sum of contributions >= threshold using pseudo-Boolean encoding.
+        r"""
+        Encode a hard pseudo-Boolean constraint on tree contributions.
 
-        This approach avoids exponential enumeration.
+        This method encodes
+
+        .. math::
+
+           \sum_i a_i \ell_i \ge \tau,
+
+        where ``threshold`` provides the integer bound :math:`\tau`. This is
+        the MaxSAT realization of the score comparison
+
+        .. math::
+
+           f_y(x) - f_c(x) \ge \varepsilon_c
 
         Parameters
         ----------
@@ -297,7 +397,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             return
 
         # Encode sum(weights_i * lits_i) >= effective_bound
-        if PBEnc is None:
+        if PBEnc is None or EncType is None:
             msg = "pysat.pb is required for this operation."
             msg += " The pysat[pblib] extra dependency is required."
             msg += " It does not work properly on Windows."
@@ -307,6 +407,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             weights=weights,
             bound=effective_bound,
             vpool=self.vpool,
+            encoding=EncType.adder,
         )
 
         for clause in pb.clauses:
@@ -315,10 +416,18 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             )
 
     def cleanup(self) -> None:
+        r"""
+        Remove query-specific soft and hard clauses from the MaxSAT model.
+
+        The structural Boolean encoding of :math:`x` and :math:`p_{t,\ell}`
+        stays in place, while the objective clauses and target-class clauses
+        for the previous query :math:`\hat{x}` are removed.
+        """
         self._clean_soft()
         for idx in sorted(self.garbage_list(), reverse=True):
             self.hard.pop(idx)
         self.remove_garbage()
+        self.invalidate_solver_state()
 
     def _set_builder(self, model_type: Type) -> None:
         match model_type:

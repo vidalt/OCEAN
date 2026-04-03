@@ -11,6 +11,8 @@ from ._variables import FeatureVar
 
 
 class Explanation(Mapper[FeatureVar], BaseExplanation):
+    """Concrete explanation container returned by the CP backend."""
+
     _epsilon: float = float(np.finfo(np.float32).eps)
     _x: Array1D = np.zeros((0,), dtype=int)
 
@@ -40,7 +42,8 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
 
     def to_numpy(self) -> Array1D:
         return (
-            self.to_series()
+            self
+            .to_series()
             .to_frame()
             .T[self.columns]
             .to_numpy()
@@ -125,7 +128,6 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         prefix = f"{self.__class__.__name__}:\n"
         root = self._repr(mapping)
         suffix = ""
-
         return prefix + root + suffix
 
 

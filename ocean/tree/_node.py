@@ -5,6 +5,8 @@ from ._utils import average_length
 
 
 class Node(NodeMixin):
+    """Node in a parsed decision tree."""
+
     _feature: Key | None
     _value: Array | None
     _threshold: float | None

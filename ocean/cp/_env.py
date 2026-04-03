@@ -2,6 +2,8 @@ from ortools.sat.python import cp_model as cp
 
 
 class Env:
+    """Container exposing the shared OR-Tools solver instance."""
+
     _solver: cp.CpSolver
 
     def __init__(self) -> None:

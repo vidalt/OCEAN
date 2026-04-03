@@ -9,6 +9,8 @@ from .._base import BaseModel, Var
 
 
 class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, cp.IntVar]):
+    """CP variables encoding the active root-to-leaf path of one tree."""
+
     PATH_VAR_NAME_FMT: str = "{name}_path"
 
     _path: Mapping[NonNegativeInt, cp.IntVar]

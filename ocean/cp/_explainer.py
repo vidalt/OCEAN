@@ -22,6 +22,8 @@ from ._model import Model
 
 
 class Explainer(Model, BaseExplainer):
+    """Constraint programming explainer for tree ensemble classifiers."""
+
     def __init__(
         self,
         ensemble: BaseExplainableEnsemble,
@@ -29,7 +31,7 @@ class Explainer(Model, BaseExplainer):
         mapper: Mapper[Feature],
         weights: NonNegativeArray1D | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
-        model_type: Model.Type = Model.Type.CP,
+        model_type: "Model.Type" = Model.Type.CP,
     ) -> None:
         ensembles = (ensemble,)
         trees = parse_ensembles(*ensembles, mapper=mapper)
@@ -68,6 +70,7 @@ class Explainer(Model, BaseExplainer):
         max_time: int = 60,
         num_workers: int | None = None,
         random_seed: int = 42,
+        clean_up: bool = True,
     ) -> Explanation | None:
         self.solver.parameters.log_search_progress = verbose
         self.solver.parameters.max_time_in_seconds = max_time
@@ -121,7 +124,8 @@ class Explainer(Model, BaseExplainer):
             self.cleanup()
             return None
         self.explanation.query = x
-        self.cleanup()
+        if clean_up:
+            self.cleanup()
         return self.explanation
 
 

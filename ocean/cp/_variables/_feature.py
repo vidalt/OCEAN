@@ -10,6 +10,8 @@ from .._base import BaseModel, Var
 
 
 class FeatureVar(Var, FeatureKeeper):
+    """CP variable bundle associated with a single parsed feature."""
+
     X_VAR_NAME_FMT: str = "x[{name}]"
 
     _x: cp.IntVar

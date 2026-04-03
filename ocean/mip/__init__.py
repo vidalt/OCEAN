@@ -1,3 +1,5 @@
+"""Mixed-integer programming backend for optimal counterfactual search."""
+
 from ._base import BaseModel
 from ._explainer import Explainer
 from ._explanation import Explanation

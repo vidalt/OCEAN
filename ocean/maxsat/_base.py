@@ -5,11 +5,15 @@ from pysat.formula import WCNF, IDPool
 
 
 class BaseModel(ABC, WCNF):
+    """Base weighted CNF model used by the MaxSAT backend."""
+
     vpool: IDPool
+    _solver_epoch: int
 
     def __init__(self) -> None:
         WCNF.__init__(self)
         self.vpool = IDPool()  # Create new pool for each instance
+        self._solver_epoch = 0
 
     def __setattr__(self, name: str, value: Any) -> None:  # noqa: ANN401
         object.__setattr__(self, name, value)
@@ -60,6 +64,14 @@ class BaseModel(ABC, WCNF):
         self.soft.clear()
         self.wght.clear()
         self.topw = 1
+
+    @property
+    def solver_epoch(self) -> int:
+        return self._solver_epoch
+
+    def invalidate_solver_state(self) -> None:
+        """Mark the formula as having changed non-monotonically."""
+        self._solver_epoch += 1
 
 
 class Var(Protocol):

@@ -1,3 +1,5 @@
+"""Public package entry points for OCEAN."""
+
 from . import abc, cp, datasets, feature, maxsat, mip, tree
 
 MixedIntegerProgramExplainer = mip.Explainer

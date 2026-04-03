@@ -5,6 +5,8 @@ import gurobipy as gp
 
 
 class BaseModel(ABC, gp.Model):
+    """Base Gurobi model used by the MIP backend."""
+
     def __init__(self, name: str = "", env: gp.Env | None = None) -> None:
         gp.Model.__init__(self, name=name, env=env)
 

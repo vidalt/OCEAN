@@ -10,6 +10,8 @@ from ._variables import FeatureVar
 
 
 class Explanation(Mapper[FeatureVar], BaseExplanation):
+    """Concrete explanation container returned by the MaxSAT backend."""
+
     _epsilon: float = float(np.finfo(np.float32).eps)
     _x: Array1D = np.zeros((0,), dtype=int)
 

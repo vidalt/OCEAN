@@ -94,37 +94,39 @@ def parse_features(
     scale: bool = True,
 ) -> Parsed:
     """
-    Preprocesses a DataFrame by validating, cleaning, and parsing features.
+    Parse a tabular dataset into OCEAN's feature representation.
 
     Parameters
     ----------
     data : pd.DataFrame
         The DataFrame to be processed.
     discretes : tuple[Key, ...], optional
-        A tuple of column names that should be treated as discrete features.
+        A tuple of column names that should be treated as ordered discrete
+        (ordinal) features, such as integer-valued counts or ranked buckets.
         default is (). If None, no column is treated as discrete.
     encoded : tuple[Key, ...], optional
         A tuple of column names that should be treated as one-hot encoded
-        features. default is ().
+        features, typically unordered nominal categories. default is ().
     drop_na : bool, optional
         Whether to drop columns with NaN values. default is True.
     drop_constant : bool, optional
         Whether to drop columns with constant values. default is True.
     scale : bool, optional
-        Whether to scale continuous features between [0, 1].
+        Whether to scale continuous features to the centered interval
+        ``[-0.5, 0.5]``.
         default is True.
 
     Returns
     -------
-        Mapper[Feature]
-            A mapper that maps the DataFrame columns to the features.
-        pd.DataFrame
-            The processed DataFrame.
+    Parsed
+        A tuple ``(processed_data, mapper)`` where ``processed_data`` is ready
+        to train a tree ensemble and ``mapper`` keeps the relationship between
+        original feature names and transformed columns.
 
     Raises
     ------
     ValueError
-        If a column in `discretes` is not found in the DataFrame.
+        If a column in ``discretes`` is not found in the input frame.
 
     """
     missing = [col for col in discretes if col not in data.columns]

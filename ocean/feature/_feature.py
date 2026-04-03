@@ -8,7 +8,11 @@ from ..typing import Array1D, Key, Number
 
 
 class Feature:
+    """Description of a single feature after OCEAN preprocessing."""
+
     class Type(Enum):
+        """Supported feature categories."""
+
         CONTINUOUS = "continuous"
         DISCRETE = "discrete"
         ONE_HOT_ENCODED = "one-hot-encoded"

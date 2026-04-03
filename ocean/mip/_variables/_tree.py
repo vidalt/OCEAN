@@ -13,6 +13,8 @@ from .._builders.flow import FlowBuilder, FlowBuilderFactory
 
 
 class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
+    """MIP variables encoding the flow through one parsed tree."""
+
     FLOW_VAR_NAME_FMT: str = "{name}_flow"
 
     _flow: gp.MVar
@@ -21,6 +23,8 @@ class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, gp.Var]):
     _builder: FlowBuilder
 
     class FlowType(Enum):
+        """Available formulations for the tree flow variables."""
+
         CONTINUOUS = "CONTINUOUS"
         BINARY = "BINARY"
 
