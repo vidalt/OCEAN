@@ -135,7 +135,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
 
         x_arr = np.asarray(x, dtype=float).ravel()
         variables = self.mapper.values()
-        names = [n for n, _ in self.mapper.items()]
+        names = list(self.mapper.keys())
         k = 0
         indexer = self.mapper.idx
 

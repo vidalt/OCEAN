@@ -30,9 +30,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             value = values[i]
             if self[name].is_continuous:
                 idx = self._continuous_index(self[name])
-                values[f] = self.format_value(
-                    f, idx, list(self[name].levels)
-                )
+                values[f] = self.format_value(f, idx, list(self[name].levels))
             elif self[name].is_discrete:
                 values[f] = self.format_discrete_value(
                     f, value, self[name].thresholds
@@ -105,11 +103,11 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                     if np.isclose(v.xget(code).X, 1.0):
                         return code
             if v.is_continuous:
-                f = [val for _, val in self.items()].index(v)
+                f = list(self.values()).index(v)
                 idx = self._continuous_index(v)
                 return self.format_value(f, idx, list(v.levels))
             if v.is_discrete:
-                f = [val for _, val in self.items()].index(v)
+                f = list(self.values()).index(v)
                 val = v.xget().X
                 return self.format_discrete_value(f, val, v.thresholds)
             x = v.xget().X

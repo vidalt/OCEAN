@@ -65,7 +65,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                     if np.isclose(solver.Value(v.xget(code)), 1.0):
                         return code
             if v.is_numeric:
-                f = [val for _, val in self.items()].index(v)
+                f = list(self.values()).index(v)
                 if v.is_discrete:
                     val = int(solver.Value(v.xget()))
                     return self.format_discrete_value(f, val, v.thresholds)

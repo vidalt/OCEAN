@@ -223,7 +223,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         x_arr = np.asarray(x, dtype=float).ravel()
 
         variables = self.mapper.values()
-        names = [n for n, _ in self.mapper.items()]
+        names = list(self.mapper.keys())
         objective: cp.LinearExpr = 0  # type: ignore[assignment]
         k = 0
         indexer = self.mapper.idx
