@@ -52,7 +52,7 @@ Backend summary
      - Requires Gurobi. Also supports adding isolation-forest constraints.
    * - CP
      - ``ocean.ConstraintProgrammingExplainer``
-     - ``1``
+     - Integer ``p >= 1`` with default ``1``
      - Uses OR-Tools CP-SAT and is the easiest exact backend to run locally.
    * - MaxSAT
      - ``ocean.MaxSATExplainer``
@@ -71,7 +71,8 @@ Common workflow
    feature space.
 5. Call ``explainer.explain(x, y=target_class, norm=...)``.
 6. Inspect the result through ``explanation.x``, ``explanation.to_series()``,
-   or the more human-readable ``explanation.value`` mapping.
+   the more human-readable ``explanation.value`` mapping, or
+   ``explainer.get_distance()`` for the post-processed query-to-CF distance.
 
 What the explanation object gives back
 --------------------------------------

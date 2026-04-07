@@ -31,8 +31,9 @@ Every explainer exposes an ``explain`` method with the same core arguments.
    Target class to enforce in the counterfactual.
 
 ``norm``
-   Distance norm. The MIP backend supports ``1`` and ``2``. The CP and MaxSAT
-   backends currently support ``1``.
+   Distance norm. The MIP backend supports ``1`` and ``2``. The CP backend
+   supports integer norms with ``1`` as the default. The MaxSAT backend
+   supports ``1``.
 
 ``max_time``
    Solver time limit in seconds.
@@ -58,7 +59,7 @@ Backend-specific behavior
      - MaxSAT
    * - Norm support
      - ``L1`` and ``L2``
-     - ``L1`` only
+     - Integer ``Lp`` norms, default ``L1``
      - ``L1`` only
    * - Anytime callback
      - Yes
@@ -92,6 +93,9 @@ useful.
 - ``explanation.x`` gives the processed numerical vector.
 - ``explanation.to_series()`` keeps the processed column names.
 - ``explanation.value`` decodes one-hot groups into original category labels.
+- ``explainer.get_distance()`` returns the post-processed distance between the
+  query and the decoded counterfactual using the norm from the last
+  ``explain(...)`` call.
 - ``repr(explanation)`` is usually the best display form for notebooks and
   logs.
 

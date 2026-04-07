@@ -179,6 +179,11 @@ The MIP backend also supports an :math:`L_2` variant:
    \sum_{j \in \mathcal{E}} \sum_{k \in K_j}
    (u_{j,k} - \hat{x}_{j,k})^2.
 
+More generally, for any integer :math:`p \ge 1`, minimizing
+:math:`d_p(x, \hat{x})` is equivalent to minimizing :math:`d_p(x, \hat{x})^p`
+because the map :math:`t \mapsto t^p` is strictly increasing on
+:math:`\mathbb{R}_{\ge 0}`.
+
 Backend realizations
 --------------------
 
@@ -190,9 +195,9 @@ MIP
    :math:`L_1` or :math:`L_2` with linear or quadratic expressions.
 
 CP
-   Uses finite-domain integer variables and a scaled integer :math:`L_1`
-   objective. Continuous features are modeled through interval indices derived
-   from tree thresholds.
+   Uses finite-domain integer variables and a scaled integer
+   :math:`L_p^p` objective for integer ``norm`` values. Continuous features
+   are modeled through interval indices derived from tree thresholds.
 
 MaxSAT
    Encodes the :math:`L_1` objective as weighted soft clauses and the target
@@ -203,9 +208,9 @@ Reading the implementation
 
 If you want to map these equations back to code, the main entry points are:
 
-- :mod:`ocean.mip._model`
-- :mod:`ocean.cp._model`
-- :mod:`ocean.maxsat._model`
+- ``ocean.mip._model``
+- ``ocean.cp._model``
+- ``ocean.maxsat._model``
 
 Those modules differ in how they encode the variables and constraints, but they
 all implement the same optimization pattern described above.

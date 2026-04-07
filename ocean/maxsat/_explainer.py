@@ -60,6 +60,49 @@ class Explainer(Model, BaseExplainer):
     def get_objective_value(self) -> float:
         return self.solver.cost / self._obj_scale
 
+    def get_distance(self) -> float:
+        """
+        Return the post-processed distance of the last CF.
+
+        Returns
+        -------
+        float
+            Post-processed :math:`L_p` distance for the last successful solve.
+
+        Raises
+        ------
+        RuntimeError
+            If no explanation has been computed yet.
+
+        """
+        query = self.explanation.query
+        if query.size == 0:
+            msg = "No explanation has been computed yet."
+            raise RuntimeError(msg)
+
+        norm = getattr(self, "_distance_norm", None)
+        if norm is None:
+            msg = "No explanation has been computed yet."
+            raise RuntimeError(msg)
+
+        counterfactual = self.explanation.x
+        distance = 0.0
+        for name, feature in self.mapper.items():
+            if feature.is_one_hot_encoded:
+                feature_distance = 0.0
+                for code in feature.codes:
+                    idx = self.mapper.idx.get(name, code)
+                    delta = float(counterfactual[idx]) - float(query[idx])
+                    feature_distance += abs(delta) ** norm
+                distance += feature_distance / 2.0
+            else:
+                idx = self.mapper.idx.get(name)
+                delta = float(counterfactual[idx]) - float(query[idx])
+                distance += abs(delta) ** norm
+        if norm != 1:
+            distance **= 1.0 / norm
+        return float(distance)
+
     def get_solving_status(self) -> str:
         return self.Status
 
@@ -117,6 +160,7 @@ class Explainer(Model, BaseExplainer):
             signal.alarm(0)
         # Store the query in the explanation
         self.explanation.query = x
+        self._distance_norm = norm
 
         # Clean up for next solve
         if clean_up:

@@ -72,7 +72,7 @@ class TestNoIsolation:
             f"Solver satus {status}, status name {solver.StatusName()}"
         )
 
-        explanation = model.explanation  # type: ignore[unreachable]
+        explanation = model.explanation
 
         validate_solution(explanation)
         validate_paths(*model.trees, explanation=explanation)
@@ -109,7 +109,7 @@ class TestNoIsolation:
                 f"{solver.ResponseStats()} for class {class_} with constraint "
             )
 
-            explanation = model.explanation  # type: ignore[unreachable]
+            explanation = model.explanation
 
             validate_solution(explanation)
             validate_paths(*model.trees, explanation=explanation)

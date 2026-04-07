@@ -1,7 +1,7 @@
 """Shared type aliases and protocols used throughout OCEAN."""
 
 from collections.abc import Mapping
-from typing import Annotated, Protocol
+from typing import TYPE_CHECKING, Annotated, Protocol
 
 import numpy as np
 import pandas as pd
@@ -33,8 +33,12 @@ type NodeId = Annotated[np.int64, Field(ge=-1)]
 type Key = int | str
 
 # Index alias:
-type Index1L = pd.Index[Key]
-type Index = pd.Index[int] | pd.Index[str] | pd.MultiIndex
+if TYPE_CHECKING:
+    type Index1L = pd.Index[Key]
+    type Index = pd.Index[int] | pd.Index[str] | pd.MultiIndex
+else:
+    type Index1L = pd.Index
+    type Index = pd.Index | pd.MultiIndex
 
 # Arrays aliases
 

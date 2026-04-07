@@ -22,6 +22,7 @@ Mapper utilities
 .. autoclass:: ocean.abc._mapper.Mapper
    :members: __init__, reduce, apply, __len__, __iter__, __getitem__, _get_args, _validate_args, _add_indexer, _add_getter, _get_with_name, _get_with_code, _repr
    :member-order: bysource
+   :no-index:
 
 MIP managers
 ------------

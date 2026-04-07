@@ -1,6 +1,8 @@
 Datasets
 ========
 
+.. py:module:: ocean.datasets
+
 The :mod:`ocean.datasets` module exposes three convenience loaders backed by
 ``ocean.datasets.Loader``.
 

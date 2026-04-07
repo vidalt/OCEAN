@@ -28,7 +28,7 @@ What it does
    mapper.
 3. Trains a random forest on that processed matrix.
 4. Selects a query that the model predicts as class ``0``.
-5. Uses :class:`ocean.ConstraintProgrammingExplainer` to search for the closest
+5. Uses ``ocean.ConstraintProgrammingExplainer`` to search for the closest
    class-``1`` counterfactual.
 6. Prints both the original raw instance and the decoded explanation.
 

@@ -38,10 +38,13 @@ same counterfactual query with the three public explainers.
    maxsat_cf = maxsat.explain(query, y=target_class, norm=1)
 
    print("MIP objective:", mip.get_objective_value())
+   print("MIP distance:", mip.get_distance())
    print(mip_cf)
    print("CP objective:", cp.get_objective_value())
+   print("CP distance:", cp.get_distance())
    print(cp_cf)
    print("MaxSAT objective:", maxsat.get_objective_value())
+   print("MaxSAT distance:", maxsat.get_distance())
    print(maxsat_cf)
 
 Step-by-step
@@ -58,7 +61,7 @@ Step-by-step
 Common variations
 -----------------
 
-- Use ``norm=2`` only with the MIP backend.
+- Use ``norm=2`` with the MIP backend or the CP backend.
 - Set ``verbose=True`` to expose solver logs while debugging.
 - Set ``max_time`` and ``num_workers`` when you want more control over runtime.
 - Reuse the same fitted model and mapper across multiple explainers to compare

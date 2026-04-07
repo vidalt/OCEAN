@@ -105,7 +105,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         norm: int = 1,
     ) -> None:
         r"""
-        Minimize the scaled integer approximation of :math:`d_1(x, \hat{x})`.
+        Minimize the scaled integer approximation of :math:`d_p(x, \hat{x})`.
 
         Parameters
         ----------
@@ -114,8 +114,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             code parameter is named ``x``, but mathematically it represents the
             query.
         norm
-            Distance norm. The CP backend currently supports only
-            :math:`L_1`.
+            Distance norm. The default is :math:`L_1`.
 
         """
         objective = self._add_objective(x=x, norm=norm)
@@ -195,30 +194,26 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     def _add_objective(self, x: Array1D, norm: int) -> cp.ObjLinearExprT:
         r"""
-        Build the scaled linear expression for :math:`d_1(x, \hat{x})`.
+        Build the scaled linear expression for :math:`d_p(x, \hat{x})^p`.
 
         Continuous coordinates are costed through interval indices, while
         discrete, binary, and one-hot encoded features contribute exact
-        scaled absolute deviations.
+        scaled powered deviations.
 
         Returns
         -------
         cp.ObjLinearExprT
             Linear objective expression approximating
-            :math:`d_1(x, \hat{x})`.
+            :math:`d_p(x, \hat{x})^p`.
 
         Raises
         ------
         ValueError
-            If ``x`` does not have the expected size or ``norm`` is not
-            supported by the CP backend.
+            If ``x`` does not have the expected size.
 
         """
         if x.size != self.mapper.n_columns:
             msg = f"Expected {self.mapper.n_columns} values, got {x.size}"
-            raise ValueError(msg)
-        if norm != 1:
-            msg = f"Unsupported norm: {norm}"
             raise ValueError(msg)
         x_arr = np.asarray(x, dtype=float).ravel()
 
@@ -231,21 +226,27 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             if v.is_one_hot_encoded:
                 for code in v.codes:
                     idx = indexer.get(name, code)
-                    objective += self.L1(x_arr[idx], v, code=code)
+                    objective += self.L1(x_arr[idx], v, code=code, norm=norm)
                     k += 1
             else:
-                objective += self.L1(x_arr[k], v)
+                objective += self.L1(x_arr[k], v, norm=norm)
                 k += 1
         return objective
 
-    def get_intervals_cost(self, levels: Array1D, x: float) -> list[int]:
+    def get_intervals_cost(
+        self,
+        levels: Array1D,
+        x: float,
+        *,
+        norm: int = 1,
+    ) -> list[int]:
         r"""
         Return interval costs for a continuous feature encoded by thresholds.
 
         For a continuous coordinate :math:`x_j`, CP does not optimize directly
         over the real value. Instead it selects an interval between successive
         threshold levels. This helper assigns each interval the scaled
-        :math:`L_1` distance to the query coordinate :math:`\hat{x}_j`.
+        :math:`L_p^p` distance to the query coordinate :math:`\hat{x}_j`.
 
         Returns
         -------
@@ -259,21 +260,45 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             if levels[i] < x <= levels[i + 1]:
                 continue
             if levels[i] > x:
-                intervals_cost[i] = int(abs(x - levels[i]) * self._obj_scale)
+                intervals_cost[i] = int(
+                    abs(x - levels[i]) ** norm * self._obj_scale
+                )
             elif levels[i + 1] < x:
                 intervals_cost[i] = int(
-                    abs(x - levels[i + 1]) * self._obj_scale
+                    abs(x - levels[i + 1]) ** norm * self._obj_scale
                 )
         return intervals_cost.tolist()
+
+    def get_values_cost(
+        self,
+        values: list[int],
+        x: float,
+        *,
+        norm: int = 1,
+    ) -> list[int]:
+        r"""
+        Return scaled :math:`L_p^p` costs for one finite-value domain.
+
+        Returns
+        -------
+        list[int]
+            Scaled powered costs for each admissible value.
+
+        """
+        return [
+            int(abs(x - value) ** norm * self._obj_scale) for value in values
+        ]
 
     def L1(
         self,
         x: np.float64,
         v: FeatureVar,
         code: Key | None = None,
+        *,
+        norm: int = 1,
     ) -> cp.LinearExpr:
         r"""
-        Build the CP contribution of one feature to :math:`d_1(x, \hat{x})`.
+        Build the CP contribution of one feature to :math:`d_p(x, \hat{x})^p`.
 
         Parameters
         ----------
@@ -285,19 +310,21 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         code
             Optional category code :math:`k` when the feature is represented by
             one-hot variables :math:`u_{j,k}`.
+        norm
+            Distance norm :math:`p` used to build :math:`d_p(x, \hat{x})^p`.
 
         Returns
         -------
         cp.LinearExpr
             Scaled linear expression for the contribution of that feature to
-            :math:`d_1(x, \hat{x})`.
+            :math:`d_p(x, \hat{x})^p`.
 
         """
         obj_exprs: list[cp.LinearExpr] = []
         obj_coefs: list[int] = []
         if v.is_numeric:
             if v.is_continuous:
-                intervals_cost = self.get_intervals_cost(v.levels, x)
+                intervals_cost = self.get_intervals_cost(v.levels, x, norm=norm)
                 # tighten domain of objvar based on x itself ----------
                 v.objvarget().Proto().domain[:] = []
                 v.objvarget().Proto().domain.extend(
@@ -321,17 +348,33 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                     ]
                 else:
                     values = np.asarray(v.levels).astype(int).tolist()
-                values.append(int(x))
+                values = sorted({*values, int(x)})
                 v.xget().Proto().domain[:] = []
                 v.xget().Proto().domain.extend(
                     cp.Domain.FromValues(values).FlattenedIntervals()
                 )
                 # -----------------------------------------------------
                 obj_expr = v.objvarget()
-                self.add_garbage(
-                    self.AddAbsEquality(obj_expr, int(x) - v.xget())
-                )
-                obj_coefs.append(self._obj_scale)
+                if norm == 1:
+                    self.add_garbage(
+                        self.AddAbsEquality(obj_expr, int(x) - v.xget())
+                    )
+                    obj_coefs.append(self._obj_scale)
+                else:
+                    values_cost = self.get_values_cost(values, x, norm=norm)
+                    value_idx = self.NewIntVar(0, len(values) - 1, "")
+                    v.objvarget().Proto().domain[:] = []
+                    v.objvarget().Proto().domain.extend(
+                        cp.Domain(
+                            min(values_cost), max(values_cost)
+                        ).FlattenedIntervals()
+                    )
+                    self.add_garbage(
+                        value_idx,
+                        self.AddElement(value_idx, values, v.xget()),
+                        self.AddElement(value_idx, values_cost, obj_expr),
+                    )
+                    obj_coefs.append(1)
             obj_exprs.append(obj_expr)
         elif v.is_one_hot_encoded:
             obj_expr = v.xget(code) if x == 0.0 else 1 - v.xget(code)  # type: ignore[assignment]

@@ -1,6 +1,12 @@
 Top-level Package
 =================
 
+.. automodule:: ocean
+   :members:
+   :undoc-members:
+   :imported-members:
+   :member-order: bysource
+
 The root :mod:`ocean` package re-exports the three main explainer classes used
 by most applications:
 

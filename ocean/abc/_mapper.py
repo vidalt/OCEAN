@@ -282,7 +282,7 @@ class Mapper[V: Value](Mapping[Key, V]):
 
     def _add_indexer(self) -> Indexer[Key, NonNegativeInt]:
         """
-        Build the memoized index dispatcher used by :attr:`idx`.
+        Build the memoized index dispatcher used by ``idx``.
 
         Returns
         -------
