@@ -49,6 +49,10 @@ for the reference site.
    pip install .[docs]
    sphinx-build -W -b html docs docs/_build/html
 
+Use Python 3.12 or newer when building from the source tree, since the
+package uses Python 3.12 type-alias syntax in modules such as
+``ocean.typing``.
+
 Or through tox:
 
 .. code-block:: bash

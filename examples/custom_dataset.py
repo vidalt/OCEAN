@@ -81,7 +81,10 @@ def main() -> None:
     if explanation is None:
         msg = "No counterfactual was found for the synthetic example."
         raise RuntimeError(msg)
-    counterfactual_frame = explanation.to_numpy().reshape(1, -1)
+    counterfactual_frame = pd.DataFrame(
+        [explanation.to_numpy()],
+        columns=data.columns,
+    )
 
     print("Original raw instance:")
     print(raw_query)
@@ -98,7 +101,7 @@ def main() -> None:
     print("Counterfactual vector:")
     print(explanation.to_series())
     print()
-    print("Objective value:", explainer.get_objective_value())
+    print("Distance:", explainer.get_distance())
 
 
 if __name__ == "__main__":

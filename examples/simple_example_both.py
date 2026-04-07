@@ -1,68 +1,125 @@
 import time
 
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier
+
 from ocean import ConstraintProgrammingExplainer, MixedIntegerProgramExplainer
 from ocean.datasets import load_adult
-from xgboost import XGBClassifier
+
 print_paths = True
 plot_anytime_distances = True
-num_workers = 8  # Both CP and MILP solving support multithreading
+num_workers = 8
 random_state = 0
-timeout = 3600  # Maximum running time given to the (CP or MILP) solver
+timeout = 3600
 
-# Load the adult dataset
-(data, target), mapper = load_adult(
-    scale=True
-)  # scale=True to perform normalization
+
+def to_frame(
+    x: np.ndarray[tuple[int], np.dtype[np.float64]],
+    columns: pd.Index | pd.MultiIndex,
+) -> pd.DataFrame:
+    return pd.DataFrame([x], columns=columns)
+
+
+def print_close_threshold_paths(
+    model: RandomForestClassifier | AdaBoostClassifier,
+    cf: np.ndarray[tuple[int], np.dtype[np.float64]] | None,
+    *,
+    columns: pd.Index | pd.MultiIndex,
+    query_pred: int,
+    label: str,
+) -> None:
+    if cf is None:
+        print(f"{label}: No CF found.")
+        return
+
+    cf_frame = to_frame(cf, columns)
+    if int(model.predict(cf_frame)[0]) != query_pred:
+        print(f"{label} Valid CF.")
+        return
+
+    print(f"INVALID {label} CF: decision path of the CF found by {label}")
+    for i, estimator in enumerate(model.estimators_):
+        if int(estimator.predict(cf_frame)[0]) != query_pred:
+            continue
+
+        feature = estimator.tree_.feature
+        threshold = estimator.tree_.threshold
+        node_indicator = estimator.decision_path(cf_frame)
+        leaf_id = estimator.apply(cf_frame)
+        sample_id = 0
+        start = node_indicator.indptr[sample_id]
+        stop = node_indicator.indptr[sample_id + 1]
+        node_index = node_indicator.indices[start:stop]
+
+        print(node_index)
+        print(
+            f"[Tree {i}] Rules used to predict sample {sample_id} "
+            "with features close to a threshold:\n"
+        )
+        for node_id in node_index:
+            if leaf_id[sample_id] == node_id:
+                continue
+
+            threshold_sign = (
+                "<=" if cf[feature[node_id]] <= threshold[node_id] else ">"
+            )
+            if np.abs(cf[feature[node_id]] - threshold[node_id]) < 1e-3:
+                print(
+                    f"decision node {node_id}: "
+                    f"cf[{feature[node_id]}] = {cf[feature[node_id]]} "
+                    f"{threshold_sign} {threshold[node_id]}"
+                )
+
+
+def unpack_anytime(
+    anytime: list[dict[str, float]] | None,
+) -> tuple[list[float], list[float]]:
+    if anytime is None:
+        return [], []
+    objectives = [entry.get("objective_value", 0.0) for entry in anytime]
+    times = [entry.get("time", 0.0) for entry in anytime]
+    return objectives, times
+
+
+(data, target), mapper = load_adult(scale=True)
 X_train, X_test, y_train, y_test = train_test_split(
-    data, target, test_size=0.2, random_state=random_state
+    data,
+    target,
+    test_size=0.2,
+    random_state=random_state,
 )
 
-# Train a RF
-#rf = RandomForestClassifier(n_estimators=5, max_depth=2, random_state=random_state)
-rf = AdaBoostClassifier(estimator=DecisionTreeClassifier(max_depth=1), n_estimators=100, random_state=random_state)
-#rf = XGBClassifier(n_estimators=5, max_depth=2, random_state=random_state)
+rf = AdaBoostClassifier(
+    estimator=DecisionTreeClassifier(max_depth=1),
+    n_estimators=100,
+    random_state=random_state,
+)
 rf.fit(X_train, y_train)
-
-'''
-from sklearn.tree import plot_tree
-import matplotlib.pyplot as plt
-# Plot the first tree of the forest
-plt.figure(figsize=(20, 10))
-plot_tree(rf.estimators_[0], filled=True)
-plt.title("First tree of the Random Forest")
-plt.savefig("./first_tree_rf.png")
-plt.close()
-'''
 
 print("RF train acc= ", rf.score(X_train, y_train))
 print("RF test acc= ", rf.score(X_test, y_test))
 
-if isinstance(rf, RandomForestClassifier) or isinstance(rf, AdaBoostClassifier):
+if isinstance(rf, (RandomForestClassifier, AdaBoostClassifier)):
     print(
         "RF size= ",
-        sum(a_tree.tree_.node_count for a_tree in rf.estimators_),
+        sum(tree.tree_.node_count for tree in rf.estimators_),
         " nodes.",
     )
 
-# Define a CF query using the qid-th element of the test set
-# qid = 1
-# query = X_test.iloc[qid]
-import numpy as np
-
 qid = 10
-query = X_test.iloc[qid]
-query_pred = rf.predict([np.asarray(query)])[0]
-print("Query: ", query, "(class ", query_pred, ")")
+query_frame = X_test.iloc[[qid]]
+query_series = query_frame.iloc[0]
+query = query_series.to_numpy(dtype=float).flatten()
+query_pred = int(rf.predict(query_frame)[0])
+print("Query: ", query_series, "(class ", query_pred, ")")
 
-
-# Use the CP formulation to generate a CF
 cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
-
 start_ = time.time()
-explanation_oceancp = cp_model.explain(
+cp_explanation = cp_model.explain(
     query,
     y=1 - query_pred,
     norm=1,
@@ -70,87 +127,29 @@ explanation_oceancp = cp_model.explain(
     num_workers=num_workers,
     random_seed=random_state,
     max_time=timeout,
-    verbose=False
+    verbose=False,
 )
 cp_time = time.time() - start_
+cp_cf = cp_explanation.to_numpy() if cp_explanation is not None else None
 
-if explanation_oceancp is not None:
-    print(
-        "CP : ",
-        explanation_oceancp,
-        "(class ",
-        rf.predict([explanation_oceancp.to_numpy()])[0],
-        ")",
-    )
-    # print("CP Sollist = ", cp_model.get_anytime_solutions())
+if cp_explanation is not None and cp_cf is not None:
+    cp_pred = int(rf.predict(to_frame(cp_cf, data.columns))[0])
+    print("CP : ", cp_explanation, "(class ", cp_pred, ")")
 else:
     print("CP: No CF found.")
 
-# debug CP -------------------------------------------------------
 if print_paths:
-    cf = explanation_oceancp.to_numpy()
-    if cf is not None:
-        if rf.predict([cf])[0] == query_pred:
-            print("INVALID CP CF : decision path of the CF found by CP")
-            for i, clf in enumerate(rf.estimators_):
-                if clf.predict([cf])[0] == query_pred:
-                    n_nodes = clf.tree_.node_count
-                    children_left = clf.tree_.children_left
-                    children_right = clf.tree_.children_right
-                    feature = clf.tree_.feature
-                    threshold = clf.tree_.threshold
-                    values = clf.tree_.value
+    print_close_threshold_paths(
+        rf,
+        cp_cf,
+        columns=data.columns,
+        query_pred=query_pred,
+        label="CP",
+    )
 
-                    node_indicator = clf.decision_path([cf])
-                    leaf_id = clf.apply([cf])
-                    sample_id = 0
-                    # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
-                    node_index = node_indicator.indices[
-                        node_indicator.indptr[
-                            sample_id
-                        ] : node_indicator.indptr[sample_id + 1]
-                    ]
-                    print(node_index)
-                    print(
-                        "[Tree {i}] Rules used to predict sample {id} with features values close to threshold:\n".format(
-                            i=i, id=sample_id
-                        )
-                    )
-                    for node_id in node_index:
-                        # continue to the next node if it is a leaf node
-                        if leaf_id[sample_id] == node_id:
-                            continue
-
-                        # check if value of the split feature for sample 0 is below threshold
-                        if cf[feature[node_id]] <= threshold[node_id]:
-                            threshold_sign = "<="
-                        else:
-                            threshold_sign = ">"
-                        if (
-                            np.abs(cf[feature[node_id]] - threshold[node_id])
-                            < 1e-3
-                        ):
-                            print(
-                                "decision node {node} : (cf[{feature}] = {value}) "
-                                "{inequality} {threshold})".format(
-                                    node=node_id,
-                                    sample=sample_id,
-                                    feature=feature[node_id],
-                                    value=cf[feature[node_id]],
-                                    inequality=threshold_sign,
-                                    threshold=threshold[node_id],
-                                )
-                            )
-        else:
-            print("CP Valid CF.")
-# debug CP -------------------------------------------------------
-
-
-# Use the MILP formulation to generate a CF
 milp_model = MixedIntegerProgramExplainer(rf, mapper=mapper)
-# print("milp_model._num_epsilon", milp_model._num_epsilon)
 start_ = time.time()
-explanation_ocean = milp_model.explain(
+milp_explanation = milp_model.explain(
     query,
     y=1 - query_pred,
     norm=1,
@@ -160,124 +159,61 @@ explanation_ocean = milp_model.explain(
     max_time=timeout,
 )
 milp_time = time.time() - start_
-cf = explanation_ocean
-# cf[4] += 0.0001
-if explanation_ocean is not None:
-    print(
-        "MILP : ",
-        explanation_ocean,
-        "(class ",
-        rf.predict([explanation_ocean.to_numpy()])[0],
-        ")",
-    )
-    # print("MILP Sollist = ", milp_model.get_anytime_solutions())
+milp_cf = milp_explanation.to_numpy() if milp_explanation is not None else None
+
+if milp_explanation is not None and milp_cf is not None:
+    milp_pred = int(rf.predict(to_frame(milp_cf, data.columns))[0])
+    print("MILP : ", milp_explanation, "(class ", milp_pred, ")")
 else:
     print("MILP: No CF found.")
 
-# debug MILP -------------------------------------------------------
 if print_paths:
-    cf = explanation_ocean.to_numpy()
-    if cf is not None:
-        if rf.predict([cf])[0] == query_pred:
-            print("INVALID MILP CF : decision path of the CF found by MILP")
-            for i, clf in enumerate(rf.estimators_):
-                if clf.predict([cf])[0] == query_pred:
-                    n_nodes = clf.tree_.node_count
-                    children_left = clf.tree_.children_left
-                    children_right = clf.tree_.children_right
-                    feature = clf.tree_.feature
-                    threshold = clf.tree_.threshold
-                    values = clf.tree_.value
+    print_close_threshold_paths(
+        rf,
+        milp_cf,
+        columns=data.columns,
+        query_pred=query_pred,
+        label="MILP",
+    )
 
-                    node_indicator = clf.decision_path([cf])
-                    leaf_id = clf.apply([cf])
-
-                    sample_id = 0
-                    # obtain ids of the nodes `sample_id` goes through, i.e., row `sample_id`
-                    node_index = node_indicator.indices[
-                        node_indicator.indptr[
-                            sample_id
-                        ] : node_indicator.indptr[sample_id + 1]
-                    ]
-
-                    print(
-                        "[Tree {i}] Rules used to predict sample {id} with features values close to threshold:\n".format(
-                            i=i, id=sample_id
-                        )
-                    )
-                    for node_id in node_index:
-                        # continue to the next node if it is a leaf node
-                        if leaf_id[sample_id] == node_id:
-                            continue
-
-                        # check if value of the split feature for sample 0 is below threshold
-                        if cf[feature[node_id]] <= threshold[node_id]:
-                            threshold_sign = "<="
-                        else:
-                            threshold_sign = ">"
-                        if (
-                            np.abs(cf[feature[node_id]] - threshold[node_id])
-                            < 1e-3
-                        ):
-                            print(
-                                "decision node {node} : (cf[{feature}] = {value}) "
-                                "{inequality} {threshold})".format(
-                                    node=node_id,
-                                    sample=sample_id,
-                                    feature=feature[node_id],
-                                    value=cf[feature[node_id]],
-                                    inequality=threshold_sign,
-                                    threshold=threshold[node_id],
-                                )
-                            )
-        else:
-            print("MILP Valid CF.")
-# debug MILP -------------------------------------------------------
-
-
-# Display summary statistics
 print(f"Runtime: CP {cp_time:.3f} s, MILP {milp_time:.3f} s")
 print(
-    f"Distance: CP {cp_model.get_objective_value():.10f},",
-    f" MILP {milp_model.get_objective_value():.10f}",
+    f"Distance: CP {cp_model.get_objective_value():.10f}, "
+    f"MILP {milp_model.get_objective_value():.10f}"
 )
 print(
-    f"Status: CP {cp_model.get_solving_status()},",
-    f" MILP {milp_model.get_solving_status()}",
+    f"Status: CP {cp_model.get_solving_status()}, "
+    f"MILP {milp_model.get_solving_status()}"
 )
 
 if plot_anytime_distances:
-    import matplotlib.pyplot as plt
+    cp_objectives, cp_times = unpack_anytime(cp_model.get_anytime_solutions())
+    milp_objectives, milp_times = unpack_anytime(
+        milp_model.get_anytime_solutions()
+    )
 
-    anytime_solution = {}
-    anytime_solution["cp"] = cp_model.get_anytime_solutions()
-    anytime_solution["mip"] = milp_model.get_anytime_solutions()
-    cpobjectives = []
-    cptimes = []
-    for dic in anytime_solution.get("cp", []):
-        cpobjectives.append(dic.get("objective_value", 0))
-        cptimes.append(dic.get("time", 0))
-    milpobjectives = []
-    milptimes = []
-    for dic in anytime_solution.get("mip", []):
-        milpobjectives.append(dic.get("objective_value", 0))
-        milptimes.append(dic.get("time", 0))
-
-    plt.plot(milptimes, milpobjectives, marker="x", label="MILP", c="b")
-    if milp_model.get_solving_status() == "OPTIMAL":
+    plt.plot(milp_times, milp_objectives, marker="x", label="MILP", c="b")
+    if milp_times and milp_model.get_solving_status() == "OPTIMAL":
         plt.plot(
-            milptimes[-1], milpobjectives[-1], marker="*", c="b", markersize=15
+            milp_times[-1],
+            milp_objectives[-1],
+            marker="*",
+            c="b",
+            markersize=15,
         )
 
-    plt.plot(cptimes, cpobjectives, marker="x", label="CP", c="r")
-    if cp_model.get_solving_status() == "OPTIMAL":
+    plt.plot(cp_times, cp_objectives, marker="x", label="CP", c="r")
+    if cp_times and cp_model.get_solving_status() == "OPTIMAL":
         plt.plot(
-            cptimes[-1], cpobjectives[-1], marker="*", c="r", markersize=15
+            cp_times[-1],
+            cp_objectives[-1],
+            marker="*",
+            c="r",
+            markersize=15,
         )
 
     plt.legend()
     plt.ylabel("CF distance from query")
     plt.xlabel("Running time (second)")
-
     plt.title("Anytime CF distance comparison.")
     plt.savefig("./anytime_distances_cp_vs_milp.pdf")

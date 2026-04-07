@@ -96,6 +96,8 @@ type XGBTree = pd.DataFrame
 class BaseExplanation(Protocol):
     """Protocol implemented by explanation containers returned by explainers."""
 
+    def to_numpy(self) -> Array1D: ...
+    def to_series(self) -> pd.Series: ...
     @property
     def x(self) -> Array1D: ...
     @property
@@ -106,6 +108,11 @@ class BaseExplanation(Protocol):
 
 class BaseExplainer(Protocol):
     """Protocol implemented by all public OCEAN explainers."""
+
+    def get_objective_value(self) -> float: ...
+    def get_distance(self) -> float: ...
+    def get_solving_status(self) -> str: ...
+    def get_anytime_solutions(self) -> list[dict[str, float]] | None: ...
 
     def explain(
         self,
@@ -128,6 +135,9 @@ __all__ = [
     "Array",
     "Array1D",
     "Array2D",
+    "BaseExplainableEnsemble",
+    "BaseExplainer",
+    "BaseExplanation",
     "Dtype",
     "Index",
     "Index1L",
@@ -138,6 +148,8 @@ __all__ = [
     "Key",
     "NodeId",
     "NodeIdArray1D",
+    "NodeIdDtype",
+    "NonNegative",
     "NonNegativeArray",
     "NonNegativeArray1D",
     "NonNegativeArray2D",
@@ -147,9 +159,12 @@ __all__ = [
     "NonNegativeIntArray1D",
     "NonNegativeIntArray2D",
     "NonNegativeIntDtype",
+    "NonNegativeNumber",
     "Number",
     "ParsableEnsemble",
     "PositiveInt",
+    "SKLearnTree",
     "Unit",
     "UnitO",
+    "XGBTree",
 ]

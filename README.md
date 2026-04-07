@@ -15,7 +15,7 @@
 
 **ocean** is a full package dedicated to counterfactual explanations for **tree ensembles**.  
 It builds on the paper *Optimal Counterfactual Explanations in Tree Ensemble* by Axel Parmentier and Thibaut Vidal in the *Proceedings of the thirty-eighth International Conference on Machine Learning*, 2021, in press. The article is [available here](http://proceedings.mlr.press/v139/parmentier21a/parmentier21a.pdf).  
-Beyond the original MIP approach, ocean includes a new **constraint programming (CP)** method and will grow to cover additional formulations and heuristics.
+Beyond the original MIP approach, ocean also includes **constraint programming (CP)** and **weighted MaxSAT** backends for exact counterfactual search on the same parsed tree ensembles.
 
 ## Installation
 
@@ -54,14 +54,15 @@ rf.fit(data, target)
 y = int(rf.predict(x).item())
 x = x.to_numpy().flatten()
 
-# Explain the prediction using MIPEXplainer
+# Explain the prediction using the MIP backend
 mip_model = MixedIntegerProgramExplainer(rf, mapper=mapper)
 mip_explanation = mip_model.explain(x, y=1 - y, norm=1)
 
-# Explain the prediction using CPEExplainer
+# Explain the prediction using the CP backend
 cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
 cp_explanation = cp_model.explain(x, y=1 - y, norm=1)
 
+# Explain the prediction using the MaxSAT backend
 maxsat_model = MaxSATExplainer(rf, mapper=mapper)
 maxsat_explanation = maxsat_model.explain(x, y=1 - y, norm=1)
 

@@ -1,4 +1,4 @@
-# ruff: noqa
+# ruff: noqa: BLE001, C901, N801, PLC0415, PLR6301, PYI034, RUF012
 
 from __future__ import annotations
 
@@ -69,6 +69,9 @@ def _install_gurobi_stub() -> None:
         class Constr(_GenericAliasMixin):
             pass
 
+        class MConstr(_GenericAliasMixin):
+            pass
+
         class LinExpr(_GenericAliasMixin):
             pass
 
@@ -104,6 +107,7 @@ def _install_gurobi_stub() -> None:
         module.Env = Env
         module.Var = Var
         module.Constr = Constr
+        module.MConstr = MConstr
         module.LinExpr = LinExpr
         module.QuadExpr = QuadExpr
         module.MVar = MVar
@@ -252,6 +256,9 @@ def _install_pysat_stub() -> None:
             def atleast(*_args: object, **_kwargs: object) -> _PBResult:
                 return _PBResult()
 
+        class EncType:
+            adder = "adder"
+
         class RC2(_GenericAliasMixin):
             def __init__(self, *_args: object, **_kwargs: object) -> None:
                 self.cost = 0
@@ -271,6 +278,7 @@ def _install_pysat_stub() -> None:
 
         formula.WCNF = WCNF
         formula.IDPool = IDPool
+        pb.EncType = EncType
         pb.PBEnc = PBEnc
         rc2.RC2 = RC2
 
