@@ -1,5 +1,6 @@
 import time
 import warnings
+from typing import cast
 
 import gurobipy as gp
 from sklearn.ensemble import AdaBoostClassifier, IsolationForest
@@ -58,6 +59,15 @@ class Explainer(Model, BaseExplainer):
         self.build()
 
     def get_objective_value(self) -> float:
+        """
+        Return the solver objective value of the last optimization run.
+
+        Returns
+        -------
+        float
+            Objective value reported by Gurobi for the latest solve.
+
+        """
         return self.ObjVal
 
     def get_distance(self) -> float:
@@ -104,6 +114,15 @@ class Explainer(Model, BaseExplainer):
         return float(distance)
 
     def get_solving_status(self) -> str:
+        """
+        Return the latest Gurobi solve status as a readable string.
+
+        Returns
+        -------
+        str
+            Current model status such as ``"OPTIMAL"`` or ``"TIME_LIMIT"``.
+
+        """
         gurobi_statuses = {
             1: "LOADED",
             2: "OPTIMAL",
@@ -125,7 +144,23 @@ class Explainer(Model, BaseExplainer):
         return gurobi_statuses[self.Status]
 
     def get_anytime_solutions(self) -> list[dict[str, float]] | None:
-        return self.callback.sollist
+        """
+        Return incumbent solutions collected during the last solve.
+
+        Returns
+        -------
+        list[dict[str, float]] | None
+            Time-stamped incumbent objective values when ``return_callback``
+            was enabled in :meth:`explain`, otherwise ``None``.
+
+        """
+        callback = cast(
+            "SolutionCallback | None",
+            getattr(self, "callback", None),
+        )
+        if callback is None:
+            return None
+        return callback.sollist
 
     def explain(
         self,
@@ -140,6 +175,43 @@ class Explainer(Model, BaseExplainer):
         random_seed: int = 42,
         clean_up: bool = True,
     ) -> Explanation | None:
+        """
+        Solve one counterfactual query with the MIP backend.
+
+        Parameters
+        ----------
+        x
+            Query instance in the processed feature space.
+        y
+            Target class enforced by the counterfactual.
+        norm
+            Distance norm. The MIP backend supports ``1`` and ``2``.
+        return_callback
+            Whether to collect incumbent solutions through a Gurobi callback.
+        verbose
+            Whether to print Gurobi logs.
+        max_time
+            Time limit in seconds.
+        num_workers
+            Optional Gurobi thread count.
+        random_seed
+            Random seed passed to Gurobi.
+        clean_up
+            Whether to remove query-specific constraints after the solve.
+
+        Returns
+        -------
+        Explanation | None
+            The decoded counterfactual, or ``None`` when no feasible
+            counterfactual is found within the given limits.
+
+        Raises
+        ------
+        RuntimeError
+            If the solver stops for an unexpected status that is not handled
+            by the explainer.
+
+        """
         self.setParam("LogToConsole", int(verbose))
         self.setParam("TimeLimit", max_time)
         self.setParam("Seed", random_seed)

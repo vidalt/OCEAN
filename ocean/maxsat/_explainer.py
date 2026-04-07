@@ -58,6 +58,15 @@ class Explainer(Model, BaseExplainer):
         self.solver = ENV.solver
 
     def get_objective_value(self) -> float:
+        """
+        Return the weighted MaxSAT objective value of the last solve.
+
+        Returns
+        -------
+        float
+            Objective value rescaled back to the user-facing distance units.
+
+        """
         return self.solver.cost / self._obj_scale
 
     def get_distance(self) -> float:
@@ -104,11 +113,29 @@ class Explainer(Model, BaseExplainer):
         return float(distance)
 
     def get_solving_status(self) -> str:
+        """
+        Return the status of the latest MaxSAT solve.
+
+        Returns
+        -------
+        str
+            Status string such as ``"OPTIMAL"`` or ``"INFEASIBLE"``.
+
+        """
         return self.Status
 
     def get_anytime_solutions(self) -> list[dict[str, float]] | None:
-        """MaxSAT currently exposes only the final optimal solution."""
-        raise NotImplementedError
+        """
+        Return the intermediate solution trace for the last MaxSAT solve.
+
+        Returns
+        -------
+        None
+            The MaxSAT backend currently exposes only the final solution.
+
+        """
+        _ = self.Status
+        return None
 
     def explain(
         self,
@@ -123,6 +150,42 @@ class Explainer(Model, BaseExplainer):
         random_seed: int = 42,
         clean_up: bool = True,
     ) -> Explanation | None:
+        """
+        Solve one counterfactual query with the weighted MaxSAT backend.
+
+        Parameters
+        ----------
+        x
+            Query instance in the processed feature space.
+        y
+            Target class enforced by the counterfactual.
+        norm
+            Distance norm. The MaxSAT backend currently supports only ``1``.
+        return_callback
+            Accepted for API compatibility but ignored by this backend.
+        verbose
+            Whether to enable RC2 logging.
+        max_time
+            Time limit in seconds.
+        num_workers
+            Optional thread count forwarded to the MaxSAT solver.
+        random_seed
+            Accepted for API compatibility but currently ignored.
+        clean_up
+            Whether to remove query-specific clauses after the solve.
+
+        Returns
+        -------
+        Explanation | None
+            The decoded counterfactual, or ``None`` when no feasible
+            counterfactual is found within the given limits.
+
+        Raises
+        ------
+        RuntimeError
+            If the MaxSAT solver raises an error that is not UNSAT or timeout.
+
+        """
         if return_callback:
             default_seed = 42
             msg = "There are no callbacks for maxsat."

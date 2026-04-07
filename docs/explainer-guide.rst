@@ -42,7 +42,8 @@ Every explainer exposes an ``explain`` method with the same core arguments.
    Parallel worker count when the backend exposes it.
 
 ``random_seed``
-   Solver seed for more repeatable runs.
+   Solver seed for more repeatable runs. The MaxSAT backend currently accepts
+   this argument for API compatibility but does not use it.
 
 ``verbose``
    Whether to print solver logs.
@@ -66,7 +67,7 @@ Backend-specific behavior
      - Yes
      - No public callback list
    * - Automatic cleanup after solve
-     - No
+     - Yes by default
      - Yes
      - Yes
    * - Isolation forest support
@@ -77,12 +78,13 @@ Backend-specific behavior
 Repeated solves
 ---------------
 
-If you solve multiple queries with the same MIP explainer instance, call
-``cleanup()`` after each solve to remove the temporary objective and class
-constraints created for the previous query.
+All three explainers default to ``clean_up=True`` inside ``explain``. That
+means query-specific objectives and target-class constraints are removed
+automatically after each solve unless you opt out.
 
-The CP and MaxSAT explainers already clear those query-specific constraints
-inside ``explain``.
+Call ``cleanup()`` manually only when you deliberately run ``explain(...,
+clean_up=False)`` and want to clear the previous query state yourself before
+reusing the same explainer instance.
 
 Inspecting the result
 ---------------------
@@ -93,6 +95,8 @@ useful.
 - ``explanation.x`` gives the processed numerical vector.
 - ``explanation.to_series()`` keeps the processed column names.
 - ``explanation.value`` decodes one-hot groups into original category labels.
+- ``explainer.get_objective_value()`` returns the backend objective value for
+  the last solve.
 - ``explainer.get_distance()`` returns the post-processed distance between the
   query and the decoded counterfactual using the norm from the last
   ``explain(...)`` call.

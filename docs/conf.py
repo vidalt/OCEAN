@@ -16,7 +16,7 @@ install_doc_stubs()
 
 project = "OCEAN"
 author = "OCEAN contributors"
-copyright = "2026, Awa Khouna and the OCEAN contributors"
+copyright = "2026, Awa Khouna and the OCEAN contributors"  # noqa: A001
 
 try:
     release = version("oceanpy")

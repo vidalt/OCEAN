@@ -89,5 +89,7 @@ surface is intentionally similar.
   the most readable form for reports and notebooks.
 
 If you want to solve multiple queries with the same MIP explainer instance,
-call ``cleanup()`` between solves. The CP and MaxSAT explainers already clear
-query-specific constraints after each solve.
+you usually do not need any extra step because all three explainers default to
+``clean_up=True`` inside ``explain``. Call ``cleanup()`` manually only when
+you disabled that behavior with ``clean_up=False`` and want to reuse the same
+instance safely.

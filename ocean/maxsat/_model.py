@@ -8,7 +8,7 @@ from pydantic import validate_call
 
 try:
     from pysat.pb import EncType, PBEnc
-except AssertionError:
+except (AssertionError, ImportError):
     EncType = None
     PBEnc = None
 

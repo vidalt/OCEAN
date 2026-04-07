@@ -49,6 +49,15 @@ class Explainer(Model, BaseExplainer):
         self.solver = ENV.solver
 
     def get_objective_value(self) -> float:
+        """
+        Return the scaled objective value of the last CP-SAT solve.
+
+        Returns
+        -------
+        float
+            Objective value rescaled back to the user-facing distance units.
+
+        """
         return self.solver.ObjectiveValue() / self._obj_scale
 
     def get_distance(self) -> float:
@@ -95,9 +104,29 @@ class Explainer(Model, BaseExplainer):
         return float(distance)
 
     def get_solving_status(self) -> str:
+        """
+        Return the status string from the latest CP-SAT solve.
+
+        Returns
+        -------
+        str
+            Solver status such as ``"OPTIMAL"``, ``"FEASIBLE"``, or
+            ``"INFEASIBLE"``.
+
+        """
         return self.Status
 
     def get_anytime_solutions(self) -> list[dict[str, float]] | None:
+        """
+        Return intermediate solutions collected during the last solve.
+
+        Returns
+        -------
+        list[dict[str, float]] | None
+            Time-stamped incumbent objective values when ``return_callback``
+            was enabled in :meth:`explain`, otherwise ``None``.
+
+        """
         if self.callback is not None:
             return self.callback.sollist
         return None
@@ -115,6 +144,42 @@ class Explainer(Model, BaseExplainer):
         random_seed: int = 42,
         clean_up: bool = True,
     ) -> Explanation | None:
+        """
+        Solve one counterfactual query with the CP-SAT backend.
+
+        Parameters
+        ----------
+        x
+            Query instance in the processed feature space.
+        y
+            Target class enforced by the counterfactual.
+        norm
+            Integer distance norm used by the CP objective.
+        return_callback
+            Whether to record incumbent solutions during the search.
+        verbose
+            Whether to enable CP-SAT search logging.
+        max_time
+            Time limit in seconds.
+        num_workers
+            Optional number of CP-SAT workers.
+        random_seed
+            Random seed passed to CP-SAT.
+        clean_up
+            Whether to remove query-specific constraints after the solve.
+
+        Returns
+        -------
+        Explanation | None
+            The decoded counterfactual, or ``None`` when no feasible
+            counterfactual is found within the given limits.
+
+        Raises
+        ------
+        RuntimeError
+            If CP-SAT reports an invalid model or an unexpected status.
+
+        """
         self.solver.parameters.log_search_progress = verbose
         self.solver.parameters.max_time_in_seconds = max_time
         self.solver.parameters.random_seed = random_seed
