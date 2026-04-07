@@ -87,13 +87,11 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             return float(val)
         return float(query_arr[f])
 
-    def _continuous_index(self, feature: FeatureVar) -> int:
-        idx = 0
-        for mu_idx in range(len(feature.levels) - 1):
-            value = feature.mget(mu_idx).X
-            if not np.isclose(value, 0.0, rtol=0.0, atol=self._atol):
-                idx = mu_idx
-        return idx
+    @staticmethod
+    def _continuous_index(feature: FeatureVar) -> int:
+        x = float(feature.xget().X)
+        idx = int(np.searchsorted(feature.levels, x, side="left")) - 1
+        return max(0, min(idx, len(feature.levels) - 2))
 
     @property
     def value(self) -> Mapping[Key, Key | Number]:
