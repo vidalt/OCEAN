@@ -1,13 +1,18 @@
+import sys
+
 import gurobipy as gp
 import numpy as np
+import pandas as pd
 import pytest
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
 from ocean import (
     ConstraintProgrammingExplainer,
+    MaxSATExplainer,
     MixedIntegerProgramExplainer,
 )
+from ocean.feature import parse_features
 
 from .utils import ENV, generate_data
 
@@ -197,3 +202,61 @@ def test_cp_explain_xgb(
 
         except gp.GurobiError as e:
             pytest.skip(f"Skipping test due to {e}")
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="tests for non-windows platforms"
+)
+def test_explainers_return_same_distance_on_discrete_data() -> None:
+    raw = pd.DataFrame({
+        "age_bucket": [0, 0, 1, 1, 2, 2, 3, 3, 1, 2, 0, 3],
+        "owns_home": [0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1],
+        "job_type": [
+            "office",
+            "office",
+            "manual",
+            "manual",
+            "service",
+            "service",
+            "office",
+            "manual",
+            "service",
+            "office",
+            "manual",
+            "service",
+        ],
+    })
+    y = np.array([0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1], dtype=np.int64)
+    data, mapper = parse_features(
+        raw,
+        discretes=("age_bucket",),
+        encoded=("job_type",),
+        scale=False,
+    )
+    clf = RandomForestClassifier(
+        random_state=7,
+        n_estimators=5,
+        max_depth=3,
+    )
+    clf.fit(data, y)
+
+    x = data.iloc[0, :].to_numpy(dtype=float).flatten()
+    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    target = int(1 - prediction[0])
+
+    mip = MixedIntegerProgramExplainer(clf, mapper=mapper, env=ENV)
+    cp = ConstraintProgrammingExplainer(clf, mapper=mapper)
+    maxsat = MaxSATExplainer(clf, mapper=mapper)
+
+    exp_mip = mip.explain(x, y=target, norm=1, random_seed=7)
+    exp_cp = cp.explain(x, y=target, norm=1, random_seed=7)
+    exp_maxsat = maxsat.explain(x, y=target, norm=1, random_seed=7)
+
+    assert exp_mip is not None
+    assert exp_cp is not None
+    assert exp_maxsat is not None
+    assert clf.predict([exp_mip.to_numpy()])[0] == target
+    assert clf.predict([exp_cp.to_numpy()])[0] == target
+    assert clf.predict([exp_maxsat.to_numpy()])[0] == target
+    assert mip.get_distance() == pytest.approx(cp.get_distance())
+    assert mip.get_distance() == pytest.approx(maxsat.get_distance())
