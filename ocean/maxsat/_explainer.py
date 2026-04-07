@@ -156,6 +156,10 @@ class Explainer(Model, BaseExplainer):
             raise
         except TimeoutError as exc:
             warnings.warn(str(exc), category=UserWarning, stacklevel=2)
+            signal.alarm(0)
+            if clean_up:
+                self.cleanup()
+            return None
         finally:
             signal.alarm(0)
         # Store the query in the explanation
