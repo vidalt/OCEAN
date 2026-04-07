@@ -12,6 +12,8 @@ Loaded = tuple[Dataset, Mapper[Feature]]
 
 @dataclass
 class Loader:
+    """Dataset reader backed by the companion ``ocean-datasets`` repository."""
+
     URL: str = "https://www.github.com/eminyous/ocean-datasets/blob/main"
 
     @overload

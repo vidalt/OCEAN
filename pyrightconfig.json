@@ -1,4 +1,7 @@
 {
+    "pythonVersion": "3.12",
+    "venvPath": ".tox",
+    "venv": "check",
     "typeCheckingMode": "strict",
     "reportMissingTypeStubs": "none",
     "reportUnknownMemberType": "none",

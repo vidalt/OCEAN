@@ -215,7 +215,6 @@ def run_queries_verbose(
     ):
         start = time.time()
         explainer.explain(x, y=y, norm=1)
-        explainer.cleanup()
         end = time.time()
         times[i] = end - start
     return times

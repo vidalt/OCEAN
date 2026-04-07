@@ -10,6 +10,14 @@ from .._variables import TreeVar
 
 
 class TreeManager:
+    r"""
+    Manage CP tree variables and the scaled decision function :math:`f`.
+
+    Each :class:`TreeVar` encodes the active leaf decisions :math:`p_{t,\ell}`
+    of one tree. Aggregating those variables yields the integer-scaled CP
+    representation of :math:`f(x)`.
+    """
+
     TREE_VAR_FMT: str = "tree[{t}]"
     DEFAULT_SCORE_SCALE: int = int(1e10)
     XGBOOST_DEFAULT_CLASS: int = 1
@@ -43,11 +51,13 @@ class TreeManager:
         weights: NonNegativeArray1D | None = None,
         scale: int = DEFAULT_SCORE_SCALE,
     ) -> None:
+        """Initialize the tree manager and the score-scaling factor."""
         self._set_trees(trees=trees)
         self._set_weights(weights=weights)
         self._score_scale = scale
 
     def build_trees(self, model: BaseModel) -> None:
+        r"""Create the CP tree variables and cache :math:`f(x)`."""
         model.build_vars(*self.trees)
 
         self._function = self._get_function()
@@ -94,6 +104,15 @@ class TreeManager:
         self,
         trees: Iterable[Tree],
     ) -> None:
+        """
+        Wrap parsed trees in CP-specific :class:`TreeVar` objects.
+
+        Raises
+        ------
+        ValueError
+            If no tree is provided.
+
+        """
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
             if tree.xgboost:
@@ -112,6 +131,15 @@ class TreeManager:
         self._trees = tree_vars[0], *tree_vars[1:]
 
     def _set_weights(self, weights: NonNegativeArray1D | None = None) -> None:
+        """
+        Validate and store the ensemble weights.
+
+        Raises
+        ------
+        ValueError
+            If the number of weights does not match the number of estimators.
+
+        """
         if weights is None:
             weights = np.ones(self.n_estimators, dtype=np.float64)
 
@@ -125,6 +153,18 @@ class TreeManager:
         self,
         weights: NonNegativeArray1D,
     ) -> dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]:
+        r"""
+        Return the integer-scaled CP representation of :math:`f(x)`.
+
+        The returned dictionary maps each output-class pair ``(op, c)`` to the
+        corresponding linear expression for :math:`f_c(x)`.
+
+        Returns
+        -------
+        dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]
+            Dictionary of scaled class-score expressions.
+
+        """
         exprs: dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr] = {}
         n_classes = self.n_classes
         n_outputs = self.shape[-2]
@@ -166,4 +206,13 @@ class TreeManager:
     def _get_function(
         self,
     ) -> dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]:
+        r"""
+        Return the cached CP representation of :math:`f(x)`.
+
+        Returns
+        -------
+        dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]
+            Cached class-score expressions.
+
+        """
         return self.weighted_function(weights=self.weights)

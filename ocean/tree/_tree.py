@@ -7,6 +7,8 @@ from ._node import Node
 
 
 class Tree:
+    """In-memory representation of a parsed tree ensemble member."""
+
     root: Node
     _shape: tuple[NonNegativeInt, ...]
     _xgboost: bool = False

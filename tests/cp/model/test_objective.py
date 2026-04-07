@@ -51,7 +51,7 @@ class TestNoIsolation:
         solver = ENV.solver
         status = solver.Solve(model)
         assert status == cp.OPTIMAL
-        model.explanation.query = x
+        model.explanation.query = x  # type: ignore[unreachable]
         explanation = model.explanation
 
         validate_solution(explanation)
@@ -96,7 +96,7 @@ class TestNoIsolation:
                 f" for class {class_}, x = {x}, y={predictions[0]}"
             )
 
-            model.explanation.query = x
+            model.explanation.query = x  # type: ignore[unreachable]
             explanation = model.explanation
 
             validate_solution(explanation)
@@ -104,3 +104,32 @@ class TestNoIsolation:
             validate_sklearn_paths(clf, explanation, model.estimators)
             validate_sklearn_pred(clf, explanation, m_class=class_, model=model)
             model.cleanup()
+
+
+@pytest.mark.parametrize("norm", [1, 2, 3])
+def test_supported_norms(norm: int) -> None:
+    clf, mapper, data = train_rf(
+        42,
+        4,
+        3,
+        100,
+        2,
+        return_data=True,
+    )
+    trees = tuple(parse_trees(clf, mapper=mapper))
+    model = Model(trees=trees, mapper=mapper)
+    model.build()
+
+    x = np.array(data.iloc[0].to_numpy(), dtype=np.float64).flatten()
+    model.add_objective(x=x, norm=norm)
+
+    solver = ENV.solver
+    status = solver.Solve(model)
+    assert status == cp.OPTIMAL
+
+    model.explanation.query = x  # type: ignore[unreachable]
+    explanation = model.explanation
+    validate_solution(explanation)
+    validate_paths(*model.trees, explanation=explanation)
+    validate_sklearn_paths(clf, explanation, model.estimators)
+    model.cleanup()

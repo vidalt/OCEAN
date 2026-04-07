@@ -17,6 +17,14 @@ from .._variables import TreeVar
 
 
 class TreeManager:
+    r"""
+    Manage MIP tree variables and the ensemble decision function :math:`f`.
+
+    Each :class:`TreeVar` encodes the active leaf or path decisions
+    :math:`p_{t,\ell}` for one tree. Aggregating those variables yields the
+    backend expression for :math:`f(x)`.
+    """
+
     TREE_VAR_FMT: str = "tree[{t}]"
     NUM_BINARY_CLASS: int = 2
 
@@ -56,12 +64,19 @@ class TreeManager:
         max_samples: NonNegativeInt = 0,
         flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
+        """Initialize the tree manager and record ensemble metadata."""
         self._set_trees(trees=trees, flow_type=flow_type)
         self._n_isolators = n_isolators
         self._max_samples = max_samples
         self._set_weights(weights=weights)
 
     def build_trees(self, model: BaseModel) -> None:
+        r"""
+        Create the backend tree variables and cache the derived expressions.
+
+        After this call, the manager stores the aggregate path-length
+        expression and the MIP representation of :math:`f(x)`.
+        """
         model.build_vars(*self.trees)
 
         self._length = self._get_length()
@@ -124,6 +139,15 @@ class TreeManager:
         return self.n_isolators * self.min_average_length
 
     def weighted_function(self, weights: NonNegativeArray1D) -> gp.MLinExpr:
+        r"""
+        Return the weighted ensemble decision function :math:`f(x)`.
+
+        Returns
+        -------
+        gp.MLinExpr
+            MIP expression representing :math:`f(x)`.
+
+        """
         # \sum_{t=1}^{T} w_t f_t(x)
         def weighted(tree: TreeVar, weight: float) -> gp.MLinExpr:
             return weight * tree.value
@@ -135,6 +159,18 @@ class TreeManager:
         self,
         weights: NonNegativeArray1D,
     ) -> gp.MLinExpr:
+        r"""
+        Return the XGBoost margin form of :math:`f(x)`.
+
+        This includes the base logit term in addition to the weighted tree
+        contributions.
+
+        Returns
+        -------
+        gp.MLinExpr
+            Margin expression representing :math:`f(x)`.
+
+        """
         margin_values = gp.MLinExpr.zeros(self.shape) + self._logit
         if self.n_classes == self.NUM_BINARY_CLASS:
             margin_values += (
@@ -152,6 +188,15 @@ class TreeManager:
         *,
         flow_type: TreeVar.FlowType,
     ) -> None:
+        """
+        Wrap parsed trees in backend-specific :class:`TreeVar` objects.
+
+        Raises
+        ------
+        ValueError
+            If no tree is provided.
+
+        """
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
             if tree.xgboost:
@@ -175,6 +220,15 @@ class TreeManager:
         self._trees = tree_vars[0], *tree_vars[1:]
 
     def _set_weights(self, weights: NonNegativeArray1D | None = None) -> None:
+        """
+        Validate and store the ensemble weights.
+
+        Raises
+        ------
+        ValueError
+            If the number of weights does not match the number of estimators.
+
+        """
         if weights is None:
             weights = np.ones(self.n_estimators, dtype=np.float64)
 
@@ -185,9 +239,27 @@ class TreeManager:
         self._weights = weights
 
     def _get_length(self) -> gp.LinExpr:
+        """
+        Return the total isolation-path length expression.
+
+        Returns
+        -------
+        gp.LinExpr
+            Sum of the isolation-tree path lengths.
+
+        """
         return sum((tree.length for tree in self.isolators), gp.LinExpr())
 
     def _get_function(self) -> gp.MLinExpr:
+        r"""
+        Return the backend expression representing :math:`f(x)`.
+
+        Returns
+        -------
+        gp.MLinExpr
+            Cached MIP expression for :math:`f(x)`.
+
+        """
         if self._xgboost:
             return self.xgb_margin_function(weights=self.weights)
         return self.weighted_function(weights=self.weights)

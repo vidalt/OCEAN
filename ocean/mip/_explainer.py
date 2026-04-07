@@ -20,6 +20,8 @@ from ._variables import TreeVar
 
 
 class Explainer(Model, BaseExplainer):
+    """Mixed-integer programming explainer for tree ensemble classifiers."""
+
     def __init__(
         self,
         ensemble: BaseExplainableEnsemble,
@@ -31,8 +33,8 @@ class Explainer(Model, BaseExplainer):
         env: gp.Env | None = None,
         epsilon: float = Model.DEFAULT_EPSILON,
         num_epsilon: float = Model.DEFAULT_NUM_EPSILON,
-        model_type: Model.Type = Model.Type.MIP,
-        flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
+        model_type: "Model.Type" = Model.Type.MIP,
+        flow_type: "TreeVar.FlowType" = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
         ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
         n_isolators, max_samples = self._get_isolation_params(isolation)
@@ -57,6 +59,49 @@ class Explainer(Model, BaseExplainer):
 
     def get_objective_value(self) -> float:
         return self.ObjVal
+
+    def get_distance(self) -> float:
+        """
+        Return the post-processed distance of the last CF.
+
+        Returns
+        -------
+        float
+            Post-processed :math:`L_p` distance for the last successful solve.
+
+        Raises
+        ------
+        RuntimeError
+            If no explanation has been computed yet.
+
+        """
+        query = self.explanation.query
+        if query.size == 0:
+            msg = "No explanation has been computed yet."
+            raise RuntimeError(msg)
+
+        norm = getattr(self, "_distance_norm", None)
+        if norm is None:
+            msg = "No explanation has been computed yet."
+            raise RuntimeError(msg)
+
+        counterfactual = self.explanation.x
+        distance = 0.0
+        for name, feature in self.mapper.items():
+            if feature.is_one_hot_encoded:
+                feature_distance = 0.0
+                for code in feature.codes:
+                    idx = self.mapper.idx.get(name, code)
+                    delta = float(counterfactual[idx]) - float(query[idx])
+                    feature_distance += abs(delta) ** norm
+                distance += feature_distance / 2.0
+            else:
+                idx = self.mapper.idx.get(name)
+                delta = float(counterfactual[idx]) - float(query[idx])
+                distance += abs(delta) ** norm
+        if norm != 1:
+            distance **= 1.0 / norm
+        return float(distance)
 
     def get_solving_status(self) -> str:
         gurobi_statuses = {
@@ -93,6 +138,7 @@ class Explainer(Model, BaseExplainer):
         max_time: int = 60,
         num_workers: int | None = None,
         random_seed: int = 42,
+        clean_up: bool = True,
     ) -> Explanation | None:
         self.setParam("LogToConsole", int(verbose))
         self.setParam("TimeLimit", max_time)
@@ -140,6 +186,10 @@ class Explainer(Model, BaseExplainer):
                 msg += " valid CF for an un-handled reason."
                 msg += "Unexpected solver status: " + status
                 raise RuntimeError(msg)
+        self.explanation.query = x
+        self._distance_norm = norm
+        if clean_up:
+            self.cleanup()
         return self.explanation
 
     @staticmethod
@@ -152,6 +202,8 @@ class Explainer(Model, BaseExplainer):
 
 
 class SolutionCallback:
+    """Collect incumbent solutions reported by Gurobi during optimization."""
+
     def __init__(self, starttime: float) -> None:
         self.starttime = starttime
         self.sollist: list[dict[str, float]] = []

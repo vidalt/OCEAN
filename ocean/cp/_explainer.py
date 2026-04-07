@@ -22,6 +22,8 @@ from ._model import Model
 
 
 class Explainer(Model, BaseExplainer):
+    """Constraint programming explainer for tree ensemble classifiers."""
+
     def __init__(
         self,
         ensemble: BaseExplainableEnsemble,
@@ -29,7 +31,7 @@ class Explainer(Model, BaseExplainer):
         mapper: Mapper[Feature],
         weights: NonNegativeArray1D | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
-        model_type: Model.Type = Model.Type.CP,
+        model_type: "Model.Type" = Model.Type.CP,
     ) -> None:
         ensembles = (ensemble,)
         trees = parse_ensembles(*ensembles, mapper=mapper)
@@ -48,6 +50,49 @@ class Explainer(Model, BaseExplainer):
 
     def get_objective_value(self) -> float:
         return self.solver.ObjectiveValue() / self._obj_scale
+
+    def get_distance(self) -> float:
+        """
+        Return the post-processed distance of the last CF.
+
+        Returns
+        -------
+        float
+            Post-processed :math:`L_p` distance for the last successful solve.
+
+        Raises
+        ------
+        RuntimeError
+            If no explanation has been computed yet.
+
+        """
+        query = self.explanation.query
+        if query.size == 0:
+            msg = "No explanation has been computed yet."
+            raise RuntimeError(msg)
+
+        norm = getattr(self, "_distance_norm", None)
+        if norm is None:
+            msg = "No explanation has been computed yet."
+            raise RuntimeError(msg)
+
+        counterfactual = self.explanation.x
+        distance = 0.0
+        for name, feature in self.mapper.items():
+            if feature.is_one_hot_encoded:
+                feature_distance = 0.0
+                for code in feature.codes:
+                    idx = self.mapper.idx.get(name, code)
+                    delta = float(counterfactual[idx]) - float(query[idx])
+                    feature_distance += abs(delta) ** norm
+                distance += feature_distance / 2.0
+            else:
+                idx = self.mapper.idx.get(name)
+                delta = float(counterfactual[idx]) - float(query[idx])
+                distance += abs(delta) ** norm
+        if norm != 1:
+            distance **= 1.0 / norm
+        return float(distance)
 
     def get_solving_status(self) -> str:
         return self.Status
@@ -68,6 +113,7 @@ class Explainer(Model, BaseExplainer):
         max_time: int = 60,
         num_workers: int | None = None,
         random_seed: int = 42,
+        clean_up: bool = True,
     ) -> Explanation | None:
         self.solver.parameters.log_search_progress = verbose
         self.solver.parameters.max_time_in_seconds = max_time
@@ -121,7 +167,9 @@ class Explainer(Model, BaseExplainer):
             self.cleanup()
             return None
         self.explanation.query = x
-        self.cleanup()
+        self._distance_norm = norm
+        if clean_up:
+            self.cleanup()
         return self.explanation
 
 

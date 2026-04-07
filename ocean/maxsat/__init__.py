@@ -1,5 +1,7 @@
+"""Weighted MaxSAT backend for optimal counterfactual search."""
+
 from ._base import BaseModel
-from ._env import ENV
+from ._env import ENV, MaxSATSolver
 from ._explainer import Explainer
 from ._explanation import Explanation
 from ._managers import FeatureManager, TreeManager
@@ -13,6 +15,7 @@ __all__ = [
     "Explanation",
     "FeatureManager",
     "FeatureVar",
+    "MaxSATSolver",
     "Model",
     "TreeManager",
     "TreeVar",

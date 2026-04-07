@@ -8,6 +8,8 @@ from .._base import BaseModel, Var
 
 
 class TreeVar(Var, TreeKeeper, Mapping[NonNegativeInt, object]):
+    """MaxSAT literals encoding the active leaf of one parsed tree."""
+
     PATH_VAR_NAME_FMT: str = "{name}_path"
 
     _path: Mapping[NonNegativeInt, int]

@@ -1,3 +1,5 @@
+"""Constraint programming backend for optimal counterfactual search."""
+
 from ._base import BaseModel
 from ._builder.model import ConstraintProgramBuilder
 from ._env import ENV

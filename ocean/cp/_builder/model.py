@@ -11,6 +11,8 @@ from .._variables import FeatureVar, TreeVar
 
 
 class ModelBuilder(Protocol):
+    """Protocol implemented by objects that encode ensemble constraints."""
+
     def build(
         self,
         model: BaseModel,
@@ -35,6 +37,8 @@ class ModelBuilder(Protocol):
 
 
 class ConstraintProgramBuilder(ModelBuilder):
+    """Build CP constraints linking feature variables to tree paths."""
+
     def build(
         self,
         model: BaseModel,
