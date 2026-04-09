@@ -31,6 +31,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     DEFAULT_EPSILON: Unit = 1.0 / (2.0**16)
     DEFAULT_NUM_EPSILON: Unit = 1.0 / (2.0**6)
+    MIN_NUMERIC_TOL: float = 1e-9
 
     class Type(Enum):
         MIP = "MIP"
@@ -126,6 +127,15 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self.build_trees(self)
         self._builder.build(self, trees=self.trees, mapper=self.mapper)
         self._set_isolation()
+        self._stabilize_tolerances()
+
+    @property
+    def epsilon(self) -> Unit:
+        return self._epsilon
+
+    @property
+    def num_epsilon(self) -> Unit:
+        return self._num_epsilon
 
     def add_objective(
         self,
@@ -250,6 +260,31 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             return
 
         self.addConstr(self.length >= self.min_length)
+
+    def _stabilize_tolerances(self) -> None:
+        """
+        Tighten solver tolerances when the class margin is very small.
+
+        The MIP uses a tiny score margin ``self._epsilon`` to enforce the
+        target class. If integer-valued branching variables are accepted with
+        a larger tolerance than that margin, Gurobi can report solutions whose
+        near-integral leaf selections satisfy the model scores but decode to an
+        invalid counterfactual under exact tree traversal.
+        """
+        total_weight = float(np.sum(self.weights, dtype=np.float64))
+        if total_weight <= 0.0:
+            return
+
+        safe_tol = self._epsilon / (2.0 * total_weight)
+        safe_tol = max(self.MIN_NUMERIC_TOL, safe_tol)
+
+        feasibility_tol = float(self.getParamInfo("FeasibilityTol")[2])
+        if safe_tol < feasibility_tol:
+            self.setParam("FeasibilityTol", safe_tol)
+
+        int_feas_tol = float(self.getParamInfo("IntFeasTol")[2])
+        if safe_tol < int_feas_tol:
+            self.setParam("IntFeasTol", safe_tol)
 
     def _add_objective(self, x: Array1D, norm: int) -> Objective:
         r"""

@@ -26,6 +26,30 @@ def _logit(p: Array1D) -> Array1D:
     return np.log(p / (1 - p))
 
 
+def _previous_float32(value: float) -> float:
+    """
+    Return the greatest float32 value strictly smaller than ``value``.
+
+    XGBoost routes numeric splits with a strict ``< split`` comparison, while
+    OCEAN's internal tree abstraction uses ``<= threshold``. Using the
+    previous representable float32 value preserves the exact branch semantics
+    for float32-encoded inputs.
+
+    Returns
+    -------
+    float
+        Largest representable float32 value strictly below ``value``.
+
+    """
+    return float(
+        np.nextafter(
+            np.float32(value),
+            np.float32(-np.inf),
+            dtype=np.float32,
+        )
+    )
+
+
 def _get_column_value(
     xgb_tree: XGBTree, node_id: NonNegativeInt, column: str
 ) -> str | float | int:
@@ -105,7 +129,9 @@ def _build_xgb_node(
 
     threshold = None
     if mapper[name].is_numeric:
-        threshold = float(_get_column_value(xgb_tree, node_id, "Split")) - 1e-8
+        threshold = _previous_float32(
+            float(_get_column_value(xgb_tree, node_id, "Split"))
+        )
         mapper[name].add(threshold)
 
     left_id = _get_child_id(xgb_tree, node_id, "Yes")
