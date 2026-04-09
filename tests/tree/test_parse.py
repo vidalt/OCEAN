@@ -78,7 +78,13 @@ def _check_xgb_tree(
                 assert feature_name == node.feature
                 assert np.isclose(
                     node.threshold,
-                    float(row["Split"].values[0] - 1e-8),
+                    float(
+                        np.nextafter(
+                            np.float32(row["Split"].values[0]),
+                            np.float32(-np.inf),
+                            dtype=np.float32,
+                        )
+                    ),
                     rtol=0.0,
                     atol=1e-8,
                 )

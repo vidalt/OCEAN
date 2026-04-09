@@ -105,6 +105,26 @@ class BaseExplanation(Protocol):
     @property
     def query(self) -> Array1D: ...
 
+    @staticmethod
+    def _next_float32_up(value: float) -> float:
+        return float(
+            np.nextafter(
+                np.float32(value),
+                np.float32(np.inf),
+                dtype=np.float32,
+            )
+        )
+
+    @staticmethod
+    def _next_float32_down(value: float) -> float:
+        return float(
+            np.nextafter(
+                np.float32(value),
+                np.float32(-np.inf),
+                dtype=np.float32,
+            )
+        )
+
 
 class BaseExplainer(Protocol):
     """Protocol implemented by all public OCEAN explainers."""

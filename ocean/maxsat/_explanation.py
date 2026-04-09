@@ -12,7 +12,6 @@ from ._variables import FeatureVar
 class Explanation(Mapper[FeatureVar], BaseExplanation):
     """Concrete explanation container returned by the MaxSAT backend."""
 
-    _epsilon: float = float(np.finfo(np.float32).eps)
     _x: Array1D = np.zeros((0,), dtype=int)
 
     def vget(self, i: int) -> int:
@@ -142,9 +141,9 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         if j == idx:
             value = float(query_arr[f])
         elif j < idx:
-            value = float(levels[idx]) + self._epsilon
+            value = self._next_float32_up(levels[idx])
         else:
-            value = float(levels[idx + 1]) - self._epsilon
+            value = self._next_float32_down(levels[idx + 1])
         return value
 
     def format_discrete_value(
