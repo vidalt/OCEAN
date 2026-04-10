@@ -132,8 +132,8 @@ class MixedIntegerProgramBuilder(ModelBuilder):
         #   :: flow[node.right] = 0.0
         # Otherwise,
         #   the path in the tree should go to the left of the node
-        #   if the value of the feature is less than the threshold.
-        #   :: mu[j-1] <= 1 - epsilon * flow[node.left],
+        #   if the value of the feature is less than or equal to the
+        #   threshold.
         #   :: mu[j-1] >= flow[node.right],
         #   the path in the tree should go to the right of the node
         #   if the value of the feature is greater than the threshold.
@@ -157,7 +157,6 @@ class MixedIntegerProgramBuilder(ModelBuilder):
             raise ValueError(msg)
 
         mu = var.mget(j - 1)
-        model.addConstr(mu <= 1 - epsilon * tree[node.left.node_id])
         model.addConstr(mu >= tree[node.right.node_id])
 
         mu = var.mget(j)
@@ -232,13 +231,12 @@ class MixedIntegerProgramBuilder(ModelBuilder):
         var: FeatureVar,
         epsilon: float,
     ) -> float:
-        # Find the best epsilon value for the given feature variable.
-        # This is done by finding the minimum difference between
-        # the split levels and the tolerance of the solver.
+        # Keep the requested split epsilon and tighten solver tolerances when
+        # possible instead of inflating the effective margin around thresholds.
         tol: float = model.getParamInfo("FeasibilityTol")[2]
+        int_tol: float = model.getParamInfo("IntFeasTol")[2]
         min_tol: float = 1e-9
         delta: float = min(*np.diff(var.levels))
-        eps: float = 1.0 - min_tol
         if delta <= 2 * min_tol:
             msg = "The difference between the split levels"
             msg += f" is too small (={delta}) compared to"
@@ -246,15 +244,18 @@ class MixedIntegerProgramBuilder(ModelBuilder):
             msg += " There could be some precision errors."
             msg += " Consider not scaling the data or using bigger intervals."
             warnings.warn(msg, category=UserWarning, stacklevel=2)
-            if min_tol != tol:
+            if min_tol < tol:
                 model.setParam("FeasibilityTol", min_tol)
-            return eps
-        if delta * epsilon > tol:
+            if min_tol < int_tol:
+                model.setParam("IntFeasTol", min_tol)
             return epsilon
-        while 2 * tol / delta >= 1.0:
-            tol /= 2
-        model.setParam("FeasibilityTol", max(tol, min_tol))
-        return 2 * tol / delta
+
+        target_tol = max(min_tol, delta * epsilon / 2.0)
+        if target_tol < tol:
+            model.setParam("FeasibilityTol", target_tol)
+        if target_tol < int_tol:
+            model.setParam("IntFeasTol", target_tol)
+        return epsilon
 
 
 class ModelBuilderFactory:

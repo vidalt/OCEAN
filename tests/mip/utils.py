@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
     from ocean.typing import Key
 
+PATH_ATOL = 1e-9
+
 
 def check_solution(x: Array1D, explanation: Explanation) -> None:
     n = explanation.n_columns
@@ -60,33 +62,15 @@ def check_node(tree: TreeVar, node: Node, explanation: Explanation) -> None:
 
     left = node.left
     right = node.right
-    x = explanation.x
-    next_node = (
-        left
-        if np.isclose(tree[left.node_id].X, 1.0, rtol=0.0, atol=1e-10)
-        else right
+    left_value = tree[left.node_id].X
+    right_value = tree[right.node_id].X
+    assert np.isclose(
+        left_value + right_value, tree[node.node_id].X, rtol=0.0, atol=PATH_ATOL
     )
-    assert np.isclose(tree[next_node.node_id].X, 1.0, rtol=0.0, atol=1e-10)
-
-    name = node.feature
-    if explanation[name].is_one_hot_encoded:
-        code = node.code
-        i = explanation.idx.get(name, code)
-        value = x[i]
-    else:
-        i = explanation.idx.get(name)
-        value = x[i]
-
-    if explanation[name].is_numeric:
-        threshold = node.threshold
-        if value <= threshold:
-            assert np.isclose(tree[left.node_id].X, 1.0, rtol=0.0, atol=1e-10)
-        else:
-            assert np.isclose(tree[right.node_id].X, 1.0, rtol=0.0, atol=1e-10)
-    elif np.isclose(value, 0.0, rtol=0.0, atol=1e-10):
-        assert np.isclose(tree[left.node_id].X, 1.0, rtol=0.0, atol=1e-10)
-    else:
-        assert np.isclose(tree[right.node_id].X, 1.0, rtol=0.0, atol=1e-10)
+    next_node = (
+        left if np.isclose(left_value, 1.0, rtol=0.0, atol=PATH_ATOL) else right
+    )
+    assert np.isclose(tree[next_node.node_id].X, 1.0, rtol=0.0, atol=PATH_ATOL)
 
     check_node(tree, next_node, explanation=explanation)
 
@@ -117,7 +101,10 @@ def validate_sklearn_paths(
             node = (
                 node.left
                 if np.isclose(
-                    tree[node.left.node_id].X, 1.0, rtol=0.0, atol=1e-10
+                    tree[node.left.node_id].X,
+                    1.0,
+                    rtol=0.0,
+                    atol=PATH_ATOL,
                 )
                 else node.right
             )

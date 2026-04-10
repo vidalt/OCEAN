@@ -52,7 +52,7 @@ backend:
   differences used in the pseudo-Boolean encoding.
 
 The MIP backend also uses a numerical strictness constant
-:math:`\eta = \texttt{num\_epsilon} = 2^{-6} = 1/64 = 0.015625` for strict
+:math:`\eta = \texttt{num\_epsilon} = 10^{-6}` for strict
 right-branch comparisons in numerical splits.
 
 Feature domains
