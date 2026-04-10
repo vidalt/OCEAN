@@ -30,7 +30,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
     """
 
     DEFAULT_EPSILON: Unit = 1.0 / (2.0**16)
-    DEFAULT_NUM_EPSILON: Unit = 1.0 / (2.0**6)
+    DEFAULT_NUM_EPSILON: Unit = 1e-6  # 1.0 / (2.0**20)
     MIN_NUMERIC_TOL: float = 1e-9
 
     class Type(Enum):
@@ -162,6 +162,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
         """
         objective = self._add_objective(x=x, norm=norm)
+        self.explanation.query = np.asarray(x, dtype=np.float64).ravel().copy()
         self.setObjective(objective, sense=sense)
 
     @validate_call
@@ -263,20 +264,18 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     def _stabilize_tolerances(self) -> None:
         """
-        Tighten solver tolerances when the class margin is very small.
+        Tighten solver tolerances to preserve exact split semantics.
 
-        The MIP uses a tiny score margin ``self._epsilon`` to enforce the
-        target class. If integer-valued branching variables are accepted with
-        a larger tolerance than that margin, Gurobi can report solutions whose
-        near-integral leaf selections satisfy the model scores but decode to an
-        invalid counterfactual under exact tree traversal.
+        The formulation relies on strict score margins and split implications.
+        With Gurobi's default feasibility tolerances, a continuous feature can
+        end up slightly on the wrong side of a split threshold while the path
+        variables still select the opposite branch, which then disagrees with
+        exact sklearn tree traversal. Using the minimum supported tolerance
+        and asking the MIP solver to prioritize integral solutions reduces
+        those numerically loose incumbents without an explicit re-optimization
+        pass.
         """
-        total_weight = float(np.sum(self.weights, dtype=np.float64))
-        if total_weight <= 0.0:
-            return
-
-        safe_tol = self._epsilon / (2.0 * total_weight)
-        safe_tol = max(self.MIN_NUMERIC_TOL, safe_tol)
+        safe_tol = self.MIN_NUMERIC_TOL
 
         feasibility_tol = float(self.getParamInfo("FeasibilityTol")[2])
         if safe_tol < feasibility_tol:
@@ -285,6 +284,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         int_feas_tol = float(self.getParamInfo("IntFeasTol")[2])
         if safe_tol < int_feas_tol:
             self.setParam("IntFeasTol", safe_tol)
+
+        integrality_focus = int(self.getParamInfo("IntegralityFocus")[2])
+        if integrality_focus < 1:
+            self.setParam("IntegralityFocus", 1)
 
     def _add_objective(self, x: Array1D, norm: int) -> Objective:
         r"""

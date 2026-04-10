@@ -3,6 +3,7 @@ import warnings
 from typing import cast
 
 import gurobipy as gp
+import numpy as np
 from sklearn.ensemble import AdaBoostClassifier, IsolationForest
 
 from ..abc import Mapper
@@ -22,6 +23,8 @@ from ._variables import TreeVar
 
 class Explainer(Model, BaseExplainer):
     """Mixed-integer programming explainer for tree ensemble classifiers."""
+
+    _output_values: Array1D | None
 
     def __init__(
         self,
@@ -56,7 +59,14 @@ class Explainer(Model, BaseExplainer):
             model_type=model_type,
             flow_type=flow_type,
         )
+        self._output_values = None
         self.build()
+
+    def vget(self, i: int) -> gp.Var:
+        var = super().vget(i)
+        if self._output_values is None:
+            return var
+        return cast("gp.Var", _ValueProxy(var, float(self._output_values[i])))
 
     def get_objective_value(self) -> float:
         """
@@ -212,6 +222,7 @@ class Explainer(Model, BaseExplainer):
             by the explainer.
 
         """
+        self._output_values = None
         self.setParam("LogToConsole", int(verbose))
         self.setParam("TimeLimit", max_time)
         self.setParam("Seed", random_seed)
@@ -260,6 +271,7 @@ class Explainer(Model, BaseExplainer):
                 raise RuntimeError(msg)
         self.explanation.query = x
         self._distance_norm = norm
+        self._output_values = np.asarray(self.explanation.x, dtype=np.float64)
         if clean_up:
             self.cleanup()
         return self.explanation
@@ -288,3 +300,16 @@ class SolutionCallback:
                 "objective_value": best_objective,
                 "time": time.time() - self.starttime,
             })
+
+
+class _ValueProxy:
+    def __init__(self, var: gp.Var, value: float) -> None:
+        self._var = var
+        self._value = value
+
+    @property
+    def X(self) -> float:
+        return self._value
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._var, name)

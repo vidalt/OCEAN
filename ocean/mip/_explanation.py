@@ -86,11 +86,22 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             return float(val)
         return float(query_arr[f])
 
-    @staticmethod
-    def _continuous_index(feature: FeatureVar) -> int:
+    def _continuous_index(self, feature: FeatureVar) -> int:
+        levels = np.asarray(feature.levels, dtype=float)
+        n_intervals = len(levels) - 1
         x = float(feature.xget().X)
-        idx = int(np.searchsorted(feature.levels, x, side="left")) - 1
-        return max(0, min(idx, len(feature.levels) - 2))
+        idx = int(np.searchsorted(levels, x, side="left")) - 1
+
+        close = np.flatnonzero(np.isclose(levels, x, rtol=0.0, atol=self._atol))
+        if close.size > 0:
+            k = int(close[0])
+            if k <= 0:
+                return 0
+            if k >= n_intervals:
+                return n_intervals - 1
+            return k if self._atol < feature.mget(k).X else k - 1
+
+        return max(0, min(idx, n_intervals - 1))
 
     @property
     def value(self) -> Mapping[Key, Key | Number]:
