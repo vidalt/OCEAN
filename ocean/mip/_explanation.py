@@ -99,7 +99,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                 return 0
             if k >= n_intervals:
                 return n_intervals - 1
-            return k if self._atol < feature.mget(k).X else k - 1
+            return k if 1 - self._atol < feature.mget(k).X else k - 1
 
         return max(0, min(idx, n_intervals - 1))
 

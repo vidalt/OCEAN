@@ -192,6 +192,7 @@ class Explainer(Model, BaseExplainer):
             if random_seed != default_seed:
                 msg = "There are no callbacks/random_seed for maxsat."
             warnings.warn(msg, category=UserWarning, stacklevel=2)
+        self.Status = "UNKNOWN"  # reset status from previous solves
         self.solver.TimeLimit = max_time
         self.solver.n_threads = num_workers if num_workers is not None else 1
         self.solver.verbose = verbose
