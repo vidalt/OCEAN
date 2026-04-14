@@ -109,7 +109,9 @@ def validate_sklearn_paths(
                 else node.right
             )
             is_path_valid: bool = bool(ind[0, ptr[t] + node.node_id])
-            assert is_path_valid
+            assert is_path_valid, (
+                f"Path validation failed for tree {t} at node {node.node_id}"
+            )
 
 
 def validate_sklearn_pred(
