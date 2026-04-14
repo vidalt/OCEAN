@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from ocean.typing import Key
 
-PATH_ATOL = 1e-9
+PATH_ATOL = 1e-6  # Gurobi default tolerance for feasibility and integrality.
 
 
 def check_solution(x: Array1D, explanation: Explanation) -> None:
