@@ -13,6 +13,17 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def hard_vote_predict(clf: RandomForestClassifier, x: np.ndarray) -> int:
+    sample = np.asarray(x, dtype=np.float64).reshape(1, -1)
+    votes_list: list[int] = []
+    for tree in clf.estimators_:
+        prediction = np.asarray(tree.predict(sample), dtype=np.int64)
+        votes_list.append(int(prediction[0]))
+    votes = np.asarray(votes_list, dtype=np.int64)
+    classes, counts = np.unique(votes, return_counts=True)
+    return int(classes[np.argmax(counts)])
+
+
 @pytest.mark.parametrize("seed", [42, 43, 44])
 @pytest.mark.parametrize("n_estimators", [5])
 @pytest.mark.parametrize("max_depth", [2, 3])
@@ -49,3 +60,30 @@ def test_maxsat_explain(
         assert exp is not None
         assert clf.predict([exp.to_numpy()])[0] == target
         model.cleanup()
+
+
+def test_maxsat_explain_hard_voting() -> None:
+    seed = 42
+    data, y, mapper = generate_data(seed, 200, 2)
+    clf = RandomForestClassifier(
+        random_state=seed,
+        n_estimators=5,
+        max_depth=3,
+    )
+    clf.fit(data, y)
+    model = MaxSATExplainer(clf, mapper=mapper, hard_voting=True)
+
+    x = data.iloc[0, :].to_numpy().astype(float).flatten()
+    query_class = hard_vote_predict(clf, x)
+    target = 1 - query_class
+
+    exp = model.explain(
+        x,
+        y=target,
+        norm=1,
+        random_seed=seed,
+    )
+
+    assert model.Status == "OPTIMAL"
+    assert exp is not None
+    assert hard_vote_predict(clf, exp.to_numpy()) == target

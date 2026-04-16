@@ -4,6 +4,11 @@ from typing import TYPE_CHECKING, cast
 
 from pysat.examples.rc2 import RC2
 
+try:
+    from pysat.examples.rc2 import RC2Stratified
+except ImportError:
+    RC2Stratified = None
+
 if TYPE_CHECKING:
     from pysat.formula import WCNF
 
@@ -114,14 +119,24 @@ class MaxSATSolver:
         self._state_version += 1
         hard = cast("list[Clause]", w.hard)
         soft = cast("list[Clause]", w.soft)
-        self._rc2 = RC2(
-            w,
-            solver=self.solver_name,
-            adapt=True,
-            exhaust=False,
-            minz=True,
-            verbose=int(self.verbose),
-        )
+        if RC2Stratified is not None and len(soft) > 0:
+            self._rc2 = RC2Stratified(
+                w,
+                solver=self.solver_name,
+                adapt=True,
+                exhaust=False,
+                minz=True,
+                verbose=int(self.verbose),
+            )
+        else:
+            self._rc2 = RC2(
+                w,
+                solver=self.solver_name,
+                adapt=True,
+                exhaust=False,
+                minz=True,
+                verbose=int(self.verbose),
+            )
         self._formula = w
         self._formula_epoch = getattr(w, "solver_epoch", 0)
         self._synced_hard = len(hard)

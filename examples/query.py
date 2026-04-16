@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from dataclasses import dataclass
 
 import gurobipy as gp
+import numpy as np
 import pandas as pd
 from rich.console import Console
 from rich.progress import track
@@ -43,6 +44,7 @@ class Args:
     n_estimators: int
     max_depth: int
     n_examples: int
+    hard_voting: bool
     dataset: str
     explainers: list[str]
     models: list[str]
@@ -63,6 +65,11 @@ def create_argument_parser() -> ArgumentParser:
         type=int,
         default=100,
         dest="n_examples",
+    )
+    parser.add_argument(
+        "--hard-voting",
+        action="store_true",
+        help="Use hard-voting RandomForest leaf values and MaxSAT encoding.",
     )
     parser.add_argument(
         "--dataset",
@@ -100,6 +107,7 @@ def parse_args() -> Args:
         n_estimators=args.n_estimators,
         max_depth=args.max_depth,
         n_examples=args.n_examples,
+        hard_voting=args.hard_voting,
         dataset=args.dataset,
         explainers=args.exp,
         models=args.model,
@@ -152,6 +160,17 @@ def fit_model_with_console(
     return model
 
 
+def set_rf_hard_voting_values(model: RandomForestClassifier) -> None:
+    for estimator in model.estimators_:
+        tree = estimator.tree_
+        leaf_ids = np.flatnonzero(tree.children_left == tree.children_right)
+        for node_id in leaf_ids:
+            winners = np.argmax(tree.value[node_id], axis=1)
+            tree.value[node_id] = 0.0
+            for output_idx, winner in enumerate(winners):
+                tree.value[node_id, output_idx, winner] = 1.0
+
+
 def build_explainer(
     explainer_name: str,
     explainer_class: type[MixedIntegerProgramExplainer]
@@ -166,10 +185,16 @@ def build_explainer(
         if explainer_class is MixedIntegerProgramExplainer:
             ENV.setParam("Seed", args.seed)
             exp = explainer_class(model, mapper=mapper, env=ENV)
-        elif (
-            explainer_class is ConstraintProgrammingExplainer
-            or explainer_class is MaxSATExplainer
-        ):
+        elif explainer_class is MaxSATExplainer:
+            exp = explainer_class(
+                model,
+                mapper=mapper,
+                hard_voting=(
+                    args.hard_voting
+                    and isinstance(model, RandomForestClassifier)
+                ),
+            )
+        elif explainer_class is ConstraintProgrammingExplainer:
             exp = explainer_class(model, mapper=mapper)
         else:
             msg = f"Unknown explainer type: {explainer_class}"
@@ -283,6 +308,15 @@ def main() -> None:
         model = fit_model_with_console(
             args, data, target, model_class, model_name
         )
+        if args.hard_voting and isinstance(model, RandomForestClassifier):
+            with CONSOLE.status(
+                "[bold blue]Converting RandomForest to hard voting[/bold blue]"
+            ):
+                set_rf_hard_voting_values(model)
+            CONSOLE.print(
+                "[bold green]RandomForest leaf values converted"
+                " to one-hot[/bold green]"
+            )
         for explainer_name, explainer_class in explainers.items():
             CONSOLE.print(
                 f"[bold blue]Running for {explainer_name}[/bold blue]"

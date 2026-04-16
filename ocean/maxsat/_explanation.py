@@ -20,6 +20,12 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             code = self.codes[i]
             return self[name].xget(code=code)
         if self[name].is_numeric:
+            if self[name].has_threshold_encoding:
+                idx = self._get_threshold_index(name)
+                if idx is None:
+                    msg = "No threshold variable is available for this feature."
+                    raise ValueError(msg)
+                return self[name].xget(mu=idx)
             j: int = int(
                 np.searchsorted(self[name].levels, self._x[i], side="left")  # pyright: ignore[reportUnknownArgumentType]
             )
@@ -59,22 +65,37 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                 var = self[name].xget(code=code)
                 values.append(ENV.solver.model(var))
             elif self[name].is_continuous:
-                mu_idx = self._get_active_mu_index(name, for_discrete=False)
-                values.append(
-                    self.format_continuous_value(
-                        f, mu_idx, list(self[name].levels)
+                if self[name].has_threshold_encoding:
+                    values.append(
+                        self.format_threshold_continuous_value(
+                            f,
+                            name,
+                        )
                     )
-                )
+                else:
+                    mu_idx = self._get_active_mu_index(name, for_discrete=False)
+                    values.append(
+                        self.format_continuous_value(
+                            f,
+                            mu_idx,
+                            list(self[name].levels),
+                        )
+                    )
             elif self[name].is_discrete:
-                # For discrete features, mu[i] means value == levels[i]
-                mu_idx = self._get_active_mu_index(name, for_discrete=True)
-                levels = list(self[name].levels)
-                discrete_val = int(levels[mu_idx])
-                values.append(
-                    self.format_discrete_value(
-                        f, discrete_val, self[name].levels
+                if self[name].has_threshold_encoding:
+                    values.append(self.format_threshold_discrete_value(f, name))
+                else:
+                    # For discrete features, mu[i] means value == levels[i]
+                    mu_idx = self._get_active_mu_index(name, for_discrete=True)
+                    levels = list(self[name].levels)
+                    discrete_val = int(levels[mu_idx])
+                    values.append(
+                        self.format_discrete_value(
+                            f,
+                            discrete_val,
+                            self[name].levels,
+                        )
                     )
-                )
             elif self[name].is_binary:
                 var = self[name].xget()
                 values.append(ENV.solver.model(var))
@@ -85,8 +106,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
 
     def to_numpy(self) -> Array1D:
         return (
-            self
-            .to_series()
+            self.to_series()
             .to_frame()
             .T[self.columns]
             .to_numpy()
@@ -107,14 +127,30 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
                         return code
             if v.is_numeric:
                 f = list(self.values()).index(v)
+                if v.has_threshold_encoding:
+                    if v.is_discrete:
+                        return self.format_threshold_discrete_value(
+                            f,
+                            self.names[f],
+                        )
+                    return self.format_threshold_continuous_value(
+                        f,
+                        self.names[f],
+                    )
                 if v.is_discrete:
                     idx = self._get_active_mu_index(
-                        self.names[f], for_discrete=True
+                        self.names[f],
+                        for_discrete=True,
                     )
                     val = int(v.levels[idx])
-                    return self.format_discrete_value(f, val, v.levels)
+                    return self.format_discrete_value(
+                        f,
+                        val,
+                        v.levels,
+                    )
                 idx = self._get_active_mu_index(
-                    self.names[f], for_discrete=False
+                    self.names[f],
+                    for_discrete=False,
                 )
                 return self.format_continuous_value(
                     f,
@@ -160,6 +196,103 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
         if j_x != j_val:
             return float(val)
         return float(query_arr[f])
+
+    def _get_threshold_states(self, name: Key) -> list[bool]:
+        thresholds = self[name].split_threshold_values
+        return [
+            bool(ENV.solver.model(self[name].xget(mu=idx)) > 0)
+            for idx in range(len(thresholds))
+        ]
+
+    def _get_threshold_index(self, name: Key) -> int | None:
+        states = self._get_threshold_states(name)
+        for idx, state in enumerate(states):
+            if state:
+                return idx
+        if states:
+            return len(states) - 1
+        return None
+
+    def format_threshold_continuous_value(self, f: int, name: Key) -> float:
+        thresholds = list(self[name].split_threshold_values)
+        if len(thresholds) == 0:
+            if self.query.shape[0] != 0:
+                return float(np.asarray(self.query, dtype=float).ravel()[f])
+            return float(self[name].levels[0] + self[name].levels[-1]) / 2
+
+        query_arr = np.asarray(self.query, dtype=float).ravel()
+        query_val = float(query_arr[f]) if self.query.shape[0] != 0 else None
+        first_true = next(
+            (
+                idx
+                for idx, state in enumerate(self._get_threshold_states(name))
+                if state
+            ),
+            None,
+        )
+        result: float
+        if first_true == 0:
+            upper = thresholds[0]
+            if query_val is not None and query_val <= upper:
+                result = query_val
+            else:
+                result = self._next_float32_down(upper)
+        elif first_true is None:
+            lower = thresholds[-1]
+            if query_val is not None and query_val > lower:
+                result = query_val
+            else:
+                result = self._next_float32_up(lower)
+        else:
+            lower = thresholds[first_true - 1]
+            upper = thresholds[first_true]
+            if query_val is not None and lower < query_val <= upper:
+                result = query_val
+            elif query_val is not None and query_val <= lower:
+                result = self._next_float32_up(lower)
+            else:
+                result = self._next_float32_down(upper)
+        return result
+
+    def format_threshold_discrete_value(self, f: int, name: Key) -> float:
+        levels = np.asarray(self[name].levels, dtype=np.float64)
+        thresholds = list(self[name].split_threshold_values)
+        if len(thresholds) == 0:
+            if self.query.shape[0] != 0:
+                return float(np.asarray(self.query, dtype=float).ravel()[f])
+            return float(levels[0])
+
+        query_arr = np.asarray(self.query, dtype=float).ravel()
+        query_val = float(query_arr[f]) if self.query.shape[0] != 0 else None
+        first_true = next(
+            (
+                idx
+                for idx, state in enumerate(self._get_threshold_states(name))
+                if state
+            ),
+            None,
+        )
+        if first_true == 0:
+            lower = float("-inf")
+        elif first_true is None:
+            lower = thresholds[-1]
+        else:
+            lower = thresholds[first_true - 1]
+
+        upper = float("inf") if first_true is None else thresholds[first_true]
+        candidates = levels[(levels > lower) & (levels <= upper)]
+        if candidates.size == 0:
+            if first_true == 0:
+                candidates = np.array([levels[0]])
+            elif first_true is None:
+                candidates = np.array([levels[-1]])
+            else:
+                insertion = np.searchsorted(levels, upper, side="left")
+                insertion = np.min(insertion, len(levels) - 1)
+                candidates = np.array([levels[insertion]])
+        if query_val is not None and np.any(np.isclose(candidates, query_val)):
+            return query_val
+        return float(candidates[0])
 
     @property
     def query(self) -> Array1D:

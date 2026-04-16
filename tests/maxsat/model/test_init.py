@@ -115,3 +115,25 @@ class TestNoIsolation:
             msg = r"The number of weights must match the number of trees."
             with pytest.raises(ValueError, match=msg):
                 Model(trees=trees, mapper=mapper, weights=weights)
+
+
+def test_hard_voting_function_uses_tree_class_variables() -> None:
+    clf, mapper = train_rf(42, 3, 2, 100, 2)
+    for estimator in clf.estimators_:
+        tree = estimator.tree_
+        children_left = np.asarray(tree.children_left, dtype=np.int64)
+        children_right = np.asarray(tree.children_right, dtype=np.int64)
+        leaf_ids = np.flatnonzero(children_left == children_right)
+        for node_id in leaf_ids:
+            leaf_value = np.asarray(tree.value[node_id], dtype=np.float64)
+            winners = np.argmax(leaf_value, axis=1)
+            tree.value[node_id] = 0.0
+            for output_idx, winner in enumerate(winners):
+                tree.value[node_id, output_idx, winner] = 1.0
+
+    trees = parse_trees(clf, mapper=mapper)
+    model = Model(trees=trees, mapper=mapper, hard_voting=True)
+    model.build()
+
+    for class_id in range(model.n_classes):
+        assert len(model.function[0, class_id]) == model.n_trees

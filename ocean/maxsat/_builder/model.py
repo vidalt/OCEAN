@@ -41,8 +41,27 @@ class MaxSATBuilder(ModelBuilder):
         trees: Iterable[TreeVar],
         mapper: Mapper[FeatureVar],
     ) -> None:
+        if bool(getattr(model, "_hard_voting", False)):
+            for tree in trees:
+                self._build_hard_voting(model, tree=tree, mapper=mapper)
+            return
         for tree in trees:
             self._build(model, tree=tree, mapper=mapper)
+
+    def _build_hard_voting(
+        self,
+        model: BaseModel,
+        *,
+        tree: TreeVar,
+        mapper: Mapper[FeatureVar],
+    ) -> None:
+        for leaf in tree.leaves:
+            clause = self._collect_hard_voting_clause(
+                node=leaf,
+                mapper=mapper,
+            )
+            leaf_class = int(np.argmax(leaf.value[0, :]))
+            model.add_hard([*clause, tree.cget(leaf_class)])
 
     def _build(
         self,
@@ -64,6 +83,27 @@ class MaxSATBuilder(ModelBuilder):
     ) -> None:
         y = tree[leaf.node_id]
         self._propagate(model, node=leaf, mapper=mapper, y=y)
+
+    def _collect_hard_voting_clause(
+        self,
+        *,
+        node: Node,
+        mapper: Mapper[FeatureVar],
+    ) -> list[int]:
+        clause: list[int] = []
+        current = node
+        while current.parent is not None:
+            parent = current.parent
+            v = mapper[parent.feature]
+            clause.append(
+                self._hard_voting_literal(
+                    node=parent,
+                    v=v,
+                    sigma=current.sigma,
+                )
+            )
+            current = parent
+        return clause
 
     def _propagate(
         self,
@@ -99,6 +139,23 @@ class MaxSATBuilder(ModelBuilder):
             self._eset(model, node=node, y=y, v=v, sigma=sigma)
 
     @staticmethod
+    def _hard_voting_literal(
+        *,
+        node: Node,
+        v: FeatureVar,
+        sigma: bool,
+    ) -> int:
+        if v.is_binary:
+            x = v.xget()
+            return x if sigma else -x
+        if v.is_one_hot_encoded:
+            x = v.xget(code=node.code)
+            return x if sigma else -x
+        threshold_idx = v.threshold_index(node.threshold)
+        th = v.xget(mu=threshold_idx)
+        return -th if sigma else th
+
+    @staticmethod
     def _bset(
         model: BaseModel,
         *,
@@ -122,26 +179,12 @@ class MaxSATBuilder(ModelBuilder):
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        # For continuous features:
-        # j = searchsorted(levels, threshold) gives index where threshold fits
-        # sigma=True => left child (x <= threshold)
-        # sigma=False => right child (x > threshold)
-        threshold = node.threshold
-        j = int(np.searchsorted(v.levels, threshold, side="left"))
-        n_intervals = len(v.levels) - 1
-
+        threshold_idx = v.threshold_index(node.threshold)
+        th = v.xget(mu=threshold_idx)
         if sigma:
-            # Left branch: x <= threshold, so x is in interval 0, 1, ..., j-1
-            # Forbid intervals j, j+1, ..., n-2
-            for i in range(j, n_intervals):
-                mu = v.xget(mu=i)
-                model.add_hard([-y, -mu])
+            model.add_hard([-y, th])
         else:
-            # Right branch: x > threshold, so x is in interval j, j+1, ..., n-2
-            # Forbid intervals 0, 1, ..., j-1
-            for i in range(j):
-                mu = v.xget(mu=i)
-                model.add_hard([-y, -mu])
+            model.add_hard([-y, -th])
 
     @staticmethod
     def _dset(
@@ -152,24 +195,24 @@ class MaxSATBuilder(ModelBuilder):
         v: FeatureVar,
         sigma: bool,
     ) -> None:
-        # For discrete features:
-        # sigma=True => left child (x <= threshold)
-        # sigma=False => right child (x > threshold)
-        #
-        # mu[i] => value == levels[i]
+        if v.has_threshold_encoding:
+            threshold_idx = v.threshold_index(node.threshold)
+            th = v.xget(mu=threshold_idx)
+            if sigma:
+                model.add_hard([-y, th])
+            else:
+                model.add_hard([-y, -th])
+            return
+
         threshold = node.threshold
         n_values = len(v.levels)
 
         if sigma:
-            # Left branch: x <= threshold
-            # Forbid values where levels[i] > threshold
             for i in range(n_values):
                 if v.levels[i] > threshold:
                     mu = v.xget(mu=i)
                     model.add_hard([-y, -mu])
         else:
-            # Right branch: x > threshold
-            # Forbid values where levels[i] <= threshold
             for i in range(n_values):
                 if v.levels[i] <= threshold:
                     mu = v.xget(mu=i)

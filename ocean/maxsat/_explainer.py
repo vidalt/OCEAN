@@ -4,7 +4,8 @@ import signal
 import warnings
 from typing import TYPE_CHECKING, Any
 
-from sklearn.ensemble import AdaBoostClassifier
+import numpy as np
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 
 from ..tree import parse_ensembles
 from ..typing import (
@@ -39,6 +40,7 @@ class Explainer(Model, BaseExplainer):
         *,
         mapper: Mapper[Feature],
         weights: Array1D | None = None,
+        hard_voting: bool = False,
         epsilon: int = Model.DEFAULT_EPSILON,
         model_type: Model.Type = Model.Type.MAXSAT,
     ) -> None:
@@ -46,11 +48,20 @@ class Explainer(Model, BaseExplainer):
         trees = parse_ensembles(*ensembles, mapper=mapper)
         if isinstance(ensemble, AdaBoostClassifier):
             weights = ensemble.estimator_weights_
+        if hard_voting:
+            if not isinstance(ensemble, RandomForestClassifier):
+                msg = "Hard voting is only supported for"
+                msg += " RandomForestClassifier."
+                raise ValueError(msg)
+            if weights is not None and not np.allclose(weights, weights[0]):
+                msg = "Hard voting requires uniform estimator weights."
+                raise ValueError(msg)
         Model.__init__(
             self,
             trees,
             mapper=mapper,
             weights=weights,
+            hard_voting=hard_voting,
             epsilon=epsilon,
             model_type=model_type,
         )
@@ -67,7 +78,7 @@ class Explainer(Model, BaseExplainer):
             Objective value rescaled back to the user-facing distance units.
 
         """
-        return self.solver.cost / self._obj_scale
+        return float(self.solver.cost)
 
     def get_distance(self) -> float:
         """

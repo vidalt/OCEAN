@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 from enum import Enum
+from math import ceil, gcd
 from typing import TYPE_CHECKING
 
 import numpy as np
 from pydantic import validate_call
 
 try:
-    from pysat.pb import EncType, PBEnc
+    from pysat.card import CardEnc
+    from pysat.card import EncType as CardEncType
+except ImportError:
+    CardEnc = None
+    CardEncType = None
+
+try:
+    from pysat.pb import EncType as PBEncType
+    from pysat.pb import PBEnc
 except (AssertionError, ImportError):
-    EncType = None
+    PBEncType = None
     PBEnc = None
 
 from ..typing import NonNegativeInt
@@ -39,6 +48,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
     _builder: ModelBuilder
     DEFAULT_EPSILON: int = 1
     _obj_scale: int = int(1e8)
+    _hard_voting: bool = False
 
     class Type(Enum):
         MAXSAT = "MAXSAT"
@@ -49,6 +59,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         mapper: Mapper[Feature],
         *,
         weights: NonNegativeArray1D | None = None,
+        hard_voting: bool = False,
         max_samples: NonNegativeInt = 0,
         epsilon: int = DEFAULT_EPSILON,
         model_type: Model.Type = Type.MAXSAT,
@@ -66,6 +77,8 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             Boolean feature encoding.
         weights
             Optional tree weights.
+        hard_voting
+            Whether to build the hard-voting MaxSAT encoding.
         max_samples
             Reserved parameter used by compatible higher-level explainers.
         epsilon
@@ -83,6 +96,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         FeatureManager.__init__(self, mapper=mapper)
         GarbageManager.__init__(self)
 
+        self._hard_voting = hard_voting
         self._set_weights(weights=weights)
         self._max_samples = max_samples
         self._epsilon = epsilon
@@ -134,6 +148,9 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             raise ValueError(msg)
 
         x_arr = np.asarray(x, dtype=float).ravel()
+        self._add_objective_maxorc(x_arr)
+
+    def _add_objective_maxorc(self, x_arr: Array1D) -> None:
         variables = self.mapper.values()
         names = list(self.mapper.keys())
         k = 0
@@ -143,16 +160,19 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             if v.is_one_hot_encoded:
                 for code in v.codes:
                     idx = indexer.get(name, code)
-                    self._add_soft_l1_ohe(x_arr[idx], v, code=code)
+                    self._add_soft_l1_ohe_maxorc(x_arr[idx], v, code=code)
                     k += 1
             elif v.is_continuous:
-                self._add_soft_l1_continuous(x_arr[k], v)
+                self._add_soft_l1_threshold_numeric(x_arr[k], v)
                 k += 1
             elif v.is_discrete:
-                self._add_soft_l1_discrete(x_arr[k], v)
+                if v.has_threshold_encoding:
+                    self._add_soft_l1_threshold_numeric(x_arr[k], v)
+                else:
+                    self._add_soft_l1_discrete_maxorc(x_arr[k], v)
                 k += 1
             elif v.is_binary:
-                self._add_soft_l1_binary(x_arr[k], v)
+                self._add_soft_l1_binary_maxorc(x_arr[k], v)
                 k += 1
             else:
                 k += 1
@@ -175,6 +195,14 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             # If x=0, penalize flipping to 1
             self.add_soft([-x_var], weight=weight)
 
+    def _add_soft_l1_binary_maxorc(self, x_val: float, v: FeatureVar) -> None:
+        x_var = v.xget()
+        binary_threshold = 0.5
+        if x_val > binary_threshold:
+            self.add_soft([x_var], weight=1.0)
+        else:
+            self.add_soft([-x_var], weight=1.0)
+
     def _add_soft_l1_ohe(
         self,
         x_val: float,
@@ -194,6 +222,19 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             self.add_soft([x_var], weight=weight)
         else:
             self.add_soft([-x_var], weight=weight)
+
+    def _add_soft_l1_ohe_maxorc(
+        self,
+        x_val: float,
+        v: FeatureVar,
+        code: Key,
+    ) -> None:
+        x_var = v.xget(code=code)
+        binary_threshold = 0.5
+        if x_val > binary_threshold:
+            self.add_soft([x_var], weight=1.0)
+        else:
+            self.add_soft([-x_var], weight=1.0)
 
     def _add_soft_l1_continuous(self, x_val: float, v: FeatureVar) -> None:
         r"""
@@ -228,6 +269,49 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
                 # No cost if this is the same value
                 continue
             cost = int(abs(x_val - level_val) * self._obj_scale)
+            if cost > 0:
+                mu_var = v.xget(mu=i)
+                self.add_soft([-mu_var], weight=cost)
+
+    def _add_soft_l1_threshold_numeric(
+        self,
+        x_val: float,
+        v: FeatureVar,
+    ) -> None:
+        thresholds = v.split_threshold_values
+        n_thresholds = len(thresholds)
+        if n_thresholds == 0:
+            return
+
+        for idx, threshold in enumerate(thresholds):
+            if x_val <= threshold:
+                if idx == 0:
+                    cost = threshold - x_val
+                else:
+                    cost = min(
+                        threshold - x_val,
+                        threshold - thresholds[idx - 1],
+                    )
+                lit = v.xget(mu=idx)
+            else:
+                if idx == n_thresholds - 1:
+                    cost = x_val - threshold
+                else:
+                    cost = min(
+                        x_val - threshold,
+                        thresholds[idx + 1] - threshold,
+                    )
+                lit = -v.xget(mu=idx)
+            if cost > 0:
+                self.add_soft([lit], weight=float(cost))
+
+    def _add_soft_l1_discrete_maxorc(self, x_val: float, v: FeatureVar) -> None:
+        levels = v.levels
+        for i in range(len(levels)):
+            level_val = levels[i]
+            if level_val == x_val:
+                continue
+            cost = float(abs(x_val - level_val))
             if cost > 0:
                 mu_var = v.xget(mu=i)
                 self.add_soft([-mu_var], weight=cost)
@@ -306,6 +390,10 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         Since MaxSAT works on Boolean clauses, the leaf contributions of each
         tree are converted into an integer pseudo-Boolean constraint.
         """
+        if self._hard_voting:
+            self._set_hard_voting_majority_class(y, op=op)
+            return
+
         scale = 10000  # Scale factor for probabilities
 
         for class_ in range(self.n_classes):
@@ -333,6 +421,96 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             # Use iterative bounds propagation to encode the constraint
             # For each tree, we track the range of possible partial sums
             self._encode_weighted_sum_constraint(tree_contributions, epsilon)
+
+    def _set_hard_voting_majority_class(
+        self,
+        y: NonNegativeInt,
+        *,
+        op: NonNegativeInt = 0,
+    ) -> None:
+        r"""
+        Encode hard-voting dominance using cardinality constraints.
+
+        For hard voting, each tree contributes one unit vote to the class of
+        its active leaf. The target class is enforced through
+
+        .. math::
+
+           \sum_t \mathbb{1}[\hat{y}_t(x)=y]
+           \ge
+           \sum_t \mathbb{1}[\hat{y}_t(x)=c] + \varepsilon_c,
+           \qquad \forall c \neq y.
+        """
+        function = self.function
+        for class_ in range(self.n_classes):
+            if class_ == y:
+                continue
+
+            epsilon = self._epsilon if class_ < y else 0
+            self._encode_cardinality_difference_constraint(
+                function[op, y],
+                function[op, class_],
+                epsilon,
+            )
+
+    def _encode_cardinality_difference_constraint(
+        self,
+        positive_lits: list[int],
+        negative_lits: list[int],
+        threshold: int,
+    ) -> None:
+        r"""
+        Encode ``sum(pos) - sum(neg) >= threshold`` as a cardinality bound.
+
+        The difference is rewritten as
+
+        .. math::
+
+           \sum pos + \sum \lnot neg \ge |neg| + threshold.
+
+        This method is used for hard-voting score comparisons, where the
+        contributions are Boolean and the threshold is an integer margin.
+
+        Parameters
+        ----------
+        positive_lits
+            List of positive literals (e.g., votes for the target class).
+        negative_lits
+            List of negative literals (e.g., votes for the competing class).
+        threshold
+            Integer margin for the difference.
+
+        Raises
+        ------
+        ImportError
+            If pysat.card is not installed.
+
+        """
+        lits = [*positive_lits, *[-lit for lit in negative_lits]]
+        bound = len(negative_lits) + threshold
+
+        if bound <= 0:
+            return
+
+        if not lits or bound > len(lits):
+            self.add_garbage(self.add_hard([], return_id=True))
+            return
+
+        if CardEnc is None or CardEncType is None:
+            msg = "pysat.card is required for hard-voting cardinality encoding."
+            raise ImportError(msg)
+
+        card = CardEnc.atleast(
+            lits=lits,
+            bound=bound,
+            vpool=self.vpool,
+            encoding=CardEncType.totalizer,
+        )
+
+        for clause in card.clauses:
+            self.add_garbage(
+                self.add_hard(clause, return_id=True)  # pyright: ignore[reportUnknownArgumentType]
+            )
 
     def _encode_weighted_sum_constraint(
         self,
@@ -368,36 +546,28 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             If pysat.pb is not installed.
 
         """
+        normalized_ctbs, effective_bound = self._normalize_tree_contributions(
+            tree_contributions,
+            threshold,
+        )
         lits: list[int] = []
         weights: list[int] = []
-        shift = 0  # sum over |negative weights|
 
-        for contribs in tree_contributions:
+        for contribs in normalized_ctbs:
             for leaf_var, diff in contribs:
                 if diff == 0:
                     continue  # contributes nothing, can be ignored
 
-                if diff > 0:
-                    # positive coefficient: weight * x
-                    lits.append(leaf_var)  # x
-                    weights.append(diff)
-                else:
-                    # negative coefficient: -a * x
-                    a = -diff
-                    # transform -a*x into a*(-x) and shift the bound by +a
-                    lits.append(-leaf_var)  # -x
-                    weights.append(a)
-                    shift += a
-
-        effective_bound = threshold + shift
+                lits.append(leaf_var)
+                weights.append(diff)
 
         if not lits:  # degenerate case
             if effective_bound > 0:
-                self.add_hard([])  # UNSAT
+                self.add_garbage(self.add_hard([], return_id=True))
             return
 
         # Encode sum(weights_i * lits_i) >= effective_bound
-        if PBEnc is None or EncType is None:
+        if PBEnc is None or PBEncType is None:
             msg = "pysat.pb is required for this operation."
             msg += " The pysat[pblib] extra dependency is required."
             msg += " It does not work properly on Windows."
@@ -407,13 +577,81 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
             weights=weights,
             bound=effective_bound,
             vpool=self.vpool,
-            encoding=EncType.adder,
+            encoding=PBEncType.adder,
         )
 
         for clause in pb.clauses:
             self.add_garbage(
                 self.add_hard(clause, return_id=True)  # pyright: ignore[reportUnknownArgumentType]
             )
+
+    @staticmethod
+    def _normalize_tree_contributions(
+        tree_contributions: list[list[tuple[int, int]]],
+        threshold: int,
+    ) -> tuple[list[list[tuple[int, int]]], int]:
+        r"""
+        Normalize contributions using the one-active-leaf property per tree.
+
+        Subtracting the minimum contribution of each tree preserves the score
+        inequality and removes avoidable negative coefficients. A final GCD
+        reduction keeps the PB coefficients smaller before calling PySAT.
+
+        Parameters
+        ----------
+        tree_contributions : list[list[tuple[int, int]]]
+            List of contributions for each tree.
+        threshold : int
+            Threshold for the sum of contributions.
+
+        Returns
+        -------
+        tuple[list[list[tuple[int, int]]], int]
+            Normalized contributions and the adjusted threshold.
+
+        """
+        normalized: list[list[tuple[int, int]]] = []
+        effective_bound = threshold
+
+        for contribs in tree_contributions:
+            if not contribs:
+                continue
+
+            min_diff = min(diff for _, diff in contribs)
+            effective_bound -= min_diff
+            normalized.append(
+                [
+                    (leaf_var, diff - min_diff)
+                    for leaf_var, diff in contribs
+                    if diff != min_diff
+                ]
+            )
+
+        flat_weights = [
+            diff for contribs in normalized for _, diff in contribs if diff > 0
+        ]
+        if not flat_weights:
+            return normalized, effective_bound
+
+        common_divisor = flat_weights[0]
+        for weight in flat_weights[1:]:
+            common_divisor = gcd(common_divisor, weight)
+            if common_divisor == 1:
+                break
+
+        if common_divisor <= 1:
+            return normalized, effective_bound
+
+        reduced = [
+            [
+                (leaf_var, diff // common_divisor)
+                for leaf_var, diff in contribs
+                if diff > 0
+            ]
+            for contribs in normalized
+        ]
+        reduced_bound = ceil(effective_bound / common_divisor)
+        return reduced, reduced_bound
 
     def cleanup(self) -> None:
         r"""
