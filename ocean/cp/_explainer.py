@@ -2,6 +2,7 @@ import time
 import traceback
 import warnings
 
+import numpy as np
 from ortools.sat.python import cp_model as cp
 from sklearn.ensemble import AdaBoostClassifier, IsolationForest
 
@@ -14,7 +15,6 @@ from ..typing import (
     BaseExplainer,
     NonNegativeArray1D,
     NonNegativeInt,
-    PositiveInt,
 )
 from ._env import ENV
 from ._explanation import Explanation
@@ -99,13 +99,21 @@ class Explainer(Model, BaseExplainer):
                 for code in feature.codes:
                     idx = self.mapper.idx.get(name, code)
                     delta = float(counterfactual[idx]) - float(query[idx])
-                    feature_distance += abs(delta) ** norm
+                    feature_distance += (
+                        0.0
+                        if norm == 0 and np.isclose(delta, 0.0)
+                        else abs(delta) ** norm
+                    )
                 distance += feature_distance / 2.0
             else:
                 idx = self.mapper.idx.get(name)
                 delta = float(counterfactual[idx]) - float(query[idx])
-                distance += abs(delta) ** norm
-        if norm != 1:
+                distance += (
+                    0.0
+                    if norm == 0 and np.isclose(delta, 0.0)
+                    else abs(delta) ** norm
+                )
+        if norm not in {0, 1}:
             distance **= 1.0 / norm
         return float(distance)
 
@@ -142,7 +150,7 @@ class Explainer(Model, BaseExplainer):
         x: Array1D,
         *,
         y: NonNegativeInt,
-        norm: PositiveInt,
+        norm: NonNegativeInt,
         return_callback: bool = False,
         verbose: bool = False,
         max_time: int = 60,
@@ -160,7 +168,7 @@ class Explainer(Model, BaseExplainer):
         y
             Target class enforced by the counterfactual.
         norm
-            Integer distance norm used by the CP objective.
+            Non-negative integer distance norm used by the CP objective.
         return_callback
             Whether to record incumbent solutions during the search.
         verbose

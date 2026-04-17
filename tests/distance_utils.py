@@ -30,13 +30,15 @@ def manual_postprocessed_distance(
             for code in feature.codes:
                 idx = explanation_any.idx.get(name, code)
                 delta = float(counterfactual[idx]) - float(query[idx])
-                feature_distance += abs(delta) ** norm
+                feature_distance += (
+                    0.0 if np.isclose(delta, 0.0) else abs(delta) ** norm
+                )
             distance += feature_distance / 2.0
         else:
             idx = explanation_any.idx.get(name)
             delta = float(counterfactual[idx]) - float(query[idx])
-            distance += abs(delta) ** norm
+            distance += 0.0 if np.isclose(delta, 0.0) else abs(delta) ** norm
 
     if norm != 1:
-        distance **= 1.0 / norm
+        distance **= 1.0 / norm if norm != 0 else 1.0
     return float(distance)

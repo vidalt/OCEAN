@@ -114,7 +114,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self,
         x: Array1D,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> None:
         r"""
         Minimize the scaled integer approximation of :math:`d_p(x, \hat{x})`.
@@ -126,7 +126,8 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             code parameter is named ``x``, but mathematically it represents the
             query.
         norm
-            Distance norm. The default is :math:`L_1`.
+            Distance norm. The CP backend supports non-negative integer
+            norms, with :math:`L_1` as the default.
 
         """
         objective = self._add_objective(x=x, norm=norm)
@@ -217,7 +218,11 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
         self.Add(self.length >= self.min_length_scaled)
 
-    def _add_objective(self, x: Array1D, norm: int) -> cp.ObjLinearExprT:
+    def _add_objective(
+        self,
+        x: Array1D,
+        norm: NonNegativeInt,
+    ) -> cp.ObjLinearExprT:
         r"""
         Build the scaled linear expression for :math:`d_p(x, \hat{x})^p`.
 
@@ -241,7 +246,6 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             msg = f"Expected {self.mapper.n_columns} values, got {x.size}"
             raise ValueError(msg)
         x_arr = np.asarray(x, dtype=float).ravel()
-
         variables = self.mapper.values()
         names = list(self.mapper.keys())
         objective: cp.LinearExpr = 0  # type: ignore[assignment]
@@ -263,7 +267,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         levels: Array1D,
         x: float,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> list[int]:
         r"""
         Return interval costs for a continuous feature encoded by thresholds.
@@ -299,7 +303,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         values: list[int],
         x: float,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> list[int]:
         r"""
         Return scaled :math:`L_p^p` costs for one finite-value domain.
@@ -311,7 +315,12 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
         """
         return [
-            int(abs(x - value) ** norm * self._obj_scale) for value in values
+            int(
+                0.0
+                if np.isclose(x, value)
+                else abs(x - value) ** norm * self._obj_scale
+            )
+            for value in values
         ]
 
     def L1(
@@ -320,7 +329,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         v: FeatureVar,
         code: Key | None = None,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> cp.LinearExpr:
         r"""
         Build the CP contribution of one feature to :math:`d_p(x, \hat{x})^p`.

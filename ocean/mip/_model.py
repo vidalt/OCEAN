@@ -10,6 +10,7 @@ from ..feature import Feature
 from ..tree import Tree
 from ..typing import (
     Array1D,
+    Key,
     NonNegativeArray1D,
     NonNegativeInt,
     Unit,
@@ -18,7 +19,7 @@ from ._base import BaseModel
 from ._builders.model import ModelBuilder, ModelBuilderFactory
 from ._managers import FeatureManager, GarbageManager, TreeManager
 from ._typing import Objective
-from ._variables import TreeVar
+from ._variables import FeatureVar, TreeVar
 
 
 class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
@@ -160,7 +161,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             query.
         norm
             Distance norm used for :math:`d(x, \hat{x})`. The MIP backend
-            supports :math:`L_1` and :math:`L_2`.
+            supports :math:`L_0`, :math:`L_1`, and :math:`L_2`.
         sense
             Optimization sense passed to Gurobi. Counterfactual search uses
             minimization.
@@ -298,9 +299,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         r"""
         Build the symbolic objective expression for :math:`d(x, \hat{x})`.
 
-        Each feature variable contributes either an :math:`L_1` or
+        Each feature contributes an :math:`L_0`, :math:`L_1`, or
         :math:`L_2` term. One-hot encoded coordinates use a factor
-        :math:`1/2` so that switching category is not double counted.
+        :math:`1/2` for :math:`L_1` and :math:`L_2` so that switching a
+        category is not double counted.
 
         Returns
         -------
@@ -318,9 +320,12 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         if x.size != self.mapper.n_columns:
             msg = f"Expected {self.mapper.n_columns} values, got {x.size}"
             raise ValueError(msg)
-        if norm not in {1, 2}:
+        if norm not in {0, 1, 2}:
             msg = f"Unsupported norm: {norm}"
             raise ValueError(msg)
+        if norm == 0:
+            x_arr = np.asarray(x, dtype=np.float64).ravel()
+            return self._add_l0_objective(x_arr)
         names = self.mapper.names
         is_ohe = [self.mapper[name].is_one_hot_encoded for name in names]
         variables = map(self.vget, range(self.n_columns))
@@ -339,6 +344,104 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             ),
             start=gp.QuadExpr(),
         )
+
+    def _add_l0_objective(self, x: Array1D) -> gp.LinExpr:
+        objective = gp.LinExpr()
+        indexer = self.mapper.idx
+        for name, feature in self.mapper.items():
+            if feature.is_one_hot_encoded:
+                objective += self._l0_one_hot(x, name=name, feature=feature)
+                continue
+
+            idx = indexer.get(name)
+            x_j = float(x[idx])
+            if feature.is_binary:
+                objective += self._l0_binary(x_j, feature=feature)
+            elif feature.is_discrete:
+                objective += self._l0_discrete(x_j, feature=feature)
+            else:
+                objective += self._l0_continuous(x_j, feature=feature)
+        return objective
+
+    def _l0_one_hot(
+        self,
+        x: Array1D,
+        *,
+        name: Key,
+        feature: FeatureVar,
+    ) -> gp.LinExpr:
+        for code in feature.codes:
+            if np.isclose(x[self.mapper.idx.get(name, code)], 1.0):
+                return 1.0 - feature.xget(code)
+        msg = f"Could not determine the active query code for feature {name!r}."
+        raise ValueError(msg)
+
+    @staticmethod
+    def _l0_binary(
+        x: float,
+        *,
+        feature: FeatureVar,
+    ) -> gp.LinExpr:
+        return gp.LinExpr(feature.xget()) if np.isclose(
+            x, 0.0
+        ) else 1.0 - feature.xget()
+
+    @staticmethod
+    def _continuous_interval_index(levels: Array1D, x: float) -> int:
+        upper = np.asarray(levels, dtype=float)[1:]
+        idx = int(np.searchsorted(upper, x, side="left"))
+        return max(0, min(idx, len(upper) - 1))
+
+    def _l0_continuous(
+        self,
+        x: float,
+        *,
+        feature: FeatureVar,
+    ) -> gp.LinExpr:
+        n_intervals = len(feature.levels) - 1
+        if n_intervals <= 1:
+            return gp.LinExpr()
+
+        query_interval = self._continuous_interval_index(feature.levels, x)
+        changed = self.addVar(vtype=gp.GRB.BINARY)
+        garbage: list[gp.Var | gp.Constr] = [changed]
+
+        if query_interval > 0:
+            garbage.append(
+                self.addConstr(feature.mget(query_interval - 1) >= 1 - changed)
+            )
+        if query_interval < n_intervals - 1:
+            garbage.append(
+                self.addConstr(feature.mget(query_interval + 1) <= changed)
+            )
+
+        self.add_garbage(*garbage)
+        return gp.LinExpr(changed)
+
+    @staticmethod
+    def _l0_discrete(
+        x: float,
+        *,
+        feature: FeatureVar,
+    ) -> gp.LinExpr:
+        levels = np.asarray(feature.levels, dtype=float)
+        if len(levels) <= 1:
+            return gp.LinExpr()
+
+        thresholds = np.asarray(feature.thresholds, dtype=float)
+        buckets = np.searchsorted(thresholds, levels, side="left")
+        query_bucket = int(np.searchsorted(thresholds, x, side="left"))
+        start = int(np.searchsorted(buckets, query_bucket, side="left"))
+        end = int(np.searchsorted(buckets, query_bucket, side="right")) - 1
+        last = len(levels) - 1
+
+        if start == 0:
+            if end == last:
+                return gp.LinExpr()
+            return gp.LinExpr(feature.mget(end))
+        if end == last:
+            return 1.0 - feature.mget(start - 1)
+        return 1.0 - feature.mget(start - 1) + feature.mget(end)
 
     def L1(self, x: np.float64, v: gp.Var, *, is_ohe: bool) -> gp.LinExpr:
         r"""

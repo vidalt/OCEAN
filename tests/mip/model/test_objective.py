@@ -28,7 +28,7 @@ P_QUERIES = 0.2
 @pytest.mark.parametrize("max_depth", MAX_DEPTH)
 @pytest.mark.parametrize("n_samples", N_SAMPLES)
 @pytest.mark.parametrize("n_classes", N_CLASSES)
-@pytest.mark.parametrize("norm", [1, 2])
+@pytest.mark.parametrize("norm", [0, 1, 2])
 class TestNoIsolation:
     @staticmethod
     def test_build(

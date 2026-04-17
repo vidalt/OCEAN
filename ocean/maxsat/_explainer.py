@@ -13,7 +13,6 @@ from ..typing import (
     BaseExplainableEnsemble,
     BaseExplainer,
     NonNegativeInt,
-    PositiveInt,
 )
 from ._env import ENV
 from ._model import Model
@@ -153,7 +152,7 @@ class Explainer(Model, BaseExplainer):
         x: Array1D,
         *,
         y: NonNegativeInt,
-        norm: PositiveInt,
+        norm: NonNegativeInt,
         return_callback: bool = False,
         verbose: bool = False,
         max_time: int = 60,

@@ -118,7 +118,7 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         self,
         x: Array1D,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> None:
         r"""
         Encode the :math:`L_1` distance :math:`d_1(x, \hat{x})` as soft clauses.

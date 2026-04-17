@@ -106,7 +106,7 @@ class TestNoIsolation:
             model.cleanup()
 
 
-@pytest.mark.parametrize("norm", [1, 2, 3])
+@pytest.mark.parametrize("norm", [0, 1, 2, 3])
 def test_supported_norms(norm: int) -> None:
     clf, mapper, data = train_rf(
         42,
