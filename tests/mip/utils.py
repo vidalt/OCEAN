@@ -97,7 +97,11 @@ def validate_sklearn_paths(
     for t, tree in enumerate(trees):
         # Get the leaf node from the tree
         node = tree.root
+        msg = f"Path validation failed for tree {t} \n"
         while not node.is_leaf:
+            msg += f"At node {node.node_id}"
+            msg += f"\t with left {tree[node.left.node_id].X}\n"
+            msg += f"\t and right {tree[node.right.node_id].X}\n"
             node = (
                 node.left
                 if np.isclose(
@@ -109,9 +113,8 @@ def validate_sklearn_paths(
                 else node.right
             )
             is_path_valid: bool = bool(ind[0, ptr[t] + node.node_id])
-            assert is_path_valid, (
-                f"Path validation failed for tree {t} at node {node.node_id}"
-            )
+            msg += f"\t and sklearn value {ind[0, ptr[t] + node.node_id]}\n"
+            assert is_path_valid, msg
 
 
 def validate_sklearn_pred(

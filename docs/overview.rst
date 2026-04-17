@@ -53,11 +53,13 @@ Backend summary
    * - CP
      - ``ocean.ConstraintProgrammingExplainer``
      - Integer ``p >= 1`` with default ``1``
-     - Uses OR-Tools CP-SAT and is the easiest exact backend to run locally.
+     - Uses OR-Tools CP-SAT, is the easiest exact backend to run locally, and
+       also supports adding isolation-forest constraints.
    * - MaxSAT
      - ``ocean.MaxSATExplainer``
      - ``1``
-     - Uses a weighted MaxSAT encoding backed by PySAT.
+     - Uses a weighted MaxSAT encoding backed by PySAT and supports an
+       optional hard-voting mode for random forests.
 
 Common workflow
 ---------------

@@ -125,7 +125,7 @@ WorkClass        : 4
 ```
 
 
-See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) for more usage examples.
+See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) or the [documentation](https://github.com/vidalt/OCEAN/blob/main/docs/index.rst) for more usage examples.
 
 
 ## Feature Preview & Roadmap

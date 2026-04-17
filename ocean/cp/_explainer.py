@@ -3,7 +3,7 @@ import traceback
 import warnings
 
 from ortools.sat.python import cp_model as cp
-from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import AdaBoostClassifier, IsolationForest
 
 from ..abc import Mapper
 from ..feature import Feature
@@ -30,10 +30,12 @@ class Explainer(Model, BaseExplainer):
         *,
         mapper: Mapper[Feature],
         weights: NonNegativeArray1D | None = None,
+        isolation: IsolationForest | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
         model_type: "Model.Type" = Model.Type.CP,
     ) -> None:
-        ensembles = (ensemble,)
+        ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
+        n_isolators, max_samples = self._get_isolation_params(isolation)
         trees = parse_ensembles(*ensembles, mapper=mapper)
         if isinstance(ensemble, AdaBoostClassifier):
             weights = ensemble.estimator_weights_
@@ -42,6 +44,8 @@ class Explainer(Model, BaseExplainer):
             trees,
             mapper=mapper,
             weights=weights,
+            n_isolators=n_isolators,
+            max_samples=max_samples,
             epsilon=epsilon,
             model_type=model_type,
         )
@@ -205,7 +209,7 @@ class Explainer(Model, BaseExplainer):
                 msg += "solver could not prove optimality within "
                 msg += "the given time frame. \n It can however certify"
                 msg += " that no counterfactual can be closer than"
-                msg += f" {self.solver.BestObjectiveBound()}."
+                msg += f" {self.solver.BestObjectiveBound() / self._obj_scale}."
                 warnings.warn(msg, category=UserWarning, stacklevel=2)
             case "INFEASIBLE":
                 msg = "There are no feasible counterfactuals for this query."
@@ -236,6 +240,14 @@ class Explainer(Model, BaseExplainer):
         if clean_up:
             self.cleanup()
         return self.explanation
+
+    @staticmethod
+    def _get_isolation_params(
+        isolation: IsolationForest | None,
+    ) -> tuple[NonNegativeInt, NonNegativeInt]:
+        if isolation is not None:
+            return len(isolation), int(isolation.max_samples_)  # pyright: ignore[reportUnknownArgumentType]
+        return 0, 0
 
 
 class MySolCallback(cp.CpSolverSolutionCallback):

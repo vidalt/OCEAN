@@ -47,7 +47,7 @@ CP managers
    :member-order: bysource
 
 .. autoclass:: ocean.cp._managers._tree.TreeManager
-   :members: build_trees, weighted_function, _set_trees, _set_weights, _get_function
+   :members: build_trees, weighted_function, isolators, length, max_samples, min_average_length, min_length, min_length_scaled, _set_trees, _set_weights, _get_function
    :member-order: bysource
 
 .. autoclass:: ocean.cp._managers._garbage.GarbageManager
@@ -62,7 +62,7 @@ MaxSAT managers
    :member-order: bysource
 
 .. autoclass:: ocean.maxsat._managers._tree.TreeManager
-   :members: build_trees, weighted_function, _set_trees, _set_weights, _get_function
+   :members: build_trees, weighted_function, _hard_voting_function, _set_trees, _set_weights, _get_function
    :member-order: bysource
 
 .. autoclass:: ocean.maxsat._managers._garbage.GarbageManager

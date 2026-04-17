@@ -18,6 +18,7 @@ preparation, backend-specific behavior, and worked examples.
    installation
    quickstart
    visual-examples
+   isolation-forest-example
    data-preparation
    explainer-guide
    custom-dataset

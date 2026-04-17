@@ -18,6 +18,15 @@ The two required inputs are:
 - a fitted supported tree ensemble,
 - the mapper returned by :func:`ocean.feature.parse_features`.
 
+Two optional constructor arguments are especially useful when you compare
+backends:
+
+- ``isolation=some_isolation_forest`` is supported by the MIP and CP
+  explainers and adds an isolation-forest plausibility constraint.
+- ``hard_voting=True`` is supported by the MaxSAT explainer for
+  ``RandomForestClassifier`` and switches the score comparison from soft class
+  proportions to per-tree votes.
+
 Calling ``explain``
 -------------------
 
@@ -72,8 +81,12 @@ Backend-specific behavior
      - Yes
    * - Isolation forest support
      - Yes
+     - Yes
+     - No
+   * - Hard-voting random forest mode
      - No
      - No
+     - Yes
 
 Repeated solves
 ---------------
@@ -85,6 +98,13 @@ automatically after each solve unless you opt out.
 Call ``cleanup()`` manually only when you deliberately run ``explain(...,
 clean_up=False)`` and want to clear the previous query state yourself before
 reusing the same explainer instance.
+
+One backend detail matters when you keep old explanations around. The CP and
+MaxSAT explanation objects read values back from the current shared backend
+solver state, so they behave like live views rather than frozen snapshots. If
+you want to preserve one result before another CP or MaxSAT solve, materialize
+it immediately with ``explanation.to_numpy().copy()`` or
+``explanation.to_series().copy()``.
 
 Inspecting the result
 ---------------------

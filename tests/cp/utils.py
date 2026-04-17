@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Literal, overload
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
 from ocean.abc import Mapper
 from ocean.cp import ENV, Explanation, Model, TreeVar
@@ -211,8 +211,80 @@ def train_rf(
     return clf, mapper
 
 
+@overload
+def train_rf_isolation(
+    seed: int,
+    n_estimators: int,
+    max_depth: int,
+    n_isolators: int,
+    max_samples: int,
+    n_samples: int,
+    n_classes: int,
+    *,
+    return_data: Literal[False] = False,
+) -> tuple[RandomForestClassifier, IsolationForest, Mapper[Feature]]: ...
+
+
+@overload
+def train_rf_isolation(
+    seed: int,
+    n_estimators: int,
+    max_depth: int,
+    n_isolators: int,
+    max_samples: int,
+    n_samples: int,
+    n_classes: int,
+    *,
+    return_data: Literal[True],
+) -> tuple[
+    RandomForestClassifier,
+    IsolationForest,
+    Mapper[Feature],
+    pd.DataFrame,
+]: ...
+
+
+def train_rf_isolation(
+    seed: int,
+    n_estimators: int,
+    max_depth: int,
+    n_isolators: int,
+    max_samples: int,
+    n_samples: int,
+    n_classes: int,
+    *,
+    return_data: bool = False,
+) -> (
+    tuple[RandomForestClassifier, IsolationForest, Mapper[Feature]]
+    | tuple[
+        RandomForestClassifier,
+        IsolationForest,
+        Mapper[Feature],
+        pd.DataFrame,
+    ]
+):
+    data, y, mapper = generate_data(seed, n_samples, n_classes)
+    clf = RandomForestClassifier(
+        random_state=seed,
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+    )
+    clf.fit(data, y)
+    ilf = IsolationForest(
+        random_state=seed,
+        n_estimators=n_isolators,
+        max_samples=max_samples,  # pyright: ignore[reportArgumentType]
+    )
+    ilf.fit(data)
+    if return_data:
+        return clf, ilf, mapper, data
+    return clf, ilf, mapper
+
+
 SEEDS = [43, 44, 45]
 N_ESTIMATORS = [1, 4, 8]
 MAX_DEPTH = [2, 3]
 N_CLASSES = [2, 4]
 N_SAMPLES = [100, 200, 500]
+N_ISOLATORS = [1, 2, 4]
+MAX_SAMPLES = [4, 8]

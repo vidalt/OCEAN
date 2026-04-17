@@ -62,6 +62,10 @@ Common variations
 -----------------
 
 - Use ``norm=2`` with the MIP backend or the CP backend.
+- Pass ``isolation=some_isolation_forest`` to the MIP or CP explainer when
+  you want counterfactuals to avoid highly isolated regions.
+- Use ``MaxSATExplainer(model, mapper=mapper, hard_voting=True)`` when you
+  want MaxSAT to match a hard-voting random forest.
 - Set ``verbose=True`` to expose solver logs while debugging.
 - Set ``max_time`` and ``num_workers`` when you want more control over runtime.
 - Reuse the same fitted model and mapper across multiple explainers to compare

@@ -46,6 +46,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         mapper: Mapper[Feature],
         *,
         weights: NonNegativeArray1D | None = None,
+        n_isolators: NonNegativeInt = 0,
         max_samples: NonNegativeInt = 0,
         epsilon: int = DEFAULT_EPSILON,
         model_type: "Model.Type" = Type.CP,
@@ -62,8 +63,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             finite-domain decision variables.
         weights
             Optional tree weights.
+        n_isolators
+            Number of isolation trees appended after the predictive ensemble.
         max_samples
-            Reserved parameter used by compatible higher-level explainers.
+            Reference sample count used by the isolation-forest extension.
         epsilon
             Integer classification margin used in the pairwise score
             constraints.
@@ -76,6 +79,8 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             self,
             trees=trees,
             weights=weights,
+            n_isolators=n_isolators,
+            max_samples=max_samples,
         )
         FeatureManager.__init__(self, mapper=mapper)
         GarbageManager.__init__(self)
@@ -92,11 +97,13 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
         This builds the finite-domain feature variables for :math:`x`, the
         leaf/path variables :math:`p_{t,\ell}`, and the consistency
-        constraints connecting both representations.
+        constraints connecting both representations. When isolation trees are
+        present, it also adds the minimum aggregate path-length constraint.
         """
         self.build_features(self)
         self.build_trees(self)
         self._builder.build(self, trees=self.trees, mapper=self.mapper)
+        self._set_isolation()
 
     def add_objective(
         self,
@@ -191,6 +198,19 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         query :math:`\hat{x}` are discarded.
         """
         self.remove_garbage()
+
+    def _set_isolation(self) -> None:
+        """
+        Add the optional isolation-forest length constraint.
+
+        When isolation trees are present, this constrains the scaled
+        aggregate path length to remain above the scaled minimum admissible
+        value.
+        """
+        if self.n_isolators == 0:
+            return
+
+        self.Add(self.length >= self.min_length_scaled)
 
     def _add_objective(self, x: Array1D, norm: int) -> cp.ObjLinearExprT:
         r"""
