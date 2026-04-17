@@ -23,6 +23,9 @@ backends:
 
 - ``isolation=some_isolation_forest`` is supported by the MIP and CP
   explainers and adds an isolation-forest plausibility constraint.
+- ``isolation_threshold=...`` can be passed together with ``isolation=...`` on
+  MIP and CP. ``0.5`` reproduces the historical cutoff, values closer to ``1``
+  are weaker, and smaller values are stricter.
 - ``hard_voting=True`` is supported by the MaxSAT explainer for
   ``RandomForestClassifier`` and switches the score comparison from soft class
   proportions to per-tree votes.
@@ -135,3 +138,5 @@ constraints. Depending on the backend, the solver may also warn when:
 
 When that happens, increase ``max_time``, simplify the ensemble, or choose a
 query whose target class is realistically reachable under the learned model.
+For MIP and CP with ``isolation=...``, also check whether
+``isolation_threshold`` is too strict for the target region.

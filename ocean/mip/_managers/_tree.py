@@ -4,7 +4,7 @@ import gurobipy as gp
 import numpy as np
 
 from ...tree import Tree
-from ...tree._utils import average_length
+from ...tree._utils import minimum_average_length
 from ...typing import (
     Array1D,
     NonNegativeArray1D,
@@ -37,6 +37,9 @@ class TreeManager:
     # Maximum number of samples in the isolators.
     _max_samples: NonNegativeInt
 
+    # Optional isolation-score threshold in (0, 1].
+    _isolation_threshold: float | None
+
     # Weights for the estimators in the ensemble.
     _weights: NonNegativeArray1D
 
@@ -62,12 +65,28 @@ class TreeManager:
         weights: NonNegativeArray1D | None = None,
         n_isolators: NonNegativeInt = 0,
         max_samples: NonNegativeInt = 0,
+        isolation_threshold: float | None = None,
         flow_type: TreeVar.FlowType = TreeVar.FlowType.CONTINUOUS,
     ) -> None:
-        """Initialize the tree manager and record ensemble metadata."""
+        """
+        Initialize the tree manager and record ensemble metadata.
+
+        Raises
+        ------
+        ValueError
+            If ``isolation_threshold`` is provided and does not satisfy
+            ``0 < isolation_threshold <= 1``.
+
+        """
         self._set_trees(trees=trees, flow_type=flow_type)
         self._n_isolators = n_isolators
         self._max_samples = max_samples
+        if isolation_threshold is not None and not (
+            0.0 < isolation_threshold <= 1.0
+        ):
+            msg = "The isolation threshold must satisfy 0 < threshold <= 1."
+            raise ValueError(msg)
+        self._isolation_threshold = isolation_threshold
         self._set_weights(weights=weights)
 
     def build_trees(self, model: BaseModel) -> None:
@@ -119,6 +138,10 @@ class TreeManager:
         return self._max_samples
 
     @property
+    def isolation_threshold(self) -> float | None:
+        return self._isolation_threshold
+
+    @property
     def weights(self) -> NonNegativeArray1D:
         return self._weights
 
@@ -132,7 +155,10 @@ class TreeManager:
 
     @property
     def min_average_length(self) -> NonNegativeNumber:
-        return average_length(self.max_samples)
+        return minimum_average_length(
+            self.max_samples,
+            threshold=self.isolation_threshold,
+        )
 
     @property
     def min_length(self) -> NonNegativeNumber:
@@ -148,6 +174,7 @@ class TreeManager:
             MIP expression representing :math:`f(x)`.
 
         """
+
         # \sum_{t=1}^{T} w_t f_t(x)
         def weighted(tree: TreeVar, weight: float) -> gp.MLinExpr:
             return weight * tree.value
@@ -197,6 +224,7 @@ class TreeManager:
             If no tree is provided.
 
         """
+
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
             if tree.xgboost:

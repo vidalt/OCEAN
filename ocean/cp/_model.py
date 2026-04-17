@@ -48,6 +48,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         weights: NonNegativeArray1D | None = None,
         n_isolators: NonNegativeInt = 0,
         max_samples: NonNegativeInt = 0,
+        isolation_threshold: float | None = None,
         epsilon: int = DEFAULT_EPSILON,
         model_type: "Model.Type" = Type.CP,
     ) -> None:
@@ -67,6 +68,9 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             Number of isolation trees appended after the predictive ensemble.
         max_samples
             Reference sample count used by the isolation-forest extension.
+        isolation_threshold
+            Optional isolation-score cutoff in ``(0, 1]``. When omitted, the
+            classic average-path-length threshold is used.
         epsilon
             Integer classification margin used in the pairwise score
             constraints.
@@ -81,6 +85,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             weights=weights,
             n_isolators=n_isolators,
             max_samples=max_samples,
+            isolation_threshold=isolation_threshold,
         )
         FeatureManager.__init__(self, mapper=mapper)
         GarbageManager.__init__(self)

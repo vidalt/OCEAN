@@ -4,7 +4,7 @@ import numpy as np
 from ortools.sat.python import cp_model as cp
 
 from ...tree import Tree
-from ...tree._utils import average_length
+from ...tree._utils import minimum_average_length
 from ...typing import Array1D, NonNegativeArray1D, NonNegativeInt, PositiveInt
 from .._base import BaseModel
 from .._variables import TreeVar
@@ -32,6 +32,9 @@ class TreeManager:
 
     # Maximum number of samples used by the isolation trees.
     _max_samples: NonNegativeInt
+
+    # Optional isolation-score threshold in (0, 1].
+    _isolation_threshold: float | None
 
     # Weights for the estimators in the ensemble.
     _weights: NonNegativeArray1D
@@ -61,12 +64,14 @@ class TreeManager:
         weights: NonNegativeArray1D | None = None,
         n_isolators: NonNegativeInt = 0,
         max_samples: NonNegativeInt = 0,
+        isolation_threshold: float | None = None,
         scale: int = DEFAULT_SCORE_SCALE,
     ) -> None:
         """Initialize the tree manager and the score-scaling factor."""
         self._set_trees(trees=trees)
         self._n_isolators = n_isolators
         self._max_samples = max_samples
+        self._isolation_threshold = isolation_threshold
         self._set_weights(weights=weights)
         self._score_scale = scale
 
@@ -118,6 +123,10 @@ class TreeManager:
         return self._max_samples
 
     @property
+    def isolation_threshold(self) -> float | None:
+        return self._isolation_threshold
+
+    @property
     def length(self) -> cp.LinearExpr | int:
         return self._length
 
@@ -127,7 +136,10 @@ class TreeManager:
 
     @property
     def min_average_length(self) -> float:
-        return average_length(self.max_samples)
+        return minimum_average_length(
+            self.max_samples,
+            threshold=self.isolation_threshold,
+        )
 
     @property
     def min_length(self) -> float:

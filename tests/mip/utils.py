@@ -97,10 +97,16 @@ def validate_sklearn_paths(
     for t, tree in enumerate(trees):
         # Get the leaf node from the tree
         node = tree.root
-        msg = f"Path validation failed for tree {t} \n"
+        msg = f"Path validation failed for tree {t} "
         while not node.is_leaf:
-            msg += f"At node {node.node_id}"
-            msg += f"\t with left {tree[node.left.node_id].X}\n"
+            msg += f"At node {node.node_id}, "
+            if (
+                not explanation[node.feature].is_binary
+                and not explanation[node.feature].is_one_hot_encoded
+            ):
+                msg += f"threshold {node.threshold},"
+            msg += f" feature {node.feature}, x = {x}"
+            msg += f"\n\t with left {tree[node.left.node_id].X}\n"
             msg += f"\t and right {tree[node.right.node_id].X}\n"
             node = (
                 node.left

@@ -1,4 +1,5 @@
 # ruff: noqa: E402
+# pyright: reportMissingImports=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
 
 # %% [markdown]
 # # Isolation Forest Example
@@ -14,8 +15,10 @@
 from __future__ import annotations
 
 import os
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 ROOT = Path(__file__).resolve().parents[1]
 CACHE_DIR = ROOT / ".cache" / "matplotlib"
@@ -23,11 +26,12 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 os.environ.setdefault("MPLCONFIGDIR", str(CACHE_DIR))
 os.environ.setdefault("XDG_CACHE_HOME", str(CACHE_DIR.parent))
 
-import matplotlib as mpl
 import gurobipy as gp
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 from matplotlib.colors import ListedColormap
+from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
@@ -36,6 +40,13 @@ from ocean import (
     MixedIntegerProgramExplainer,
 )
 from ocean.feature import parse_features
+from ocean.mip import Model as MixedIntegerProgramModel
+from ocean.tree import parse_ensembles
+from ocean.tree._utils import minimum_average_length  # noqa: PLC2701
+
+if TYPE_CHECKING:
+    from ocean.abc import Mapper
+    from ocean.feature import Feature
 
 mpl.use("Agg")
 
@@ -44,6 +55,9 @@ from matplotlib import pyplot as plt
 FIGURES_DIR = ROOT / "docs" / "_static" / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_PATH = FIGURES_DIR / "isolation-forest-example-2d.svg"
+EXAMPLE_SEED = 20
+THRESHOLDS = (0.9, 0.51, 0.5, 0.1)
+TABLE_THRESHOLDS = (0.9, 0.51, 0.5, 0.1)
 
 ENV = gp.Env(empty=True)
 ENV.setParam("OutputFlag", 0)
@@ -57,7 +71,7 @@ POINTS = ListedColormap(["#1d4ed8", "#dc2626"])
 class ExampleData:
     raw: pd.DataFrame
     data: pd.DataFrame
-    mapper: object
+    mapper: Mapper[Feature]
     target: np.ndarray[tuple[int], np.dtype[np.int64]]
     model: RandomForestClassifier
     isolation: IsolationForest
@@ -69,13 +83,19 @@ class ExampleData:
 class CounterfactualResult:
     backend: str
     isolation_enabled: bool
-    counterfactual: np.ndarray[tuple[int], np.dtype[np.float64]]
-    distance: float
-    isolation_score: float
+    threshold: float | None
+    status: str
+    counterfactual: np.ndarray[tuple[int], np.dtype[np.float64]] | None
+    distance: float | None
+    isolation_score: float | None
 
 
 @dataclass(frozen=True)
-class ExampleSolutions:
+class ThresholdCase:
+    threshold: float
+    decision_level: float
+    required_length: float
+    max_target_length: float
     mip_plain: CounterfactualResult
     mip_iso: CounterfactualResult
     cp_plain: CounterfactualResult
@@ -92,7 +112,7 @@ class ExampleSolutions:
 # - and a single approved outlier that leaves behind a tiny approved pocket.
 
 
-def build_example_dataset(seed: int = 11) -> ExampleData:
+def build_example_dataset(seed: int = EXAMPLE_SEED) -> ExampleData:  # noqa: PLR0914
     rng = np.random.default_rng(seed)
 
     denied_main = rng.normal(
@@ -143,7 +163,7 @@ def build_example_dataset(seed: int = 11) -> ExampleData:
     isolation = IsolationForest(
         random_state=seed,
         n_estimators=100,
-        max_samples=16,
+        max_samples=16,  # pyright: ignore[reportArgumentType]
     )
     isolation.fit(data)
 
@@ -167,10 +187,13 @@ def build_example_dataset(seed: int = 11) -> ExampleData:
 
 
 # %% [markdown]
-# ## Solve the same query four ways
+# ## Solve the same query under four isolation thresholds
 #
-# We compare two backends, and for each backend we solve once without the
-# isolation forest and once with it.
+# We compare four thresholds:
+# - ``0.9`` where the isolation constraint is weak enough to match the plain CF,
+# - ``0.51`` where the pocket is no longer enough and the CF moves inward,
+# - ``0.5`` where it pushes the CF into the dense approved region,
+# - ``0.1`` where it makes the target class infeasible.
 
 
 def _solve_backend(
@@ -179,33 +202,66 @@ def _solve_backend(
     backend: str,
     use_isolation: bool,
     seed: int,
+    threshold: float | None = None,
 ) -> CounterfactualResult:
-    kwargs: dict[str, object] = {"mapper": data.mapper}
+    explainer: (
+        MixedIntegerProgramExplainer | ConstraintProgrammingExplainer
+    )
     if backend == "MIP":
-        kwargs["env"] = ENV
-        explainer_cls = MixedIntegerProgramExplainer
+        if use_isolation:
+            explainer = MixedIntegerProgramExplainer(
+                data.model,
+                mapper=data.mapper,
+                isolation=data.isolation,
+                isolation_threshold=threshold,
+                env=ENV,
+            )
+        else:
+            explainer = MixedIntegerProgramExplainer(
+                data.model,
+                mapper=data.mapper,
+                env=ENV,
+            )
     elif backend == "CP":
-        explainer_cls = ConstraintProgrammingExplainer
+        if use_isolation:
+            explainer = ConstraintProgrammingExplainer(
+                data.model,
+                mapper=data.mapper,
+                isolation=data.isolation,
+                isolation_threshold=threshold,
+            )
+        else:
+            explainer = ConstraintProgrammingExplainer(
+                data.model,
+                mapper=data.mapper,
+            )
     else:
         msg = f"Unknown backend: {backend}"
         raise ValueError(msg)
-
-    if use_isolation:
-        kwargs["isolation"] = data.isolation
-
-    explainer = explainer_cls(data.model, **kwargs)
-    explanation = explainer.explain(
-        data.query,
-        y=1,
-        norm=1,
-        max_time=10,
-        num_workers=1,
-        random_seed=seed,
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="There are no feasible counterfactuals for this query.*",
+        )
+        explanation = explainer.explain(
+            data.query,
+            y=1,
+            norm=1,
+            max_time=10,
+            num_workers=1,
+            random_seed=seed,
+        )
+    status = explainer.get_solving_status()
     if explanation is None:
-        mode = "with isolation" if use_isolation else "without isolation"
-        msg = f"{backend} could not find a counterfactual {mode}."
-        raise RuntimeError(msg)
+        return CounterfactualResult(
+            backend=backend,
+            isolation_enabled=use_isolation,
+            threshold=threshold,
+            status=status,
+            counterfactual=None,
+            distance=None,
+            isolation_score=None,
+        )
 
     counterfactual = explanation.to_numpy().copy()
     distance = float(explainer.get_distance())
@@ -215,52 +271,103 @@ def _solve_backend(
     return CounterfactualResult(
         backend=backend,
         isolation_enabled=use_isolation,
+        threshold=threshold,
+        status=status,
         counterfactual=counterfactual,
         distance=distance,
         isolation_score=isolation_score,
     )
 
 
-def solve_example(data: ExampleData, seed: int = 11) -> ExampleSolutions:
-    return ExampleSolutions(
-        mip_plain=_solve_backend(
-            data,
-            backend="MIP",
-            use_isolation=False,
-            seed=seed,
-        ),
-        mip_iso=_solve_backend(
-            data,
-            backend="MIP",
-            use_isolation=True,
-            seed=seed,
-        ),
-        cp_plain=_solve_backend(
-            data,
-            backend="CP",
-            use_isolation=False,
-            seed=seed,
-        ),
-        cp_iso=_solve_backend(
-            data,
-            backend="CP",
-            use_isolation=True,
-            seed=seed,
-        ),
+def _decision_level(example: ExampleData, threshold: float) -> float:
+    return float(-threshold - example.isolation.offset_)
+
+
+def _maximize_target_length(data: ExampleData) -> float:
+    trees = parse_ensembles(data.model, data.isolation, mapper=data.mapper)
+    model = MixedIntegerProgramModel(
+        trees=trees,
+        mapper=data.mapper,
+        n_isolators=len(data.isolation),
+        max_samples=int(data.isolation.max_samples_),
+        isolation_threshold=1.0,
+        env=ENV,
     )
+    model.build()
+    model.set_majority_class(y=1)
+    model.setObjective(model.length, gp.GRB.MAXIMIZE)
+    model.optimize()
+    if model.Status != gp.GRB.OPTIMAL:
+        msg = "Failed to maximize the target-class isolation length."
+        raise RuntimeError(msg)
+    return float(model.ObjVal)
+
+
+def solve_example(
+    data: ExampleData,
+    seed: int = EXAMPLE_SEED,
+) -> tuple[ThresholdCase, ...]:
+    mip_plain = _solve_backend(
+        data,
+        backend="MIP",
+        use_isolation=False,
+        seed=seed,
+    )
+    cp_plain = _solve_backend(
+        data,
+        backend="CP",
+        use_isolation=False,
+        seed=seed,
+    )
+    max_target_length = _maximize_target_length(data)
+    cases: list[ThresholdCase] = []
+
+    for threshold in THRESHOLDS:
+        required_length = len(data.isolation) * minimum_average_length(
+            int(data.isolation.max_samples_),
+            threshold=threshold,
+        )
+        cases.append(
+            ThresholdCase(
+                threshold=threshold,
+                decision_level=_decision_level(data, threshold),
+                required_length=float(required_length),
+                max_target_length=max_target_length,
+                mip_plain=mip_plain,
+                mip_iso=_solve_backend(
+                    data,
+                    backend="MIP",
+                    use_isolation=True,
+                    seed=seed,
+                    threshold=threshold,
+                ),
+                cp_plain=cp_plain,
+                cp_iso=_solve_backend(
+                    data,
+                    backend="CP",
+                    use_isolation=True,
+                    seed=seed,
+                    threshold=threshold,
+                ),
+            )
+        )
+
+    return tuple(cases)
 
 
 # %% [markdown]
 # ## Plot the decision regions and the MIP moves
 #
 # The background is the random-forest decision boundary. The dashed contour is
-# the zero level of the isolation-forest decision function. Points outside that
-# contour are treated as too isolated by the auxiliary forest.
+# the isolation-forest cutoff induced by the chosen threshold. Points below
+# that contour are too isolated for the corresponding run.
 
 
 def _plot_background(
     ax: plt.Axes,
     example: ExampleData,
+    *,
+    decision_level: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     x = example.data["income_shift"]
     y = example.data["stability_shift"]
@@ -293,7 +400,7 @@ def _plot_background(
         xx,
         yy,
         iso_values,
-        levels=[0.0],
+        levels=[decision_level],
         colors=["#0f172a"],
         linewidths=1.6,
         linestyles=["--"],
@@ -325,107 +432,297 @@ def _draw_arrow(
     ax.add_patch(arrow)
 
 
+def _same_counterfactual(
+    left: CounterfactualResult,
+    right: CounterfactualResult,
+) -> bool:
+    if left.counterfactual is None or right.counterfactual is None:
+        return False
+    return bool(np.allclose(left.counterfactual, right.counterfactual))
+
+
+def _format_counterfactual(
+    counterfactual: np.ndarray[tuple[int], np.dtype[np.float64]] | None,
+) -> str:
+    if counterfactual is None:
+        return "-"
+    rounded = np.round(counterfactual, 6).tolist()
+    return str(rounded)
+
+
+def _format_scalar(value: float | None) -> str:
+    if value is None:
+        return "-"
+    return f"{value:.6f}"
+
+
+def _require_counterfactual(
+    result: CounterfactualResult,
+) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+    if result.counterfactual is None:
+        msg = (
+            "Expected a counterfactual for "
+            f"{result.backend} {result.threshold}."
+        )
+        raise RuntimeError(msg)
+    return result.counterfactual
+
+
+def _panel_result_text(case: ThresholdCase) -> str:
+    plain = (
+        f"plain: L1={case.mip_plain.distance:.3f}, "
+        f"IF={case.mip_plain.isolation_score:.3f}"
+    )
+    if case.mip_iso.counterfactual is None:
+        return (
+            f"{plain}\n"
+            "iso: infeasible\n"
+            f"required length={case.required_length:.1f}"
+        )
+    return (
+        f"{plain}\n"
+        f"iso: L1={case.mip_iso.distance:.3f}, "
+        f"IF={case.mip_iso.isolation_score:.3f}"
+    )
+
+
 def plot_example(
     example: ExampleData,
-    solution: ExampleSolutions,
+    cases: tuple[ThresholdCase, ...],
     path: Path,
 ) -> None:
-    fig, ax = plt.subplots(figsize=(8.2, 6.1))
-    _plot_background(ax, example)
-
-    ax.scatter(
-        example.query[0],
-        example.query[1],
-        marker="*",
-        s=180,
-        c="#0f172a",
-        zorder=5,
-        label="query",
-    )
-    ax.scatter(
-        solution.mip_plain.counterfactual[0],
-        solution.mip_plain.counterfactual[1],
-        marker="X",
-        s=110,
-        c="#d97706",
-        zorder=6,
-        label="MIP CF without isolation",
-    )
-    ax.scatter(
-        solution.mip_iso.counterfactual[0],
-        solution.mip_iso.counterfactual[1],
-        marker="D",
-        s=86,
-        c="#b91c1c",
-        zorder=6,
-        label="MIP CF with isolation",
+    fig, axes = plt.subplots(
+        2,
+        2,
+        figsize=(13.4, 9.2),
+        sharex=True,
+        sharey=True,
     )
 
-    _draw_arrow(
-        ax,
-        example.query,
-        solution.mip_plain.counterfactual,
-        color="#d97706",
-        label="MIP move without isolation",
-    )
-    _draw_arrow(
-        ax,
-        example.query,
-        solution.mip_iso.counterfactual,
-        color="#b91c1c",
-        label="MIP move with isolation",
-    )
+    for ax, case in zip(axes.flat, cases, strict=True):
+        _plot_background(ax, example, decision_level=case.decision_level)
+        same_mip_solution = _same_counterfactual(case.mip_plain, case.mip_iso)
+        plain_cf = _require_counterfactual(case.mip_plain)
 
-    ax.annotate(
-        "single approved outlier",
-        xy=(example.outlier_point[0], example.outlier_point[1]),
-        xytext=(-54, 18),
-        textcoords="offset points",
-        fontsize=9,
-        color="#7c2d12",
-        bbox={"boxstyle": "round,pad=0.2", "fc": "white", "ec": "#fb923c"},
-    )
-    ax.annotate(
-        "tiny approved pocket",
-        xy=(
-            solution.mip_plain.counterfactual[0],
-            solution.mip_plain.counterfactual[1],
+        ax.scatter(
+            example.query[0],
+            example.query[1],
+            marker="*",
+            s=120,
+            c="#0f172a",
+            zorder=5,
+        )
+        ax.scatter(
+            plain_cf[0],
+            plain_cf[1],
+            marker="X",
+            s=58,
+            c="#d97706",
+            zorder=6,
+        )
+
+        _draw_arrow(
+            ax,
+            example.query,
+            plain_cf,
+            color="#d97706",
+            label="MIP move without isolation",
+        )
+
+        if case.mip_iso.counterfactual is not None:
+            iso_cf = case.mip_iso.counterfactual
+            ax.scatter(
+                iso_cf[0],
+                iso_cf[1],
+                marker="D",
+                s=46,
+                facecolors="none",
+                edgecolors="#b91c1c",
+                linewidths=1.5,
+                zorder=7,
+            )
+            if not same_mip_solution:
+                _draw_arrow(
+                    ax,
+                    example.query,
+                    iso_cf,
+                    color="#b91c1c",
+                    label="MIP move with isolation",
+                )
+
+        ax.text(
+            0.02,
+            0.98,
+            f"decision_function >= {case.decision_level:.3f}",
+            transform=ax.transAxes,
+            va="top",
+            fontsize=8.8,
+            bbox={"boxstyle": "round,pad=0.25", "fc": "white", "ec": "#cbd5e1"},
+        )
+        ax.text(
+            0.02,
+            0.02,
+            _panel_result_text(case),
+            transform=ax.transAxes,
+            fontsize=8.8,
+            bbox={"boxstyle": "round,pad=0.3", "fc": "white", "ec": "#cbd5e1"},
+        )
+
+        if case.threshold == 0.9:
+            ax.annotate(
+                "single approved outlier",
+                xy=(example.outlier_point[0], example.outlier_point[1]),
+                xytext=(-42, 16),
+                textcoords="offset points",
+                fontsize=8.6,
+                color="#7c2d12",
+                bbox={
+                    "boxstyle": "round,pad=0.2",
+                    "fc": "white",
+                    "ec": "#fb923c",
+                },
+            )
+            ax.annotate(
+                "plain and isolation match",
+                xy=(
+                    plain_cf[0],
+                    plain_cf[1],
+                ),
+                xytext=(-68, 20),
+                textcoords="offset points",
+                fontsize=8.6,
+                color="#92400e",
+                bbox={
+                    "boxstyle": "round,pad=0.2",
+                    "fc": "white",
+                    "ec": "#f59e0b",
+                },
+            )
+        elif case.threshold == 0.51:
+            iso_cf = _require_counterfactual(case.mip_iso)
+            ax.annotate(
+                "the tiny pocket is no longer enough,\nso the CF moves inward",
+                xy=(
+                    iso_cf[0],
+                    iso_cf[1],
+                ),
+                xytext=(-82, 18),
+                textcoords="offset points",
+                fontsize=8.6,
+                color="#92400e",
+                bbox={
+                    "boxstyle": "round,pad=0.2",
+                    "fc": "white",
+                    "ec": "#f59e0b",
+                },
+            )
+        elif case.threshold == 0.5 and case.mip_iso.counterfactual is not None:
+            ax.annotate(
+                "plain falls in the tiny pocket",
+                xy=(
+                    plain_cf[0],
+                    plain_cf[1],
+                ),
+                xytext=(-72, 20),
+                textcoords="offset points",
+                fontsize=8.6,
+                color="#92400e",
+                bbox={
+                    "boxstyle": "round,pad=0.2",
+                    "fc": "white",
+                    "ec": "#f59e0b",
+                },
+            )
+            ax.annotate(
+                "isolation pushes to the dense region",
+                xy=(
+                    case.mip_iso.counterfactual[0],
+                    case.mip_iso.counterfactual[1],
+                ),
+                xytext=(-8, -26),
+                textcoords="offset points",
+                fontsize=8.6,
+                color="#7f1d1d",
+                bbox={
+                    "boxstyle": "round,pad=0.2",
+                    "fc": "white",
+                    "ec": "#ef4444",
+                },
+            )
+        else:
+            ax.text(
+                0.04,
+                0.75,
+                (
+                    "no isolation-aware target point\n"
+                    f"max target length = {case.max_target_length:.1f}\n"
+                    f"required = {case.required_length:.1f}"
+                ),
+                transform=ax.transAxes,
+                fontsize=8.7,
+                bbox={
+                    "boxstyle": "round,pad=0.3",
+                    "fc": "white",
+                    "ec": "#ef4444",
+                },
+            )
+
+        outcome = "plain = isolation"
+        if case.mip_iso.counterfactual is None:
+            outcome = "isolation infeasible"
+        elif not same_mip_solution:
+            outcome = "plain != isolation"
+        ax.set_title(f"threshold = {case.threshold}\n{outcome}")
+
+    handles = [
+        Line2D(
+            [0],
+            [0],
+            marker="*",
+            linestyle="None",
+            markersize=10,
+            markerfacecolor="#0f172a",
+            markeredgecolor="#0f172a",
+            label="query",
         ),
-        xytext=(-72, 26),
-        textcoords="offset points",
-        fontsize=9,
-        color="#92400e",
-        bbox={"boxstyle": "round,pad=0.2", "fc": "white", "ec": "#f59e0b"},
-    )
-    ax.annotate(
-        "dense approved region",
-        xy=(
-            solution.mip_iso.counterfactual[0],
-            solution.mip_iso.counterfactual[1],
+        Line2D(
+            [0],
+            [0],
+            marker="X",
+            linestyle="None",
+            markersize=7,
+            markerfacecolor="#d97706",
+            markeredgecolor="#d97706",
+            label="MIP CF without isolation",
         ),
-        xytext=(12, -28),
-        textcoords="offset points",
-        fontsize=9,
-        color="#7f1d1d",
-        bbox={"boxstyle": "round,pad=0.2", "fc": "white", "ec": "#ef4444"},
-    )
-
-    ax.text(
-        0.02,
-        0.02,
-        (
-            f"MIP without isolation: L1 = {solution.mip_plain.distance:.3f}, "
-            f"IF score = {solution.mip_plain.isolation_score:.4f}\n"
-            f"MIP with isolation: L1 = {solution.mip_iso.distance:.3f}, "
-            f"IF score = {solution.mip_iso.isolation_score:.4f}"
+        Line2D(
+            [0],
+            [0],
+            marker="D",
+            linestyle="None",
+            markersize=6.4,
+            markerfacecolor="white",
+            markeredgecolor="#b91c1c",
+            label="MIP CF with isolation",
         ),
-        transform=ax.transAxes,
-        fontsize=9.5,
-        bbox={"boxstyle": "round,pad=0.35", "fc": "white", "ec": "#cbd5e1"},
+        Line2D(
+            [0],
+            [0],
+            color="#0f172a",
+            linestyle="--",
+            linewidth=1.6,
+            label="threshold contour",
+        ),
+    ]
+    fig.legend(
+        handles=handles,
+        loc="upper center",
+        ncol=4,
+        frameon=True,
+        bbox_to_anchor=(0.5, 0.98),
     )
-    ax.set_title("Isolation forest example")
-    ax.legend(loc="upper left", frameon=True)
-    fig.tight_layout()
+    fig.suptitle("Isolation forest example", y=1.01)
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.94))
     fig.savefig(path, bbox_inches="tight")
     plt.close(fig)
 
@@ -437,27 +734,67 @@ def plot_example(
 # decoded explanations returned by both MIP and CP on the same query.
 
 
-def build_results_table(solution: ExampleSolutions) -> pd.DataFrame:
-    rows = []
-    for result in (
-        solution.mip_plain,
-        solution.mip_iso,
-        solution.cp_plain,
-        solution.cp_iso,
-    ):
-        rows.append({
-            "backend": result.backend,
-            "isolation": "yes" if result.isolation_enabled else "no",
-            "counterfactual": np.round(result.counterfactual, 6).tolist(),
-            "distance": round(result.distance, 6),
-            "if_score": round(result.isolation_score, 6),
-        })
+def build_results_table(
+    cases: tuple[ThresholdCase, ...],
+) -> pd.DataFrame:
+    plain_case = cases[0]
+    by_threshold = {case.threshold: case for case in cases}
+    rows: list[dict[str, object]] = [
+        {
+            "case": "plain",
+            "mip_status": plain_case.mip_plain.status,
+            "mip_cf": _format_counterfactual(
+                plain_case.mip_plain.counterfactual
+            ),
+            "mip_distance": _format_scalar(plain_case.mip_plain.distance),
+            "mip_if_score": _format_scalar(
+                plain_case.mip_plain.isolation_score
+            ),
+            "cp_status": plain_case.cp_plain.status,
+            "cp_cf": _format_counterfactual(plain_case.cp_plain.counterfactual),
+            "cp_distance": _format_scalar(plain_case.cp_plain.distance),
+            "cp_if_score": _format_scalar(plain_case.cp_plain.isolation_score),
+        }
+    ]
+    rows.extend(
+        (
+            {
+                "case": f"isolation = {threshold}",
+                "mip_status": by_threshold[threshold].mip_iso.status,
+                "mip_cf": _format_counterfactual(
+                    by_threshold[threshold].mip_iso.counterfactual
+                ),
+                "mip_distance": _format_scalar(
+                    by_threshold[threshold].mip_iso.distance
+                ),
+                "mip_if_score": _format_scalar(
+                    by_threshold[threshold].mip_iso.isolation_score
+                ),
+                "cp_status": by_threshold[threshold].cp_iso.status,
+                "cp_cf": _format_counterfactual(
+                    by_threshold[threshold].cp_iso.counterfactual
+                ),
+                "cp_distance": _format_scalar(
+                    by_threshold[threshold].cp_iso.distance
+                ),
+                "cp_if_score": _format_scalar(
+                    by_threshold[threshold].cp_iso.isolation_score
+                ),
+            }
+        )
+        for threshold in TABLE_THRESHOLDS
+    )
     return pd.DataFrame(rows)
 
 
-def print_summary(example: ExampleData, solution: ExampleSolutions) -> None:
+def print_summary(
+    example: ExampleData,
+    cases: tuple[ThresholdCase, ...],
+) -> None:
     columns = example.data.columns
     query_frame = pd.DataFrame([example.query], columns=columns)
+    by_threshold = {case.threshold: case for case in cases}
+    infeasible_case = by_threshold[0.1]
 
     print("Query:", example.query)
     print(
@@ -467,16 +804,31 @@ def print_summary(example: ExampleData, solution: ExampleSolutions) -> None:
         np.round(example.model.predict_proba(query_frame)[0], 4),
     )
     print()
-    print(build_results_table(solution).to_string(index=False))
+    print(build_results_table(cases).to_string(index=False))
+    print()
+    print("Infeasibility proof at threshold", infeasible_case.threshold)
+    print(
+        "maximum target-class isolation length:",
+        round(infeasible_case.max_target_length, 6),
+    )
+    print(
+        "required isolation length:",
+        round(infeasible_case.required_length, 6),
+    )
+    print(
+        "inequality:",
+        f"{infeasible_case.max_target_length:.6f} < "
+        f"{infeasible_case.required_length:.6f}",
+    )
     print()
     print("Saved figure to", OUTPUT_PATH)
 
 
 def main() -> None:
-    example = build_example_dataset()
-    solution = solve_example(example)
-    plot_example(example, solution, OUTPUT_PATH)
-    print_summary(example, solution)
+    example = build_example_dataset(seed=EXAMPLE_SEED)
+    cases = solve_example(example, seed=EXAMPLE_SEED)
+    plot_example(example, cases, OUTPUT_PATH)
+    print_summary(example, cases)
 
 
 if __name__ == "__main__":

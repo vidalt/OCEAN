@@ -56,6 +56,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         weights: NonNegativeArray1D | None = None,
         n_isolators: NonNegativeInt = 0,
         max_samples: NonNegativeInt = 0,
+        isolation_threshold: float | None = None,
         name: str = "OCEAN",
         env: gp.Env | None = None,
         epsilon: Unit = DEFAULT_EPSILON,
@@ -80,6 +81,9 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             constraint on the path length.
         max_samples
             Reference sample count used by the isolation-forest extension.
+        isolation_threshold
+            Optional isolation-score cutoff in ``(0, 1]``. When omitted, the
+            classic average-path-length threshold is used.
         name
             Name of the underlying Gurobi model.
         env
@@ -102,6 +106,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             weights=weights,
             n_isolators=n_isolators,
             max_samples=max_samples,
+            isolation_threshold=isolation_threshold,
             flow_type=flow_type,
         )
         FeatureManager.__init__(self, mapper=mapper)

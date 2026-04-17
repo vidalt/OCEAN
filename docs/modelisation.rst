@@ -68,11 +68,38 @@ tree :math:`t`, the additional condition is
 
    \sum_{t \in \mathcal{T}_{iso}} L_t(x)
    \ge
-   |\mathcal{T}_{iso}| \cdot c(\texttt{max\_samples}),
+   |\mathcal{T}_{iso}| \cdot \lambda(\texttt{max\_samples}, \tau),
 
-where :math:`c(\cdot)` is the usual isolation-forest average path-length
-normalizer. Intuitively, this keeps the counterfactual away from points that
-would be isolated too quickly by the auxiliary forest.
+where :math:`\tau = \texttt{isolation\_threshold}` and
+
+.. math::
+
+   \lambda(m, \tau) =
+   \begin{cases}
+   c(m) & \text{if } \tau \text{ is omitted}, \\
+   -c(m)\log_2(\tau) & \text{otherwise}.
+   \end{cases}
+
+Here :math:`c(\cdot)` is the usual isolation-forest average path-length
+normalizer. The historical behavior corresponds to ``isolation_threshold=0.5``
+because :math:`-\log_2(0.5)=1`.
+
+This means the threshold is monotone in the opposite direction one might first
+guess:
+
+- larger values such as ``0.9`` are weaker because they require a smaller
+  minimum path length,
+- smaller values such as ``0.1`` are stricter because they require a much
+  larger minimum path length.
+
+Intuitively, this keeps the counterfactual away from points that would be
+isolated too quickly by the auxiliary forest.
+
+The extra inequality can also make a target infeasible. That happens when the
+classifier still has valid target-class regions, but every target-class point
+that respects the tree ensemble is isolated too quickly by the auxiliary
+forest. In that case the classification constraints and the isolation-path
+constraint have no common solution.
 
 Feature domains
 ---------------

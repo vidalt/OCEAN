@@ -31,6 +31,7 @@ class Explainer(Model, BaseExplainer):
         mapper: Mapper[Feature],
         weights: NonNegativeArray1D | None = None,
         isolation: IsolationForest | None = None,
+        isolation_threshold: float | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
         model_type: "Model.Type" = Model.Type.CP,
     ) -> None:
@@ -46,6 +47,7 @@ class Explainer(Model, BaseExplainer):
             weights=weights,
             n_isolators=n_isolators,
             max_samples=max_samples,
+            isolation_threshold=isolation_threshold,
             epsilon=epsilon,
             model_type=model_type,
         )
