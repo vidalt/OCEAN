@@ -148,7 +148,7 @@ class TestIsolation:
         status = CP_ENV.solver.Solve(model)
         assert status == cp.OPTIMAL, CP_ENV.solver.StatusName()
 
-        explanation = model.explanation
+        explanation = model.explanation  # type: ignore[unreachable]
 
         validate_solution(explanation)
         validate_paths(*model.trees, explanation=explanation)
@@ -200,7 +200,7 @@ class TestIsolation:
                 f"{CP_ENV.solver.ResponseStats()} for class {class_}"
             )
 
-            if status == cp.INFEASIBLE:  # pyright: ignore[reportUnnecessaryComparison]  # type: ignore[unreachable]
+            if status == cp.INFEASIBLE:  # type: ignore[unreachable] # pyright: ignore[reportUnnecessaryComparison]
                 model.cleanup()
                 continue
 

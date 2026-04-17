@@ -123,7 +123,7 @@ class MaxSATSolver:
             self._rc2 = RC2Stratified(
                 w,
                 solver=self.solver_name,
-                adapt=True,
+                blo="full",
                 exhaust=False,
                 minz=True,
                 verbose=int(self.verbose),
