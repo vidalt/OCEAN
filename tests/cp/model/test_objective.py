@@ -155,7 +155,7 @@ def test_cleanup_keeps_model_valid_after_non_l1_objective() -> None:
     status = solver.Solve(model)
     assert status == cp.OPTIMAL
 
-    variable_count = len(model.Proto().variables)
+    variable_count = len(model.Proto().variables)  # type: ignore[unreachable]
     model.cleanup()
     assert not model.Validate()
 
