@@ -255,10 +255,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             if v.is_one_hot_encoded:
                 for code in v.codes:
                     idx = indexer.get(name, code)
-                    objective += self.L1(x_arr[idx], v, code=code, norm=norm)
+                    objective += self.Lp(x_arr[idx], v, code=code, norm=norm)
                     k += 1
             else:
-                objective += self.L1(x_arr[k], v, norm=norm)
+                objective += self.Lp(x_arr[k], v, norm=norm)
                 k += 1
         return objective
 
@@ -323,7 +323,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             for value in values
         ]
 
-    def L1(
+    def Lp(
         self,
         x: np.float64,
         v: FeatureVar,
