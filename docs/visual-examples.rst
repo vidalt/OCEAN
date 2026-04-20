@@ -68,3 +68,7 @@ These figures line up with the feature semantics described in
 
 If you want more visual material later, the next useful additions would be a
 backend comparison figure or a side-by-side ``L1`` versus ``L2`` illustration.
+
+For a focused isolation-forest example showing why the extra constraint can
+rule out a counterfactual inside a tiny anomalous prediction pocket, see
+:doc:`isolation-forest-example`.

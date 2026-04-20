@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
     from ocean.typing import Key
 
-PATH_ATOL = 1e-9
+PATH_ATOL = 1e-6  # Gurobi default tolerance for feasibility and integrality.
 
 
 def check_solution(x: Array1D, explanation: Explanation) -> None:
@@ -97,7 +97,17 @@ def validate_sklearn_paths(
     for t, tree in enumerate(trees):
         # Get the leaf node from the tree
         node = tree.root
+        msg = f"Path validation failed for tree {t} "
         while not node.is_leaf:
+            msg += f"At node {node.node_id}, "
+            if (
+                not explanation[node.feature].is_binary
+                and not explanation[node.feature].is_one_hot_encoded
+            ):
+                msg += f"threshold {node.threshold},"
+            msg += f" feature {node.feature}, x = {x}"
+            msg += f"\n\t with left {tree[node.left.node_id].X}\n"
+            msg += f"\t and right {tree[node.right.node_id].X}\n"
             node = (
                 node.left
                 if np.isclose(
@@ -109,7 +119,8 @@ def validate_sklearn_paths(
                 else node.right
             )
             is_path_valid: bool = bool(ind[0, ptr[t] + node.node_id])
-            assert is_path_valid
+            msg += f"\t and sklearn value {ind[0, ptr[t] + node.node_id]}\n"
+            assert is_path_valid, msg
 
 
 def validate_sklearn_pred(

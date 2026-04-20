@@ -55,6 +55,52 @@ The MIP backend also uses a numerical strictness constant
 :math:`\eta = \texttt{num\_epsilon} = 10^{-6}` for strict
 right-branch comparisons in numerical splits.
 
+Optional isolation-forest constraint
+------------------------------------
+
+When an isolation forest is supplied to the MIP or CP explainer, OCEAN parses
+those isolation trees after the predictive ensemble and adds a plausibility
+constraint based on the aggregate path length. If :math:`\mathcal{T}_{iso}`
+denotes the isolation trees and :math:`L_t(x)` the path length selected in
+tree :math:`t`, the additional condition is
+
+.. math::
+
+   \sum_{t \in \mathcal{T}_{iso}} L_t(x)
+   \ge
+   |\mathcal{T}_{iso}| \cdot \lambda(\texttt{max\_samples}, \tau),
+
+where :math:`\tau = \texttt{isolation\_threshold}` and
+
+.. math::
+
+   \lambda(m, \tau) =
+   \begin{cases}
+   c(m) & \text{if } \tau \text{ is omitted}, \\
+   -c(m)\log_2(\tau) & \text{otherwise}.
+   \end{cases}
+
+Here :math:`c(\cdot)` is the usual isolation-forest average path-length
+normalizer. The historical behavior corresponds to ``isolation_threshold=0.5``
+because :math:`-\log_2(0.5)=1`.
+
+This means the threshold is monotone in the opposite direction one might first
+guess:
+
+- larger values such as ``0.9`` are weaker because they require a smaller
+  minimum path length,
+- smaller values such as ``0.1`` are stricter because they require a much
+  larger minimum path length.
+
+Intuitively, this keeps the counterfactual away from points that would be
+isolated too quickly by the auxiliary forest.
+
+The extra inequality can also make a target infeasible. That happens when the
+classifier still has valid target-class regions, but every target-class point
+that respects the tree ensemble is isolated too quickly by the auxiliary
+forest. In that case the classification constraints and the isolation-path
+constraint have no common solution.
+
 Feature domains
 ---------------
 
@@ -201,7 +247,9 @@ CP
 
 MaxSAT
    Encodes the :math:`L_1` objective as weighted soft clauses and the target
-   prediction constraints as hard clauses or pseudo-Boolean constraints.
+   prediction constraints as hard clauses or pseudo-Boolean constraints. In
+   hard-voting mode for random forests, the target-class comparison is encoded
+   with vote-count cardinality constraints instead of probability differences.
 
 Reading the implementation
 --------------------------
@@ -239,12 +287,12 @@ Constraint-programming model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: ocean.cp._model.Model
-   :members: build, add_objective, set_majority_class, cleanup, _set_majority_class, _add_objective, get_intervals_cost, L1
+   :members: build, add_objective, set_majority_class, cleanup, _set_majority_class, _set_isolation, _add_objective, get_intervals_cost, L1
    :member-order: bysource
 
 Weighted MaxSAT model
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: ocean.maxsat._model.Model
-   :members: build, add_objective, _add_soft_l1_binary, _add_soft_l1_ohe, _add_soft_l1_continuous, _add_soft_l1_discrete, _get_intervals_cost, set_majority_class, _set_majority_class, _encode_weighted_sum_constraint, cleanup
+   :members: build, add_objective, _add_objective_maxorc, _add_soft_l1_binary, _add_soft_l1_binary_maxorc, _add_soft_l1_ohe, _add_soft_l1_ohe_maxorc, _add_soft_l1_continuous, _add_soft_l1_threshold_numeric, _add_soft_l1_discrete, _add_soft_l1_discrete_maxorc, _get_intervals_cost, set_majority_class, _set_majority_class, _set_hard_voting_majority_class, _encode_cardinality_difference_constraint, _encode_weighted_sum_constraint, _normalize_tree_contributions, cleanup
    :member-order: bysource

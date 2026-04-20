@@ -125,7 +125,7 @@ WorkClass        : 4
 ```
 
 
-See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) for more usage examples.
+See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) or the [documentation](https://ocean-py.readthedocs.io/en/latest/) for more usage examples.
 
 
 ## Feature Preview & Roadmap

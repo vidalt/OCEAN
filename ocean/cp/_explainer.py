@@ -2,8 +2,9 @@ import time
 import traceback
 import warnings
 
+import numpy as np
 from ortools.sat.python import cp_model as cp
-from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import AdaBoostClassifier, IsolationForest
 
 from ..abc import Mapper
 from ..feature import Feature
@@ -14,7 +15,6 @@ from ..typing import (
     BaseExplainer,
     NonNegativeArray1D,
     NonNegativeInt,
-    PositiveInt,
 )
 from ._env import ENV
 from ._explanation import Explanation
@@ -30,10 +30,13 @@ class Explainer(Model, BaseExplainer):
         *,
         mapper: Mapper[Feature],
         weights: NonNegativeArray1D | None = None,
+        isolation: IsolationForest | None = None,
+        isolation_threshold: float | None = None,
         epsilon: int = Model.DEFAULT_EPSILON,
         model_type: "Model.Type" = Model.Type.CP,
     ) -> None:
-        ensembles = (ensemble,)
+        ensembles = (ensemble,) if isolation is None else (ensemble, isolation)
+        n_isolators, max_samples = self._get_isolation_params(isolation)
         trees = parse_ensembles(*ensembles, mapper=mapper)
         if isinstance(ensemble, AdaBoostClassifier):
             weights = ensemble.estimator_weights_
@@ -42,6 +45,9 @@ class Explainer(Model, BaseExplainer):
             trees,
             mapper=mapper,
             weights=weights,
+            n_isolators=n_isolators,
+            max_samples=max_samples,
+            isolation_threshold=isolation_threshold,
             epsilon=epsilon,
             model_type=model_type,
         )
@@ -93,13 +99,21 @@ class Explainer(Model, BaseExplainer):
                 for code in feature.codes:
                     idx = self.mapper.idx.get(name, code)
                     delta = float(counterfactual[idx]) - float(query[idx])
-                    feature_distance += abs(delta) ** norm
+                    feature_distance += (
+                        0.0
+                        if norm == 0 and np.isclose(delta, 0.0)
+                        else abs(delta) ** norm
+                    )
                 distance += feature_distance / 2.0
             else:
                 idx = self.mapper.idx.get(name)
                 delta = float(counterfactual[idx]) - float(query[idx])
-                distance += abs(delta) ** norm
-        if norm != 1:
+                distance += (
+                    0.0
+                    if norm == 0 and np.isclose(delta, 0.0)
+                    else abs(delta) ** norm
+                )
+        if norm not in {0, 1}:
             distance **= 1.0 / norm
         return float(distance)
 
@@ -136,7 +150,7 @@ class Explainer(Model, BaseExplainer):
         x: Array1D,
         *,
         y: NonNegativeInt,
-        norm: PositiveInt,
+        norm: NonNegativeInt,
         return_callback: bool = False,
         verbose: bool = False,
         max_time: int = 60,
@@ -154,7 +168,7 @@ class Explainer(Model, BaseExplainer):
         y
             Target class enforced by the counterfactual.
         norm
-            Integer distance norm used by the CP objective.
+            Non-negative integer distance norm used by the CP objective.
         return_callback
             Whether to record incumbent solutions during the search.
         verbose
@@ -205,7 +219,7 @@ class Explainer(Model, BaseExplainer):
                 msg += "solver could not prove optimality within "
                 msg += "the given time frame. \n It can however certify"
                 msg += " that no counterfactual can be closer than"
-                msg += f" {self.solver.BestObjectiveBound()}."
+                msg += f" {self.solver.BestObjectiveBound() / self._obj_scale}."
                 warnings.warn(msg, category=UserWarning, stacklevel=2)
             case "INFEASIBLE":
                 msg = "There are no feasible counterfactuals for this query."
@@ -236,6 +250,14 @@ class Explainer(Model, BaseExplainer):
         if clean_up:
             self.cleanup()
         return self.explanation
+
+    @staticmethod
+    def _get_isolation_params(
+        isolation: IsolationForest | None,
+    ) -> tuple[NonNegativeInt, NonNegativeInt]:
+        if isolation is not None:
+            return len(isolation), int(isolation.max_samples_)  # pyright: ignore[reportUnknownArgumentType]
+        return 0, 0
 
 
 class MySolCallback(cp.CpSolverSolutionCallback):

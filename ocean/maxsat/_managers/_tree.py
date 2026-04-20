@@ -131,6 +131,9 @@ class TreeManager:
             Boolean support literals grouped by output and class.
 
         """
+        if bool(getattr(self, "_hard_voting", False)):
+            return self._hard_voting_function()
+
         func: dict[tuple[NonNegativeInt, NonNegativeInt], list[int]] = {}
         n_classes = self.n_classes
         n_outputs = self.shape[-2]
@@ -143,6 +146,17 @@ class TreeManager:
                         if leaf_class == c:
                             leaf_vars.append(tree[leaf.node_id])
                 func[op, c] = leaf_vars
+        return func
+
+    def _hard_voting_function(
+        self,
+    ) -> dict[tuple[NonNegativeInt, NonNegativeInt], list[int]]:
+        func: dict[tuple[NonNegativeInt, NonNegativeInt], list[int]] = {}
+        n_classes = self.n_classes
+        n_outputs = self.shape[-2]
+        for op in range(n_outputs):
+            for c in range(n_classes):
+                func[op, c] = [tree.cget(c) for tree in self.estimators]
         return func
 
     def _get_function(

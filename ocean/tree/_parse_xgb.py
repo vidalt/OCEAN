@@ -26,6 +26,10 @@ def _logit(p: Array1D) -> Array1D:
     return np.log(p / (1 - p))
 
 
+def _normalize_feature_name(value: str) -> str:
+    return " ".join(value.split())
+
+
 def _previous_float32(value: float) -> float:
     """
     Return the greatest float32 value strictly smaller than ``value``.
@@ -78,15 +82,38 @@ def _build_xgb_leaf(
 def _parse_feature_info(
     feature_name: str, mapper: Mapper[Feature]
 ) -> tuple[str, str | None]:
-    words = feature_name.split(" ")
-    name = words[0] if words else feature_name
-    code = words[1] if len(words) > 1 and words[1] else None
+    normalized_feature_name = _normalize_feature_name(feature_name)
+    string_names = [name for name in mapper.names if isinstance(name, str)]
 
-    if name not in mapper.names:
-        msg = f"feature '{name}' not found in mapper '{mapper.names}'"
-        raise KeyError(msg)
+    exact_matches = [
+        name
+        for name in string_names
+        if _normalize_feature_name(name) == normalized_feature_name
+    ]
+    if len(exact_matches) == 1:
+        return exact_matches[0], None
 
-    return name, code
+    sorted_names = sorted(
+        string_names,
+        key=lambda value: len(_normalize_feature_name(value)),
+        reverse=True,
+    )
+    for name in sorted_names:
+        if not mapper[name].is_one_hot_encoded:
+            continue
+        normalized_name = _normalize_feature_name(name)
+        prefix = f"{normalized_name} "
+        if not normalized_feature_name.startswith(prefix):
+            continue
+        code = normalized_feature_name[len(prefix) :].strip()
+        if code:
+            return name, code
+
+    msg = (
+        "feature "
+        f"'{normalized_feature_name}' not found in mapper '{mapper.names}'"
+    )
+    raise KeyError(msg)
 
 
 def _validate_feature_format(
@@ -201,11 +228,15 @@ def _parse_xgb_tree(
         mapper=mapper,
     )
     tree = Tree(root=root)
-    tree.logit = (
-        base_score_margin
-        if len(base_score_margin) > 1
-        else _logit(base_score_margin)
-    )
+    if len(base_score_margin) > 1:
+        tree.logit = base_score_margin
+    else:
+        margin = _logit(base_score_margin)
+        tree.logit = (
+            np.repeat(margin, int(num_trees_per_round))
+            if num_trees_per_round > 1
+            else margin
+        )
     tree.xgboost = True
     return tree
 

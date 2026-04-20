@@ -228,3 +228,71 @@ class TestIsolation:
                     weights=weights,
                     env=ENV,
                 )
+
+
+def test_isolation_threshold_changes_min_length() -> None:
+    seed = 43
+    n_isolators = 2
+    max_samples = 8
+    clf, ilf, mapper = train_rf_isolation(
+        seed,
+        4,
+        3,
+        n_isolators,
+        max_samples,
+        200,
+        2,
+    )
+    trees = parse_ensembles(clf, ilf, mapper=mapper)
+    strict_threshold = 0.51
+
+    default_model = Model(
+        trees=trees,
+        mapper=mapper,
+        n_isolators=n_isolators,
+        max_samples=max_samples,
+        env=ENV,
+    )
+    half_model = Model(
+        trees=trees,
+        mapper=mapper,
+        n_isolators=n_isolators,
+        max_samples=max_samples,
+        isolation_threshold=0.5,
+        env=ENV,
+    )
+    strict_model = Model(
+        trees=trees,
+        mapper=mapper,
+        n_isolators=n_isolators,
+        max_samples=max_samples,
+        isolation_threshold=strict_threshold,
+        env=ENV,
+    )
+
+    assert half_model.min_average_length == pytest.approx(
+        default_model.min_average_length
+    )
+    assert strict_model.min_average_length == pytest.approx(
+        -default_model.min_average_length * np.log2(strict_threshold)
+    )
+    assert strict_model.min_length == pytest.approx(
+        n_isolators * strict_model.min_average_length
+    )
+    assert strict_model.min_average_length < default_model.min_average_length
+
+
+def test_invalid_isolation_threshold() -> None:
+    seed = 43
+    clf, ilf, mapper = train_rf_isolation(seed, 1, 2, 1, 4, 100, 2)
+    trees = parse_ensembles(clf, ilf, mapper=mapper)
+    msg = r"The isolation threshold must satisfy 0 < threshold <= 1."
+    with pytest.raises(ValueError, match=msg):
+        Model(
+            trees=trees,
+            mapper=mapper,
+            n_isolators=1,
+            max_samples=4,
+            isolation_threshold=0.0,
+            env=ENV,
+        )

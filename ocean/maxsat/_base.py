@@ -3,6 +3,13 @@ from typing import Any, Protocol
 
 from pysat.formula import WCNF, IDPool
 
+try:
+    from pysat.card import CardEnc
+    from pysat.card import EncType as CardEncType
+except ImportError:
+    CardEnc = None
+    CardEncType = None
+
 
 class BaseModel(ABC, WCNF):
     """Base weighted CNF model used by the MaxSAT backend."""
@@ -48,16 +55,33 @@ class BaseModel(ABC, WCNF):
             return len(self.hard) - 1  # pyright: ignore[reportUnknownArgumentType]
         return -1
 
-    def add_soft(self, lits: list[int], weight: int = 1) -> None:
+    def add_soft(self, lits: list[int], weight: float = 1.0) -> None:
         """Add a soft clause with a given weight."""
         self.append(lits, weight=weight)
 
     def add_exactly_one(self, lits: list[int]) -> None:
         """Add constraint that exactly one path is selected."""
-        self.add_hard(lits)  # at least one
-        for i in range(len(lits)):
-            for j in range(i + 1, len(lits)):
-                self.add_hard([-lits[i], -lits[j]])  # at most one
+        if len(lits) == 0:
+            self.add_hard([])
+            return
+        if len(lits) == 1:
+            self.add_hard([lits[0]])
+            return
+        if CardEnc is None or CardEncType is None:
+            self.add_hard(lits)  # at least one
+            for i in range(len(lits)):
+                for j in range(i + 1, len(lits)):
+                    self.add_hard([-lits[i], -lits[j]])  # at most one
+            return
+
+        card = CardEnc.equals(
+            lits=lits,
+            bound=1,
+            vpool=self.vpool,
+            encoding=CardEncType.seqcounter,
+        )
+        for clause in card.clauses:
+            self.add_hard(clause)  # pyright: ignore[reportUnknownArgumentType]
 
     def _clean_soft(self) -> None:
         """Reset the model to only contain hard constraints."""

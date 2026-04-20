@@ -36,6 +36,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     # Constraints for the majority class.
     _scores: dict[tuple[NonNegativeInt, NonNegativeInt], cp.Constraint]
+    _value_idx_vars: dict[int, cp.IntVar]
 
     # Model builder for the ensemble.
     _builder: ModelBuilder
@@ -46,7 +47,9 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         mapper: Mapper[Feature],
         *,
         weights: NonNegativeArray1D | None = None,
+        n_isolators: NonNegativeInt = 0,
         max_samples: NonNegativeInt = 0,
+        isolation_threshold: float | None = None,
         epsilon: int = DEFAULT_EPSILON,
         model_type: "Model.Type" = Type.CP,
     ) -> None:
@@ -62,8 +65,13 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             finite-domain decision variables.
         weights
             Optional tree weights.
+        n_isolators
+            Number of isolation trees appended after the predictive ensemble.
         max_samples
-            Reserved parameter used by compatible higher-level explainers.
+            Reference sample count used by the isolation-forest extension.
+        isolation_threshold
+            Optional isolation-score cutoff in ``(0, 1]``. When omitted, the
+            classic average-path-length threshold is used.
         epsilon
             Integer classification margin used in the pairwise score
             constraints.
@@ -76,6 +84,9 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             self,
             trees=trees,
             weights=weights,
+            n_isolators=n_isolators,
+            max_samples=max_samples,
+            isolation_threshold=isolation_threshold,
         )
         FeatureManager.__init__(self, mapper=mapper)
         GarbageManager.__init__(self)
@@ -84,6 +95,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self._max_samples = max_samples
         self._epsilon = epsilon
         self._scores = {}
+        self._value_idx_vars = {}
         self._set_builder(model_type=model_type)
 
     def build(self) -> None:
@@ -92,17 +104,19 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
         This builds the finite-domain feature variables for :math:`x`, the
         leaf/path variables :math:`p_{t,\ell}`, and the consistency
-        constraints connecting both representations.
+        constraints connecting both representations. When isolation trees are
+        present, it also adds the minimum aggregate path-length constraint.
         """
         self.build_features(self)
         self.build_trees(self)
         self._builder.build(self, trees=self.trees, mapper=self.mapper)
+        self._set_isolation()
 
     def add_objective(
         self,
         x: Array1D,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> None:
         r"""
         Minimize the scaled integer approximation of :math:`d_p(x, \hat{x})`.
@@ -114,7 +128,8 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             code parameter is named ``x``, but mathematically it represents the
             query.
         norm
-            Distance norm. The default is :math:`L_1`.
+            Distance norm. The CP backend supports non-negative integer
+            norms, with :math:`L_1` as the default.
 
         """
         objective = self._add_objective(x=x, norm=norm)
@@ -192,7 +207,24 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         """
         self.remove_garbage()
 
-    def _add_objective(self, x: Array1D, norm: int) -> cp.ObjLinearExprT:
+    def _set_isolation(self) -> None:
+        """
+        Add the optional isolation-forest length constraint.
+
+        When isolation trees are present, this constrains the scaled
+        aggregate path length to remain above the scaled minimum admissible
+        value.
+        """
+        if self.n_isolators == 0:
+            return
+
+        self.Add(self.length >= self.min_length_scaled)
+
+    def _add_objective(
+        self,
+        x: Array1D,
+        norm: NonNegativeInt,
+    ) -> cp.ObjLinearExprT:
         r"""
         Build the scaled linear expression for :math:`d_p(x, \hat{x})^p`.
 
@@ -216,7 +248,6 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             msg = f"Expected {self.mapper.n_columns} values, got {x.size}"
             raise ValueError(msg)
         x_arr = np.asarray(x, dtype=float).ravel()
-
         variables = self.mapper.values()
         names = list(self.mapper.keys())
         objective: cp.LinearExpr = 0  # type: ignore[assignment]
@@ -226,10 +257,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             if v.is_one_hot_encoded:
                 for code in v.codes:
                     idx = indexer.get(name, code)
-                    objective += self.L1(x_arr[idx], v, code=code, norm=norm)
+                    objective += self.Lp(x_arr[idx], v, code=code, norm=norm)
                     k += 1
             else:
-                objective += self.L1(x_arr[k], v, norm=norm)
+                objective += self.Lp(x_arr[k], v, norm=norm)
                 k += 1
         return objective
 
@@ -238,7 +269,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         levels: Array1D,
         x: float,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> list[int]:
         r"""
         Return interval costs for a continuous feature encoded by thresholds.
@@ -274,7 +305,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         values: list[int],
         x: float,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> list[int]:
         r"""
         Return scaled :math:`L_p^p` costs for one finite-value domain.
@@ -286,16 +317,47 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
         """
         return [
-            int(abs(x - value) ** norm * self._obj_scale) for value in values
+            int(
+                0.0
+                if np.isclose(x, value)
+                else abs(x - value) ** norm * self._obj_scale
+            )
+            for value in values
         ]
 
-    def L1(
+    @staticmethod
+    def get_discrete_base_values(v: FeatureVar) -> list[int]:
+        if len(v.thresholds) != 0:
+            values = [
+                val
+                for threshold in v.thresholds
+                for val in [int(threshold), int(threshold) + 1]
+            ]
+        else:
+            values = np.asarray(v.levels).astype(int).tolist()
+        return sorted(set(values))
+
+    def get_discrete_values(self, v: FeatureVar, x: float) -> list[int]:
+        return sorted({*self.get_discrete_base_values(v), int(x)})
+
+    def get_value_idx_var(self, v: FeatureVar) -> cp.IntVar:
+        key = id(v)
+        if key not in self._value_idx_vars:
+            max_value_count = len(self.get_discrete_base_values(v)) + 1
+            self._value_idx_vars[key] = self.NewIntVar(
+                0,
+                max_value_count - 1,
+                f"value_idx[{len(self._value_idx_vars)}]",
+            )
+        return self._value_idx_vars[key]
+
+    def Lp(
         self,
         x: np.float64,
         v: FeatureVar,
         code: Key | None = None,
         *,
-        norm: int = 1,
+        norm: NonNegativeInt = 1,
     ) -> cp.LinearExpr:
         r"""
         Build the CP contribution of one feature to :math:`d_p(x, \hat{x})^p`.
@@ -340,15 +402,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 obj_coefs.append(1)
             else:
                 # include the value of x itself on the domain ---------
-                if len(v.thresholds) != 0:
-                    values = [
-                        val
-                        for v in v.thresholds
-                        for val in [int(v), int(v) + 1]
-                    ]
-                else:
-                    values = np.asarray(v.levels).astype(int).tolist()
-                values = sorted({*values, int(x)})
+                values = self.get_discrete_values(v, x)
                 v.xget().Proto().domain[:] = []
                 v.xget().Proto().domain.extend(
                     cp.Domain.FromValues(values).FlattenedIntervals()
@@ -362,7 +416,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                     obj_coefs.append(self._obj_scale)
                 else:
                     values_cost = self.get_values_cost(values, x, norm=norm)
-                    value_idx = self.NewIntVar(0, len(values) - 1, "")
+                    value_idx = self.get_value_idx_var(v)
                     v.objvarget().Proto().domain[:] = []
                     v.objvarget().Proto().domain.extend(
                         cp.Domain(
@@ -370,7 +424,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                         ).FlattenedIntervals()
                     )
                     self.add_garbage(
-                        value_idx,
+                        self.Add(value_idx <= len(values) - 1),
                         self.AddElement(value_idx, values, v.xget()),
                         self.AddElement(value_idx, values_cost, obj_expr),
                     )

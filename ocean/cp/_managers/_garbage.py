@@ -8,7 +8,7 @@ class GarbageManager:
 
     # Garbage collector for the model.
     # - Used to keep track of the variables and constraints created,
-    #   and to remove them when the model is cleared.
+    #   and to deactivate the removable ones when the model is cleared.
     _garbage: list[GarbageObject]
 
     def __init__(self) -> None:
@@ -20,7 +20,12 @@ class GarbageManager:
         self._garbage.extend(args)
 
     def remove_garbage(self) -> None:
-        """Clear all registered temporary CP objects from the model state."""
+        """Clear registered temporary constraints from the model state."""
         for garbage in self._garbage:
+            if isinstance(garbage, cp.IntVar):
+                # CpModel does not support removing variables. Clearing an
+                # IntVar proto leaves a variable slot with an empty domain,
+                # which makes the next CP-SAT solve report MODEL_INVALID.
+                continue
             garbage.Proto().Clear()
         self._garbage.clear()

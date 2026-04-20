@@ -139,7 +139,7 @@ class BaseExplainer(Protocol):
         x: Array1D,
         *,
         y: NonNegativeInt,
-        norm: PositiveInt,
+        norm: NonNegativeInt,
         return_callback: bool = False,
         verbose: bool = False,
         max_time: int = 60,

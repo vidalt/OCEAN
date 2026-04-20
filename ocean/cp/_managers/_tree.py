@@ -4,6 +4,7 @@ import numpy as np
 from ortools.sat.python import cp_model as cp
 
 from ...tree import Tree
+from ...tree._utils import minimum_average_length
 from ...typing import Array1D, NonNegativeArray1D, NonNegativeInt, PositiveInt
 from .._base import BaseModel
 from .._variables import TreeVar
@@ -26,8 +27,20 @@ class TreeManager:
     # Tree variables in the ensemble.
     _trees: tuple[TreeVar, *tuple[TreeVar, ...]]
 
+    # Number of isolation trees in the model.
+    _n_isolators: NonNegativeInt
+
+    # Maximum number of samples used by the isolation trees.
+    _max_samples: NonNegativeInt
+
+    # Optional isolation-score threshold in (0, 1].
+    _isolation_threshold: float | None
+
     # Weights for the estimators in the ensemble.
     _weights: NonNegativeArray1D
+
+    # Scaled aggregate isolation-path length.
+    _length: cp.LinearExpr | int
 
     # Function of the ensemble.
     _function: dict[tuple[NonNegativeInt, NonNegativeInt], cp.LinearExpr]
@@ -49,10 +62,16 @@ class TreeManager:
         trees: Iterable[Tree],
         *,
         weights: NonNegativeArray1D | None = None,
+        n_isolators: NonNegativeInt = 0,
+        max_samples: NonNegativeInt = 0,
+        isolation_threshold: float | None = None,
         scale: int = DEFAULT_SCORE_SCALE,
     ) -> None:
         """Initialize the tree manager and the score-scaling factor."""
         self._set_trees(trees=trees)
+        self._n_isolators = n_isolators
+        self._max_samples = max_samples
+        self._isolation_threshold = isolation_threshold
         self._set_weights(weights=weights)
         self._score_scale = scale
 
@@ -60,6 +79,7 @@ class TreeManager:
         r"""Create the CP tree variables and cache :math:`f(x)`."""
         model.build_vars(*self.trees)
 
+        self._length = self._get_length()
         self._function = self._get_function()
 
     @property
@@ -67,8 +87,12 @@ class TreeManager:
         return len(self.trees)
 
     @property
+    def n_isolators(self) -> NonNegativeInt:
+        return self._n_isolators
+
+    @property
     def n_estimators(self) -> PositiveInt:
-        return self.n_trees
+        return self.n_trees - self.n_isolators
 
     @property
     def trees(self) -> tuple[TreeVar, *tuple[TreeVar, ...]]:
@@ -77,6 +101,10 @@ class TreeManager:
     @property
     def estimators(self) -> tuple[TreeVar, *tuple[TreeVar, ...]]:
         return self._trees[0], *self._trees[1 : self.n_estimators]
+
+    @property
+    def isolators(self) -> tuple[TreeVar, ...]:
+        return self._trees[self.n_estimators :]
 
     @property
     def shape(self) -> tuple[NonNegativeInt, ...]:
@@ -89,6 +117,37 @@ class TreeManager:
     @property
     def score_scale(self) -> int:
         return self._score_scale
+
+    @property
+    def max_samples(self) -> NonNegativeInt:
+        return self._max_samples
+
+    @property
+    def isolation_threshold(self) -> float | None:
+        return self._isolation_threshold
+
+    @property
+    def length(self) -> cp.LinearExpr | int:
+        return self._length
+
+    @property
+    def length_scale(self) -> int:
+        return self.trees[0].length_scale
+
+    @property
+    def min_average_length(self) -> float:
+        return minimum_average_length(
+            self.max_samples,
+            threshold=self.isolation_threshold,
+        )
+
+    @property
+    def min_length(self) -> float:
+        return self.n_isolators * self.min_average_length
+
+    @property
+    def min_length_scaled(self) -> int:
+        return round(self.min_length * self.length_scale)
 
     @property
     def function(
@@ -113,6 +172,7 @@ class TreeManager:
             If no tree is provided.
 
         """
+
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
             if tree.xgboost:
@@ -216,3 +276,8 @@ class TreeManager:
 
         """
         return self.weighted_function(weights=self.weights)
+
+    def _get_length(self) -> cp.LinearExpr | int:
+        if self.n_isolators == 0:
+            return 0
+        return sum((tree.length for tree in self.isolators), start=0)

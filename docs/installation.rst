@@ -22,11 +22,12 @@ the solver requirements differ.
 
 ``ocean.cp``
    Uses OR-Tools CP-SAT. This is the simplest exact backend to run without a
-   commercial license.
+   commercial license, and it also supports optional isolation-forest
+   constraints.
 
 ``ocean.maxsat``
    Uses PySAT. This backend exposes the same top-level workflow with a weighted
-   MaxSAT encoding.
+   MaxSAT encoding and an optional hard-voting mode for random forests.
 
 Development install
 -------------------

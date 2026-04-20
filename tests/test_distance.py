@@ -72,7 +72,7 @@ def test_get_distance_requires_explanation(
     [RandomForestClassifier, XGBClassifier],
 )
 @pytest.mark.parametrize("seed", [42, 43])
-@pytest.mark.parametrize("norm", [1, 2])
+@pytest.mark.parametrize("norm", [0, 1, 2])
 def test_get_distance_matches_manual_postprocessed_distance(
     explainer_class: type[
         ConstraintProgrammingExplainer | MixedIntegerProgramExplainer
@@ -183,3 +183,73 @@ def test_get_distance_matches_across_backends_on_discrete_data() -> None:
 
     assert distances["mip"] == pytest.approx(distances["cp"])
     assert distances["mip"] == pytest.approx(distances["maxsat"])
+
+
+@pytest.mark.parametrize("norm", [0, 2])
+def test_get_distance_matches_across_mip_cp_on_discrete_data(norm: int) -> None:
+    raw = pd.DataFrame({
+        "age_bucket": [0, 0, 1, 1, 2, 2, 3, 3, 1, 2, 0, 3],
+        "owns_home": [0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1],
+        "job_type": [
+            "office",
+            "office",
+            "manual",
+            "manual",
+            "service",
+            "service",
+            "office",
+            "manual",
+            "service",
+            "office",
+            "manual",
+            "service",
+        ],
+    })
+    y = np.array([0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1], dtype=np.int64)
+    data, mapper = parse_features(
+        raw,
+        discretes=("age_bucket",),
+        encoded=("job_type",),
+        scale=False,
+    )
+    clf = RandomForestClassifier(
+        random_state=7,
+        n_estimators=5,
+        max_depth=3,
+    )
+    clf.fit(data, y)
+
+    x = data.iloc[0, :].to_numpy(dtype=float).flatten()
+    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    target = int(1 - prediction[0])
+
+    explainers: dict[
+        str,
+        ConstraintProgrammingExplainer | MixedIntegerProgramExplainer,
+    ] = {
+        "mip": MixedIntegerProgramExplainer(clf, mapper=mapper, env=ENV),
+        "cp": ConstraintProgrammingExplainer(clf, mapper=mapper),
+    }
+
+    try:
+        explanations = {
+            name: explainer.explain(x, y=target, norm=norm, random_seed=7)
+            for name, explainer in explainers.items()
+        }
+    except gp.GurobiError as exc:
+        pytest.skip(f"Skipping test due to {exc}")
+
+    assert all(explanation is not None for explanation in explanations.values())
+
+    distances = {
+        name: explainer.get_distance()
+        for name, explainer in explainers.items()
+    }
+
+    for name, explanation in explanations.items():
+        assert explanation is not None
+        assert distances[name] == pytest.approx(
+            manual_postprocessed_distance(explanation, norm=norm)
+        )
+
+    assert distances["mip"] == pytest.approx(distances["cp"])
