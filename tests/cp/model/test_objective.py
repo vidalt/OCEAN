@@ -155,12 +155,15 @@ def test_cleanup_keeps_model_valid_after_non_l1_objective() -> None:
     status = solver.Solve(model)
     assert status == cp.OPTIMAL
 
+    variable_count = len(model.Proto().variables)
     model.cleanup()
     assert not model.Validate()
 
     x1 = np.array(data.iloc[1].to_numpy(), dtype=np.float64).flatten()
     model.add_objective(x=x1, norm=2)
+    assert len(model.Proto().variables) == variable_count
 
     status = solver.Solve(model)
     assert status == cp.OPTIMAL, solver.status_name()
     model.cleanup()
+    assert len(model.Proto().variables) == variable_count

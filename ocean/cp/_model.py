@@ -36,6 +36,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     # Constraints for the majority class.
     _scores: dict[tuple[NonNegativeInt, NonNegativeInt], cp.Constraint]
+    _value_idx_vars: dict[int, cp.IntVar]
 
     # Model builder for the ensemble.
     _builder: ModelBuilder
@@ -94,6 +95,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self._max_samples = max_samples
         self._epsilon = epsilon
         self._scores = {}
+        self._value_idx_vars = {}
         self._set_builder(model_type=model_type)
 
     def build(self) -> None:
@@ -323,6 +325,32 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             for value in values
         ]
 
+    @staticmethod
+    def get_discrete_base_values(v: FeatureVar) -> list[int]:
+        if len(v.thresholds) != 0:
+            values = [
+                val
+                for threshold in v.thresholds
+                for val in [int(threshold), int(threshold) + 1]
+            ]
+        else:
+            values = np.asarray(v.levels).astype(int).tolist()
+        return sorted(set(values))
+
+    def get_discrete_values(self, v: FeatureVar, x: float) -> list[int]:
+        return sorted({*self.get_discrete_base_values(v), int(x)})
+
+    def get_value_idx_var(self, v: FeatureVar) -> cp.IntVar:
+        key = id(v)
+        if key not in self._value_idx_vars:
+            max_value_count = len(self.get_discrete_base_values(v)) + 1
+            self._value_idx_vars[key] = self.NewIntVar(
+                0,
+                max_value_count - 1,
+                f"value_idx[{len(self._value_idx_vars)}]",
+            )
+        return self._value_idx_vars[key]
+
     def Lp(
         self,
         x: np.float64,
@@ -374,15 +402,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 obj_coefs.append(1)
             else:
                 # include the value of x itself on the domain ---------
-                if len(v.thresholds) != 0:
-                    values = [
-                        val
-                        for v in v.thresholds
-                        for val in [int(v), int(v) + 1]
-                    ]
-                else:
-                    values = np.asarray(v.levels).astype(int).tolist()
-                values = sorted({*values, int(x)})
+                values = self.get_discrete_values(v, x)
                 v.xget().Proto().domain[:] = []
                 v.xget().Proto().domain.extend(
                     cp.Domain.FromValues(values).FlattenedIntervals()
@@ -396,7 +416,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                     obj_coefs.append(self._obj_scale)
                 else:
                     values_cost = self.get_values_cost(values, x, norm=norm)
-                    value_idx = self.NewIntVar(0, len(values) - 1, "")
+                    value_idx = self.get_value_idx_var(v)
                     v.objvarget().Proto().domain[:] = []
                     v.objvarget().Proto().domain.extend(
                         cp.Domain(
@@ -404,7 +424,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                         ).FlattenedIntervals()
                     )
                     self.add_garbage(
-                        value_idx,
+                        self.Add(value_idx <= len(values) - 1),
                         self.AddElement(value_idx, values, v.xget()),
                         self.AddElement(value_idx, values_cost, obj_expr),
                     )
