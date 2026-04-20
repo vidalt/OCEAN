@@ -133,3 +133,34 @@ def test_supported_norms(norm: int) -> None:
     validate_paths(*model.trees, explanation=explanation)
     validate_sklearn_paths(clf, explanation, model.estimators)
     model.cleanup()
+
+
+def test_cleanup_keeps_model_valid_after_non_l1_objective() -> None:
+    clf, mapper, data = train_rf(
+        42,
+        4,
+        3,
+        100,
+        2,
+        return_data=True,
+    )
+    trees = tuple(parse_trees(clf, mapper=mapper))
+    model = Model(trees=trees, mapper=mapper)
+    model.build()
+
+    x0 = np.array(data.iloc[0].to_numpy(), dtype=np.float64).flatten()
+    model.add_objective(x=x0, norm=0)
+
+    solver = ENV.solver
+    status = solver.Solve(model)
+    assert status == cp.OPTIMAL
+
+    model.cleanup()
+    assert not model.Validate()
+
+    x1 = np.array(data.iloc[1].to_numpy(), dtype=np.float64).flatten()
+    model.add_objective(x=x1, norm=2)
+
+    status = solver.Solve(model)
+    assert status == cp.OPTIMAL, solver.status_name()
+    model.cleanup()
