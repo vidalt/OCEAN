@@ -40,6 +40,7 @@ dependencies = [
     "python-sat; platform_system == 'Windows'",
     "scikit-learn",
     "xgboost",
+    "numba",
 ]
 
 optional-dependencies.dev = [
