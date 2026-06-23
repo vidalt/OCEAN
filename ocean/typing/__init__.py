@@ -1,6 +1,6 @@
 """Shared type aliases and protocols used throughout OCEAN."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Annotated, Protocol
 
 import numpy as np
@@ -151,6 +151,72 @@ class BaseExplainer(Protocol):
     def cleanup(self) -> None: ...
 
 
+class DecisionPathMatrix(Protocol):
+    """Sparse decision-path matrix returned by sklearn forests."""
+
+    indptr: np.ndarray
+    indices: np.ndarray
+
+
+class LocalSearchTree(Protocol):
+    """Tree attributes read by LS preprocessing and local importance."""
+
+    node_count: int
+    feature: np.ndarray
+    threshold: np.ndarray
+    children_left: np.ndarray
+    children_right: np.ndarray
+    weighted_n_node_samples: np.ndarray
+    impurity: np.ndarray
+
+
+class LocalSearchEstimator(Protocol):
+    """Estimator wrapper exposing a sklearn-like tree."""
+
+    tree_: LocalSearchTree
+
+
+class LocalSearchForest(Protocol):
+    """Random-forest subset required by the LS heuristic backend."""
+
+    n_features_in_: PositiveInt
+    n_estimators: PositiveInt
+    estimators_: Sequence[LocalSearchEstimator]
+    feature_importances_: np.ndarray
+
+    def decision_path(
+        self,
+        x: object,
+    ) -> tuple[DecisionPathMatrix, np.ndarray]: ...
+
+    def predict(self, x: object) -> np.ndarray: ...
+
+
+class LocalSearchExplainer(Protocol):
+    """Explainer state consumed by DLS/SLS helper functions."""
+
+    rf: LocalSearchForest
+    max_distance: np.float32
+    continuous_col: np.ndarray
+    binary_col: np.ndarray
+    discrete_col: np.ndarray
+    one_hot_encoded_col: Sequence[Sequence[int]]
+    lengths_list: np.ndarray
+    offsets: np.ndarray
+    thresholds_concat: np.ndarray
+    features_: Sequence[np.ndarray]
+    thresholds_: Sequence[np.ndarray]
+    values_: Sequence[np.ndarray]
+    children_left_: Sequence[np.ndarray]
+    children_right_: Sequence[np.ndarray]
+    thresh2idx: Sequence[Mapping[np.float32, int]]
+    inf: np.ndarray
+    sup: np.ndarray
+    rank_maps: Sequence[np.ndarray]
+
+    def encode(self, leaves_rank_array: np.ndarray) -> np.int64: ...
+
+
 __all__ = [
     "Array",
     "Array1D",
@@ -158,6 +224,7 @@ __all__ = [
     "BaseExplainableEnsemble",
     "BaseExplainer",
     "BaseExplanation",
+    "DecisionPathMatrix",
     "Dtype",
     "Index",
     "Index1L",
@@ -166,6 +233,10 @@ __all__ = [
     "IntArray2D",
     "IntDtype",
     "Key",
+    "LocalSearchEstimator",
+    "LocalSearchExplainer",
+    "LocalSearchForest",
+    "LocalSearchTree",
     "NodeId",
     "NodeIdArray1D",
     "NodeIdDtype",
