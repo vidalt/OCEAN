@@ -1,33 +1,31 @@
 from __future__ import annotations
 
 import argparse
-import sys
-from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import (
+    AdaBoostClassifier,
+    RandomForestClassifier,
+)
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
 
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
-from sklearn.ensemble import RandomForestClassifier  # noqa: E402
-from sklearn.model_selection import train_test_split  # noqa: E402
-
-from ocean.abc import Mapper  # noqa: E402
-from ocean.datasets import load_adult, load_compas, load_credit  # noqa: E402
-from ocean.feature import (  # noqa: E402
+from ocean.abc import Mapper
+from ocean.datasets import load_adult, load_compas, load_credit
+from ocean.feature import (
     Feature,
     parse_features,
 )
-from ocean.ls import DLSExplainer, SLSExplainer  # noqa: E402
-from ocean.ls.utils.costs import get_norm  # noqa: E402
+from ocean.ls import DLSExplainer, SLSExplainer
+from ocean.ls.utils.costs import get_norm
 
 if TYPE_CHECKING:
-    from ocean.typing import LocalSearchForest
+    from ocean.typing import BaseExplainableEnsemble
 
 SEED = 0
-type DataName = Literal["custom", "adult", "compas", "credit"]
 type DemoDataset = tuple[pd.DataFrame, pd.Series[int], Mapper[Feature]]
 
 
@@ -43,6 +41,12 @@ def parse_args() -> argparse.Namespace:
             "Dataset to use. 'custom' is generated locally; the other choices "
             "use ocean.datasets loaders and may require network access."
         ),
+    )
+    parser.add_argument(
+        "--model",
+        choices=("rf", "xgb", "adaboost"),
+        default="rf",
+        help="Model to fit before running DLS and SLS.",
     )
     return parser.parse_args()
 
@@ -85,7 +89,7 @@ def build_custom_dataset(
 
 
 def load_dataset(
-    name: DataName,
+    name: str,
 ) -> DemoDataset:
     if name == "custom":
         return build_custom_dataset()
@@ -103,8 +107,50 @@ def load_dataset(
     raise ValueError(msg)
 
 
-def predict_one(model: RandomForestClassifier, point: np.ndarray) -> int:
-    prediction = np.asarray(model.predict([point]), dtype=np.int_)
+def build_model(name: str) -> BaseExplainableEnsemble:
+    if name == "rf":
+        return RandomForestClassifier(
+            n_estimators=20,
+            max_depth=4,
+            random_state=SEED,
+        )
+    if name == "adaboost":
+        return AdaBoostClassifier(
+            estimator=DecisionTreeClassifier(
+                max_depth=2,
+                random_state=SEED,
+            ),
+            n_estimators=20,
+            random_state=SEED,
+        )
+    if name == "xgb":
+        return XGBClassifier(
+            n_estimators=20,
+            max_depth=4,
+            random_state=SEED,
+            eval_metric="logloss",
+        )
+
+    msg = f"Unknown model: {name}"
+    raise ValueError(msg)
+
+
+def to_frame(
+    point: np.ndarray,
+    columns: pd.Index | pd.MultiIndex,
+) -> pd.DataFrame:
+    return pd.DataFrame([point], columns=columns)
+
+
+def predict_one(
+    model: BaseExplainableEnsemble,
+    point: np.ndarray,
+    columns: pd.Index | pd.MultiIndex,
+) -> int:
+    prediction = np.asarray(
+        model.predict(to_frame(point, columns)),
+        dtype=np.int_,
+    )
     return int(prediction.item())
 
 
@@ -169,30 +215,29 @@ def explain_with_sls(
 
 def main() -> None:  # noqa: PLR0914
     args = parse_args()
-    data_name = cast("DataName", args.data)
+    data_name = cast("str", args.data)
+    model_name = cast("str", args.model)
     data, target, mapper = load_dataset(data_name)
     split = train_test_split(
-        data.to_numpy(dtype=np.float32),
+        data,
         target,
         test_size=0.2,
         random_state=SEED,
         stratify=target,
     )
-    X_train = np.asarray(split[0], dtype=np.float32)
-    X_test = np.asarray(split[1], dtype=np.float32)
+    X_train_frame = cast("pd.DataFrame", split[0])
+    X_test_frame = cast("pd.DataFrame", split[1])
     y_train = cast("pd.Series[int]", split[2])
     y_test = cast("pd.Series[int]", split[3])
+    X_train = X_train_frame.to_numpy(dtype=np.float32)
+    X_test = X_test_frame.to_numpy(dtype=np.float32)
 
-    rf: RandomForestClassifier
-    rf = RandomForestClassifier(
-        n_estimators=20,
-        max_depth=4,
-        random_state=SEED,
-    )
-    rf.fit(X_train, y_train)
-    train_accuracy = float(rf.score(X_train, y_train))
-    test_accuracy = float(rf.score(X_test, y_test))
+    model = build_model(model_name)
+    model.fit(X_train_frame, y_train)
+    train_accuracy = float(model.score(X_train_frame, y_train))
+    test_accuracy = float(model.score(X_test_frame, y_test))
     print("dataset=", data_name)
+    print("model=", model_name)
     print(
         "accuracy_train=",
         train_accuracy,
@@ -201,11 +246,10 @@ def main() -> None:  # noqa: PLR0914
     )
 
     query = X_test[0].astype(np.float32)
-    query_class = predict_one(rf, query)
+    query_class = predict_one(model, query, data.columns)
 
-    rf_for_ls = cast("LocalSearchForest", rf)
-    dls_explainer = DLSExplainer(rf_for_ls, mapper, data)
-    sls_explainer = SLSExplainer(rf_for_ls, mapper, data)
+    dls_explainer = DLSExplainer(model, mapper, data)
+    sls_explainer = SLSExplainer(model, mapper, data)
 
     dls_cf = explain_with_dls(dls_explainer, query, query_class)
     sls_cf = explain_with_sls(
@@ -215,8 +259,8 @@ def main() -> None:  # noqa: PLR0914
         int(X_train.shape[1]),
     )
 
-    dls_label = predict_one(rf, dls_cf)
-    sls_label = predict_one(rf, sls_cf)
+    dls_label = predict_one(model, dls_cf, data.columns)
+    sls_label = predict_one(model, sls_cf, data.columns)
     dls_distance = get_norm(1, query, dls_cf)
     sls_distance = get_norm(1, query, sls_cf)
 

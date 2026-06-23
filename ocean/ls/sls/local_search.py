@@ -84,6 +84,10 @@ def stochastic_local_search(  # noqa: PLR0914
             exp.inf,
             exp.sup,
             norm,
+            exp.weights,
+            exp.base_scores,
+            exp.score_kind,
+            exp.normalize_leaf_values,
             exp.rank_maps,
         )
     )
@@ -331,5 +335,9 @@ def hill_climbing(  # noqa: PLR0913, PLR0914, PLR0917
         exp.sup,
         norm,
         tabu_transitions,
+        exp.weights,
+        exp.base_scores,
+        exp.score_kind,
+        exp.normalize_leaf_values,
         exp.rank_maps,
     )

@@ -23,6 +23,7 @@ from .utils import (
     get_thresholds_ocean,
     hash_leaves_fnv1a,
     hypercube_cost,
+    prepare_local_search_backend,
 )
 
 if TYPE_CHECKING:
@@ -32,8 +33,8 @@ if TYPE_CHECKING:
     from ocean.feature import Feature
     from ocean.typing import (
         Array1D,
+        BaseExplainableEnsemble,
         LocalSearchExplainer,
-        LocalSearchForest,
         NonNegativeInt,
         PositiveInt,
     )
@@ -85,14 +86,20 @@ def _column_label(
 class BaseExplainer:
     def __init__(
         self,
-        rf: LocalSearchForest,
+        ensemble: BaseExplainableEnsemble,
         mapper: Mapper[Feature],
         data: pd.DataFrame,
     ) -> None:
-        self.rf = rf
+        self.ensemble = ensemble
         self.mapper = mapper
         self.data = data
-        self.n_features = rf.n_features_in_
+        backend = prepare_local_search_backend(ensemble, mapper)
+        self.rf = backend.forest
+        self.weights = backend.weights
+        self.base_scores = backend.base_scores
+        self.score_kind = backend.score_kind
+        self.normalize_leaf_values = backend.normalize_leaf_values
+        self.n_features = self.rf.n_features_in_
         self.callback: Callback | None = None
         self.norm: int = 2
         self.max_distance = np.float32(0.0)

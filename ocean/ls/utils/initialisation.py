@@ -393,7 +393,7 @@ def naive_perturbation_initialisation(  # noqa: C901, PLR0914, PLR0915
 
     points = np.tile(query, (n_population, 1))
 
-    # Masque global de perturbation (n_population x n_features)
+    # Global perturbation mask (n_population x n_features).
     if perturb_ratio < 1.0:
         k = max(1, round(perturb_ratio * n_features))
         perturb_mask = np.zeros((n_population, n_features), dtype=bool)

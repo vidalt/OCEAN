@@ -7,7 +7,11 @@ from numba.typed.typedlist import List as NumbaList
 
 from .costs import fitness, hypercube_cost
 from .numba import njit
-from .tools import hash_leaves_fnv1a
+from .tools import (
+    SCORING_MARGIN,
+    SCORING_PROBABILITY,
+    hash_leaves_fnv1a,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableSequence, Sequence
@@ -43,6 +47,7 @@ def filtered_get_leaf_numba(
     children_right: np.ndarray,
     inf: np.ndarray,
     sup: np.ndarray,
+    normalize_leaf_values: bool,  # noqa: FBT001
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
     a = inf.copy()
     b = sup.copy()
@@ -84,9 +89,93 @@ def filtered_get_leaf_numba(
             nb += 1
 
     p = probas[leaf_id][0]
-    p_norm = p / p.sum()
+    p_out = np.empty(p.shape[0], dtype=np.float32)
+    p_sum = np.float32(0.0)
+    for c in range(p.shape[0]):
+        p_sum += np.float32(p[c])
 
-    return a, b, p_norm, leaf_id
+    for c in range(p.shape[0]):
+        if normalize_leaf_values and p_sum != 0:
+            p_out[c] = np.float32(p[c]) / p_sum
+        else:
+            p_out[c] = np.float32(p[c])
+
+    return a, b, p_out, leaf_id
+
+
+@njit(cache=True)
+def _aggregate_scores(
+    values: np.ndarray,
+    weights: np.ndarray,
+    base_scores: np.ndarray,
+    score_kind: int,
+) -> np.ndarray:
+    n_estimators, n_classes = values.shape
+    scores = np.empty(n_classes, dtype=np.float32)
+
+    for c in range(n_classes):
+        if score_kind == SCORING_MARGIN:
+            scores[c] = np.float32(base_scores[c])
+        else:
+            scores[c] = np.float32(0.0)
+
+    total_weight = np.float32(0.0)
+    for j in range(n_estimators):
+        weight = np.float32(weights[j])
+        total_weight += weight
+        for c in range(n_classes):
+            scores[c] += weight * np.float32(values[j, c])
+
+    if score_kind == SCORING_PROBABILITY and total_weight != 0:
+        for c in range(n_classes):
+            scores[c] /= total_weight
+
+    return scores
+
+
+@njit(cache=True)
+def _argmax(values: np.ndarray) -> int:
+    best = 0
+    best_value = values[0]
+    for c in range(1, values.shape[0]):
+        if values[c] > best_value:
+            best = c
+            best_value = values[c]
+    return best
+
+
+@njit(cache=True)
+def _softmax_score(scores: np.ndarray, query_class: int) -> np.float32:
+    max_score = scores[0]
+    for c in range(1, scores.shape[0]):
+        max_score = max(max_score, scores[c])
+
+    total = np.float32(0.0)
+    query_value = np.float32(0.0)
+    for c in range(scores.shape[0]):
+        value = np.float32(np.exp(scores[c] - max_score))
+        total += value
+        if c == query_class:
+            query_value = value
+
+    if total == 0:
+        return np.float32(0.0)
+    return np.float32(query_value / total)
+
+
+@njit(cache=True)
+def _label_and_query_score(
+    values: np.ndarray,
+    weights: np.ndarray,
+    base_scores: np.ndarray,
+    score_kind: int,
+    query_class: int,
+) -> tuple[int, np.float32]:
+    scores = _aggregate_scores(values, weights, base_scores, score_kind)
+    label = _argmax(scores)
+    if score_kind == SCORING_MARGIN:
+        return label, _softmax_score(scores, query_class)
+    return label, np.float32(scores[query_class])
 
 
 @njit(cache=True)
@@ -137,6 +226,10 @@ def leaf_numba(  # noqa: PLR0913, PLR0914, PLR0917
     inf: np.ndarray,
     sup: np.ndarray,
     norm: int,
+    weights: np.ndarray,
+    base_scores: np.ndarray,
+    score_kind: int,
+    normalize_leaf_values: bool,  # noqa: FBT001
     rank_maps: Sequence[np.ndarray],
 ) -> tuple[
     np.float32,
@@ -176,18 +269,20 @@ def leaf_numba(  # noqa: PLR0913, PLR0914, PLR0917
             children_right_[j],
             inf,
             sup,
+            normalize_leaf_values,
         )
         A[j, :] = a_j
         B[j, :] = b_j
         probas[j, :] = p
         leaves[j] = rank_maps[j][node_j]
 
-    mean_probas = np.empty(n_classes, dtype=np.float32)
-    for c in range(n_classes):
-        mean_probas[c] = probas[:, c].mean()
-
-    label = int(mean_probas.argmax())
-    query_prob = np.float32(mean_probas[query_class])
+    label, query_prob = _label_and_query_score(
+        probas,
+        weights,
+        base_scores,
+        score_kind,
+        query_class,
+    )
 
     a = np.empty(n_features, dtype=np.float32)
     b = np.empty(n_features, dtype=np.float32)
@@ -255,6 +350,10 @@ def filtered_hill_climbing_dls_numba(  # noqa: C901, PLR0913, PLR0914, PLR0915, 
     sup: np.ndarray,
     norm: int,
     tabu_states: np.ndarray | None,
+    weights: np.ndarray,
+    base_scores: np.ndarray,
+    score_kind: int,
+    normalize_leaf_values: bool,  # noqa: FBT001
     rank_maps: Sequence[np.ndarray],
 ) -> HillClimbResult:
     validity_proportion = 0
@@ -291,17 +390,20 @@ def filtered_hill_climbing_dls_numba(  # noqa: C901, PLR0913, PLR0914, PLR0915, 
                 children_right_[j],
                 inf,
                 sup,
+                normalize_leaf_values,
             )
             A[j, :] = a_j
             B[j, :] = b_j
             probas[j, :] = p
             leaves[j] = rank_maps[j][node_j]
 
-        mean_probas = np.empty(n_classes, dtype=np.float32)
-        for c in range(n_classes):
-            mean_probas[c] = probas[:, c].mean()
-        label = int(mean_probas.argmax())
-        query_prob = np.float32(mean_probas[query_class])
+        label, query_prob = _label_and_query_score(
+            probas,
+            weights,
+            base_scores,
+            score_kind,
+            query_class,
+        )
 
         a = np.empty(n_features, dtype=np.float32)
         b = np.empty(n_features, dtype=np.float32)
@@ -425,6 +527,10 @@ def filtered_hill_climbing_sls_numba(  # noqa: C901, PLR0913, PLR0914, PLR0915, 
     sup: np.ndarray,
     norm: int,
     tabu_transitions: np.ndarray | None,
+    weights: np.ndarray,
+    base_scores: np.ndarray,
+    score_kind: int,
+    normalize_leaf_values: bool,  # noqa: FBT001
     rank_maps: Sequence[np.ndarray],
 ) -> HillClimbResult:
     validity_proportion = 0
@@ -461,17 +567,20 @@ def filtered_hill_climbing_sls_numba(  # noqa: C901, PLR0913, PLR0914, PLR0915, 
                 children_right_[j],
                 inf,
                 sup,
+                normalize_leaf_values,
             )
             A[j, :] = a_j
             B[j, :] = b_j
             probas[j, :] = p
             leaves[j] = rank_maps[j][node_j]
 
-        mean_probas = np.empty(n_classes, dtype=np.float32)
-        for c in range(n_classes):
-            mean_probas[c] = probas[:, c].mean()
-        label = int(mean_probas.argmax())
-        query_prob = np.float32(mean_probas[query_class])
+        label, query_prob = _label_and_query_score(
+            probas,
+            weights,
+            base_scores,
+            score_kind,
+            query_class,
+        )
 
         a = np.empty(n_features, dtype=np.float32)
         b = np.empty(n_features, dtype=np.float32)

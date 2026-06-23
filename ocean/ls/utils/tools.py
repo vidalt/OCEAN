@@ -22,6 +22,8 @@ type LocalPathResult = (
 CONTINUOUS_LOWER_BOUND = -0.5
 CONTINUOUS_UPPER_BOUND = 0.5
 OHE_ACTIVE_COUNT = 1
+SCORING_PROBABILITY = 0
+SCORING_MARGIN = 1
 
 
 class _DecisionPathMatrix(Protocol):
@@ -568,6 +570,8 @@ def inside_grid(idx: np.ndarray, lengths_list: np.ndarray) -> bool:
 
 
 __all__ = [
+    "SCORING_MARGIN",
+    "SCORING_PROBABILITY",
     "DecisionPathForest",
     "ceil_discrete_idx",
     "ceil_strict",

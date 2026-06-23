@@ -22,8 +22,15 @@ from .leaves import (
     filtered_hill_climbing_sls_numba,
     leaf_numba,
 )
-from .preprocess import get_thresholds, get_thresholds_ocean
+from .preprocess import (
+    LocalSearchBackend,
+    get_thresholds,
+    get_thresholds_ocean,
+    prepare_local_search_backend,
+)
 from .tools import (
+    SCORING_MARGIN,
+    SCORING_PROBABILITY,
     build_cat_groups,
     build_cat_groups_ocean,
     ceil_discrete_idx,
@@ -57,6 +64,9 @@ __all__ = [
     "L0",
     "L1",
     "L2",
+    "SCORING_MARGIN",
+    "SCORING_PROBABILITY",
+    "LocalSearchBackend",
     "build_cat_groups",
     "build_cat_groups_ocean",
     "ceil_discrete_idx",
@@ -89,6 +99,7 @@ __all__ = [
     "multi_start_initialisation",
     "naive_perturbation_initialisation",
     "point2cell",
+    "prepare_local_search_backend",
     "print_path",
     "print_thresholds",
     "process",

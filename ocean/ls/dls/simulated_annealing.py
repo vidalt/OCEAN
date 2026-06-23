@@ -58,8 +58,8 @@ def get_temperature_schedule(
         return schedule
 
     msg = (
-        f"Schedule inconnu: {schedule_type}. "
-        f"Utilisez 'exponential', 'linear' ou 'logarithmic'."
+        f"Unknown schedule: {schedule_type}. "
+        "Use 'exponential', 'linear', or 'logarithmic'."
     )
     raise ValueError(msg)
 
@@ -85,7 +85,7 @@ def simulated_annealing(  # noqa: C901, PLR0912, PLR0913, PLR0914, PLR0915, PLR0
     set_seed(seed)
     np.random.seed(seed)  # noqa: NPY002
 
-    # Historique pour le mode anytime
+    # Anytime-mode history.
     callback: Callback = []
     sols: list[LeafBounds] = []
     labels: list[int] = []
@@ -121,6 +121,10 @@ def simulated_annealing(  # noqa: C901, PLR0912, PLR0913, PLR0914, PLR0915, PLR0
             exp.inf,
             exp.sup,
             norm,
+            exp.weights,
+            exp.base_scores,
+            exp.score_kind,
+            exp.normalize_leaf_values,
             exp.rank_maps,
         )
     )
@@ -231,6 +235,10 @@ def simulated_annealing(  # noqa: C901, PLR0912, PLR0913, PLR0914, PLR0915, PLR0
                 exp.inf,
                 exp.sup,
                 norm,
+                exp.weights,
+                exp.base_scores,
+                exp.score_kind,
+                exp.normalize_leaf_values,
                 exp.rank_maps,
             )
 
@@ -309,7 +317,7 @@ def simulated_annealing_exhaustive(  # noqa: C901, PLR0912, PLR0914, PLR0915
     set_seed(seed)
     np.random.seed(seed)  # noqa: NPY002
 
-    # Historique pour le mode anytime
+    # Anytime-mode history.
     callback: Callback = []
     sols: list[LeafBounds] = []
     labels: list[int] = []
@@ -345,6 +353,10 @@ def simulated_annealing_exhaustive(  # noqa: C901, PLR0912, PLR0914, PLR0915
             exp.inf,
             exp.sup,
             norm,
+            exp.weights,
+            exp.base_scores,
+            exp.score_kind,
+            exp.normalize_leaf_values,
             exp.rank_maps,
         )
     )
@@ -463,6 +475,10 @@ def simulated_annealing_exhaustive(  # noqa: C901, PLR0912, PLR0914, PLR0915
                 exp.inf,
                 exp.sup,
                 norm,
+                exp.weights,
+                exp.base_scores,
+                exp.score_kind,
+                exp.normalize_leaf_values,
                 exp.rank_maps,
             )
 

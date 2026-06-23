@@ -164,6 +164,7 @@ class LocalSearchTree(Protocol):
     node_count: int
     feature: np.ndarray
     threshold: np.ndarray
+    value: np.ndarray
     children_left: np.ndarray
     children_right: np.ndarray
     weighted_n_node_samples: np.ndarray
@@ -177,7 +178,7 @@ class LocalSearchEstimator(Protocol):
 
 
 class LocalSearchForest(Protocol):
-    """Random-forest subset required by the LS heuristic backend."""
+    """Forest-like subset required by the LS heuristic backend."""
 
     n_features_in_: PositiveInt
     n_estimators: PositiveInt
@@ -210,6 +211,10 @@ class LocalSearchExplainer(Protocol):
     children_left_: Sequence[np.ndarray]
     children_right_: Sequence[np.ndarray]
     thresh2idx: Sequence[Mapping[np.float32, int]]
+    weights: np.ndarray
+    base_scores: np.ndarray
+    score_kind: int
+    normalize_leaf_values: bool
     inf: np.ndarray
     sup: np.ndarray
     rank_maps: Sequence[np.ndarray]
