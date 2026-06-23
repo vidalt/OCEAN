@@ -133,10 +133,9 @@ See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) or
 | Area                            | Status     | Notes / References                         |
 | ------------------------------- | ---------- | ------------------------------------------ |
 | **MIP formulation**             | ✅ Done     | Based on Parmentier & Vidal (2020/2021).   |
-| **Constraint Programming (CP)** | ✅ Done     | Based on an upcoming paper.                |
-| **MaxSAT formulation**          | ✅ Done     | Based on Raevskaya & Lehtonen (2025).      |
-| **Heuristics**                  | ⏳ Upcoming | Fast approximate methods.                  |
-| **Other methods**               | ⏳ Upcoming | Additional formulations under exploration. |
+| **Constraint Programming (CP)** | ✅ Done     | Based on Khouna et al. (2026).            |
+| **MaxSAT formulation**          | ✅ Done     | Based on Raevskaya & Lehtonen (2025) + Khouna et al. (2026)      |
+| **Heuristics**                  | ✅ Done     | Fast approximate methods.                  |
 | **AdaBoost support**            | ✅ Ready    | Fully supported in ocean.                  |
 | **Random Forest support**       | ✅ Ready    | Fully supported in ocean.                  |
 | **XGBoost support**             | ✅ Ready    | Fully supported in ocean.                  |
@@ -151,5 +150,6 @@ See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) or
 ## References
 
 - Axel Parmentier and Thibaut Vidal. 2021. Optimal Counterfactual Explanations in Tree Ensembles. In *Proceedings of the thirty-eighth International Conference on Machine Learning*. PMLR, 8276–8286. [Available here](http://proceedings.mlr.press/v139/parmentier21a/parmentier21a.pdf).
+- Khouna, A., Emine, Y., Ferry, J., & Vidal, T. (2026). Optimal Counterfactual Search in Tree Ensembles: A Study Across Modeling and Solution Paradigms. arXiv preprint arXiv:2605.06561. [Available here](https://arxiv.org/abs/2605.06561).
 - Raevskaya, Alesya & Lehtonen, Tuomo. (2025). Optimal Counterfactual Explanations for Random Forests with MaxSAT. 10.3233/FAIA250895. [Available here](https://aaltodoc.aalto.fi/server/api/core/bitstreams/36760903-9b05-491d-b744-ea4309bdf538/content).
   
