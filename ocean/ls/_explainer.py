@@ -10,6 +10,7 @@ from numba import types  # type: ignore[attr-defined]
 from numba.typed.typedlist import List as NumbaList
 
 from ._explanation import Explanation
+from ._warmup import warmup_numba
 from .dls.multi_start import (
     multi_start_deterministic,
     multi_start_simulated_annealing,
@@ -90,6 +91,7 @@ class BaseExplainer:
         mapper: Mapper[Feature],
         data: pd.DataFrame,
     ) -> None:
+        warmup_numba()
         self.ensemble = ensemble
         self.mapper = mapper
         self.data = data

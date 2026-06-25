@@ -1,26 +1,34 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-import numpy as np
-import pandas as pd
-from sklearn.ensemble import (
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT_STR = str(PROJECT_ROOT)
+if PROJECT_ROOT_STR in sys.path:
+    sys.path.remove(PROJECT_ROOT_STR)
+sys.path.insert(0, PROJECT_ROOT_STR)
+
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+from sklearn.ensemble import (  # noqa: E402
     AdaBoostClassifier,
     RandomForestClassifier,
 )
-from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier
-from xgboost import XGBClassifier
+from sklearn.model_selection import train_test_split  # noqa: E402
+from sklearn.tree import DecisionTreeClassifier  # noqa: E402
+from xgboost import XGBClassifier  # noqa: E402
 
-from ocean.abc import Mapper
-from ocean.datasets import load_adult, load_compas, load_credit
-from ocean.feature import (
+from ocean.abc import Mapper  # noqa: E402
+from ocean.datasets import load_adult, load_compas, load_credit  # noqa: E402
+from ocean.feature import (  # noqa: E402
     Feature,
     parse_features,
 )
-from ocean.ls import DLSExplainer, SLSExplainer
-from ocean.ls.utils.costs import get_norm
+from ocean.ls import DLSExplainer, SLSExplainer  # noqa: E402
+from ocean.ls.utils.costs import get_norm  # noqa: E402
 
 if TYPE_CHECKING:
     from ocean.typing import BaseExplainableEnsemble
