@@ -57,6 +57,7 @@ ROOT = HERE.parents[1]
 PACKAGES = ["ocean.ls"]
 IGNORE_MODULES: tuple[str, ...] = ()
 KNOWN_UNREACHABLE: set[str] = set()
+PYTHON_CACHE_TAG = f"py{sys.version_info.major}{sys.version_info.minor}"
 
 MIN_CREDIT_LINES = 2
 MIN_INCOME_RATIO = 0.1
@@ -85,6 +86,12 @@ def _already_warmed_up() -> bool:
 
 def _currently_warming_up() -> bool:
     return _warming_up
+
+
+def _numba_cache_exists(root: Path = HERE) -> bool:
+    has_index = any(root.rglob(f"*.{PYTHON_CACHE_TAG}.nbi"))
+    has_compiled = any(root.rglob(f"*.{PYTHON_CACHE_TAG}*.nbc"))
+    return has_index and has_compiled
 
 
 def clear_numba_cache(root: Path) -> int:
@@ -418,29 +425,36 @@ def run_workload(
     run_direct_kernel_warmup(dls, query)
 
 
-def warmup_numba(*, verbose: bool = False) -> bool:
+def warmup_numba(*, verbose: bool = False, force: bool = False) -> bool:
     """
     Compile and cache LS numba kernels once for the current process.
+
+    Existing cache files for the active Python version are treated as already
+    warmed unless ``force`` is set.
 
     Returns
     -------
     bool
-        ``True`` when this call completed or had already completed the warmup.
+        ``True`` when this call found an existing cache, completed, or had
+        already completed the warmup.
         ``False`` when called re-entrantly while another warmup is in progress.
 
     """
     global _warmed_up, _warming_up  # noqa: PLW0603
 
-    if _already_warmed_up():
+    if not force and _already_warmed_up():
         return True
     if _currently_warming_up():
         return False
 
     with _warmup_lock:
-        if _already_warmed_up():
+        if not force and _already_warmed_up():
             return True
         if _currently_warming_up():
             return False
+        if not force and _numba_cache_exists():
+            _warmed_up = True
+            return True
 
         _warming_up = True
         try:
@@ -475,7 +489,7 @@ def main() -> int:
     _emit("\n== 2. Running warm-up workload (compiles + caches) ==")
     t0 = time.time()
     try:
-        warmup_numba(verbose=True)
+        warmup_numba(verbose=True, force=True)
     except Exception as exc:  # noqa: BLE001
         _emit(f"  [error] workload failed early: {type(exc).__name__}: {exc}")
     _emit(f"   workload done in {time.time() - t0:.1f}s")
