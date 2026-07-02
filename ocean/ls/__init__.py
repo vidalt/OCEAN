@@ -1,19 +1,18 @@
 """Local-search heuristic backend for counterfactual search."""
 
 from ._explainer import (
-    BaseExplainer,
+    BaseLocalSearchExplainer,
     SimulatedAnnealingExplainer,
 )
-from ._explainer import (
-    MultiStartExplainer_deterministic as DLSExplainer,
-)
-from ._explainer import (
-    MultiStartExplainer_stochastic as SLSExplainer,
-)
 from ._explanation import Explanation
+from .dls._explainer import DeterministicMultiStartExplainer
+from .sls._explainer import StochasticMultiStartExplainer
+
+DLSExplainer = DeterministicMultiStartExplainer
+SLSExplainer = StochasticMultiStartExplainer
 
 __all__ = [
-    "BaseExplainer",
+    "BaseLocalSearchExplainer",
     "DLSExplainer",
     "Explanation",
     "SLSExplainer",

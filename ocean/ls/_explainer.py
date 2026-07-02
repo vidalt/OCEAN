@@ -12,12 +12,10 @@ from numba.typed.typedlist import List as NumbaList
 from ._explanation import Explanation
 from ._warmup import warmup_numba
 from .dls.multi_start import (
-    multi_start_deterministic,
     multi_start_simulated_annealing,
     multi_start_simulated_annealing_exhaustive,
 )
 from .dls.simulated_annealing import simulated_annealing
-from .sls.multi_start import multi_start as multi_start_stochastic
 from .utils import (
     build_cat_groups_ocean,
     get_norm,
@@ -84,7 +82,7 @@ def _column_label(
 # =============================================================================
 
 
-class BaseExplainer:
+class BaseLocalSearchExplainer:
     def __init__(
         self,
         ensemble: BaseExplainableEnsemble,
@@ -509,145 +507,7 @@ class BaseExplainer:
 # =============================================================================
 
 
-class MultiStartExplainer_deterministic(BaseExplainer):  # noqa: N801
-    """
-    Multi-Start with deterministic neighborhood (DLS).
-
-    init_type controls how the starting population is generated:
-      - "simple"  : Gaussian perturbation, one feature type at a time
-      - "gini"    : grid perturbation on the k most important features (Gini)
-      - "naive"   : Gaussian noise applied to all feature types simultaneously
-    """
-
-    def explain(  # noqa: PLR0913, PLR0917
-        self,
-        x: Array1D,
-        query_class: NonNegativeInt,
-        norm: PositiveInt,
-        std: float = 1,
-        n_population: int = 10,
-        lambda_: float = 1,
-        tabu_size: int = 10,
-        n_iter: PositiveInt = 100,
-        best_distance: float | None = None,
-        max_time_per_local_search: float = 0.1,
-        return_callback: bool = False,  # noqa: FBT001, FBT002
-        random_seed: PositiveInt = 42,
-        init_type: str = "simple",
-        k_features: int = 5,
-        flip_prob: float = 0.5,
-        perturb_ratio: float = 1.0,
-        per_start_log: StartLog | None = None,
-        total_timeout: float | None = None,
-    ) -> Explanation | None:
-        self.norm = norm
-        self.max_distance = get_norm(norm, self.inf, self.sup)
-        best_distance_value = (
-            float(best_distance)
-            if best_distance is not None
-            else float(self.max_distance)
-        )
-
-        result = multi_start_deterministic(
-            cast("LocalSearchExplainer", self),
-            n_iter,
-            std,
-            n_population,
-            x,
-            query_class,
-            lambda_,
-            tabu_size,
-            best_distance_value,
-            random_seed,
-            max_time_per_local_search,
-            return_callback,
-            norm=norm,
-            init_type=init_type,
-            k_features=k_features,
-            flip_prob=flip_prob,
-            perturb_ratio=perturb_ratio,
-            per_start_log=per_start_log,
-            total_timeout=total_timeout,
-        )
-        return self._process_result(
-            result,
-            x,
-            query_class,
-            return_callback,
-        )
-
-
-class MultiStartExplainer_stochastic(BaseExplainer):  # noqa: N801
-    """
-    Multi-Start with stochastic neighborhood (SLS).
-
-    Randomly samples neighbors on hypercube faces.
-    init_type controls how the starting population is generated.
-    """
-
-    def explain(  # noqa: PLR0913, PLR0917
-        self,
-        x: Array1D,
-        query_class: NonNegativeInt,
-        norm: PositiveInt,
-        std: float = 1,
-        n_population: int = 10,
-        lambda_: float = 1,
-        n_faces: PositiveInt = 1,
-        n_samples_per_face: PositiveInt = 1,
-        n_iter: PositiveInt = 100,
-        best_distance: float | None = None,
-        max_time_per_local_search: float = 0.1,
-        return_callback: bool = False,  # noqa: FBT001, FBT002
-        random_seed: PositiveInt = 42,
-        tabu_size: NonNegativeInt = 0,
-        init_type: str = "gini",
-        k_features: int = 5,
-        flip_prob: float = 0.5,
-        perturb_ratio: float = 1.0,
-        per_start_log: StartLog | None = None,
-        total_timeout: float | None = None,
-    ) -> Explanation | None:
-        self.norm = norm
-        self.max_distance = get_norm(norm, self.inf, self.sup)
-        best_distance_value = (
-            float(best_distance)
-            if best_distance is not None
-            else float(self.max_distance)
-        )
-
-        result = multi_start_stochastic(
-            cast("LocalSearchExplainer", self),
-            n_iter,
-            std,
-            n_population,
-            x,
-            query_class,
-            lambda_,
-            tabu_size,
-            best_distance_value,
-            n_faces,
-            n_samples_per_face,
-            random_seed,
-            max_time_per_local_search,
-            return_callback,
-            norm,
-            init_type=init_type,
-            k_features=k_features,
-            flip_prob=flip_prob,
-            perturb_ratio=perturb_ratio,
-            per_start_log=per_start_log,
-            total_timeout=total_timeout,
-        )
-        return self._process_result(
-            result,
-            x,
-            query_class,
-            return_callback,
-        )
-
-
-class SimulatedAnnealingExplainer(BaseExplainer):
+class SimulatedAnnealingExplainer(BaseLocalSearchExplainer):
     """Simulated Annealing to escape local minima."""
 
     def explain(  # noqa: PLR0913, PLR0917
