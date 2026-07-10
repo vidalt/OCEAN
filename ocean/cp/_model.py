@@ -30,6 +30,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     DEFAULT_EPSILON: int = 1
     _obj_scale: int = int(1e8)
+    MAX_WEIGHTED_NORMS: int = 3
 
     class Type(Enum):
         CP = "CP"
@@ -117,6 +118,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         x: Array1D,
         *,
         norm: NonNegativeInt = 1,
+        weighted_norms: list[float] | None = None,
     ) -> None:
         r"""
         Minimize the scaled integer approximation of :math:`d_p(x, \hat{x})`.
@@ -130,9 +132,16 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         norm
             Distance norm. The CP backend supports non-negative integer
             norms, with :math:`L_1` as the default.
+        weighted_norms
+            Optional weights for a combined ``L0``, ``L1``, ``L2`` objective.
+            The list can contain at most three non-negative values.
 
         """
-        objective = self._add_objective(x=x, norm=norm)
+        objective = self._add_objective(
+            x=x,
+            norm=norm,
+            weighted_norms=weighted_norms,
+        )
         self.Minimize(objective)
 
     @validate_call
@@ -224,6 +233,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self,
         x: Array1D,
         norm: NonNegativeInt,
+        weighted_norms: list[float] | None = None,
     ) -> cp.ObjLinearExprT:
         r"""
         Build the scaled linear expression for :math:`d_p(x, \hat{x})^p`.
@@ -248,6 +258,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             msg = f"Expected {self.mapper.n_columns} values, got {x.size}"
             raise ValueError(msg)
         x_arr = np.asarray(x, dtype=float).ravel()
+        weights = self._validate_weighted_norms(weighted_norms)
         variables = self.mapper.values()
         names = list(self.mapper.keys())
         objective: cp.LinearExpr = 0  # type: ignore[assignment]
@@ -257,12 +268,39 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             if v.is_one_hot_encoded:
                 for code in v.codes:
                     idx = indexer.get(name, code)
-                    objective += self.Lp(x_arr[idx], v, code=code, norm=norm)
+                    objective += self.Lp(
+                        x_arr[idx],
+                        v,
+                        code=code,
+                        norm=norm,
+                        weighted_norms=weights,
+                    )
                     k += 1
             else:
-                objective += self.Lp(x_arr[k], v, norm=norm)
+                objective += self.Lp(
+                    x_arr[k],
+                    v,
+                    norm=norm,
+                    weighted_norms=weights,
+                )
                 k += 1
         return objective
+
+    @classmethod
+    def _validate_weighted_norms(
+        cls,
+        weighted_norms: list[float] | None,
+    ) -> list[float] | None:
+        if weighted_norms is None:
+            return None
+        if not 1 <= len(weighted_norms) <= cls.MAX_WEIGHTED_NORMS:
+            msg = "weighted_norms must contain between 1 and 3 values."
+            raise ValueError(msg)
+        weights = [float(weight) for weight in weighted_norms]
+        if any(weight < 0.0 or not np.isfinite(weight) for weight in weights):
+            msg = "weighted_norms must contain only finite non-negative values."
+            raise ValueError(msg)
+        return weights
 
     def get_intervals_cost(
         self,
@@ -270,6 +308,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         x: float,
         *,
         norm: NonNegativeInt = 1,
+        weighted_norms: list[float] | None = None,
     ) -> list[int]:
         r"""
         Return interval costs for a continuous feature encoded by thresholds.
@@ -291,12 +330,16 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             if levels[i] < x <= levels[i + 1]:
                 continue
             if levels[i] > x:
-                intervals_cost[i] = int(
-                    abs(x - levels[i]) ** norm * self._obj_scale
+                intervals_cost[i] = self._scaled_cost(
+                    x - levels[i],
+                    norm,
+                    weighted_norms,
                 )
             elif levels[i + 1] < x:
-                intervals_cost[i] = int(
-                    abs(x - levels[i + 1]) ** norm * self._obj_scale
+                intervals_cost[i] = self._scaled_cost(
+                    x - levels[i + 1],
+                    norm,
+                    weighted_norms,
                 )
         return intervals_cost.tolist()
 
@@ -306,6 +349,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         x: float,
         *,
         norm: NonNegativeInt = 1,
+        weighted_norms: list[float] | None = None,
     ) -> list[int]:
         r"""
         Return scaled :math:`L_p^p` costs for one finite-value domain.
@@ -317,13 +361,27 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
         """
         return [
-            int(
-                0.0
-                if np.isclose(x, value)
-                else abs(x - value) ** norm * self._obj_scale
-            )
+            self._scaled_cost(float(x) - float(value), norm, weighted_norms)
             for value in values
         ]
+
+    def _scaled_cost(
+        self,
+        delta: float,
+        norm: NonNegativeInt,
+        weighted_norms: list[float] | None,
+    ) -> int:
+        if np.isclose(delta, 0.0):
+            return 0
+        abs_delta = abs(delta)
+        if weighted_norms is None:
+            return int(abs_delta**norm * self._obj_scale)
+        return int(
+            sum(
+                weight * (abs_delta**weighted_norm) * self._obj_scale
+                for weighted_norm, weight in enumerate(weighted_norms)
+            )
+        )
 
     @staticmethod
     def get_discrete_base_values(v: FeatureVar) -> list[int]:
@@ -358,6 +416,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         code: Key | None = None,
         *,
         norm: NonNegativeInt = 1,
+        weighted_norms: list[float] | None = None,
     ) -> cp.LinearExpr:
         r"""
         Build the CP contribution of one feature to :math:`d_p(x, \hat{x})^p`.
@@ -374,6 +433,8 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             one-hot variables :math:`u_{j,k}`.
         norm
             Distance norm :math:`p` used to build :math:`d_p(x, \hat{x})^p`.
+        weighted_norms
+            Optional weights for a combined ``L0``, ``L1``, ``L2`` objective.
 
         Returns
         -------
@@ -386,7 +447,12 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         obj_coefs: list[int] = []
         if v.is_numeric:
             if v.is_continuous:
-                intervals_cost = self.get_intervals_cost(v.levels, x, norm=norm)
+                intervals_cost = self.get_intervals_cost(
+                    v.levels,
+                    x,
+                    norm=norm,
+                    weighted_norms=weighted_norms,
+                )
                 # tighten domain of objvar based on x itself ----------
                 v.objvarget().Proto().domain[:] = []
                 v.objvarget().Proto().domain.extend(
@@ -409,13 +475,18 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
                 )
                 # -----------------------------------------------------
                 obj_expr = v.objvarget()
-                if norm == 1:
+                if weighted_norms is None and norm == 1:
                     self.add_garbage(
                         self.AddAbsEquality(obj_expr, int(x) - v.xget())
                     )
                     obj_coefs.append(self._obj_scale)
                 else:
-                    values_cost = self.get_values_cost(values, x, norm=norm)
+                    values_cost = self.get_values_cost(
+                        values,
+                        x,
+                        norm=norm,
+                        weighted_norms=weighted_norms,
+                    )
                     value_idx = self.get_value_idx_var(v)
                     v.objvarget().Proto().domain[:] = []
                     v.objvarget().Proto().domain.extend(
@@ -433,9 +504,20 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         elif v.is_one_hot_encoded:
             obj_expr = v.xget(code) if x == 0.0 else 1 - v.xget(code)  # type: ignore[assignment]
             obj_exprs.append(obj_expr)
-            obj_coefs.append(self._obj_scale // 2)
+            if weighted_norms is None:
+                obj_coefs.append(self._obj_scale // 2)
+            else:
+                # For 0/1 coordinates, every weighted norm is the same
+                # change indicator; one-hot coordinates are half-counted.
+                obj_coefs.append(
+                    int(sum(weighted_norms) * self._obj_scale / 2.0)
+                )
         else:
             obj_expr = v.xget() if x == 0.0 else 1 - v.xget()  # type: ignore[assignment]
             obj_exprs.append(obj_expr)
-            obj_coefs.append(self._obj_scale)
+            if weighted_norms is None:
+                obj_coefs.append(self._obj_scale)
+            else:
+                # Binary coordinates also collapse to the same change indicator.
+                obj_coefs.append(int(sum(weighted_norms) * self._obj_scale))
         return cp.LinearExpr.WeightedSum(obj_exprs, obj_coefs)

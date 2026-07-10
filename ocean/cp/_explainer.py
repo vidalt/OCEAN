@@ -91,7 +91,24 @@ class Explainer(Model, BaseExplainer):
             msg = "No explanation has been computed yet."
             raise RuntimeError(msg)
 
+        weighted_norms = getattr(self, "_weighted_norms", None)
         counterfactual = self.explanation.x
+        if weighted_norms is not None:
+            return float(
+                sum(
+                    weight
+                    * self._distance_for_norm(query, counterfactual, norm)
+                    for norm, weight in enumerate(weighted_norms)
+                )
+            )
+        return self._distance_for_norm(query, counterfactual, norm)
+
+    def _distance_for_norm(
+        self,
+        query: Array1D,
+        counterfactual: Array1D,
+        norm: int,
+    ) -> float:
         distance = 0.0
         for name, feature in self.mapper.items():
             if feature.is_one_hot_encoded:
@@ -150,7 +167,8 @@ class Explainer(Model, BaseExplainer):
         x: Array1D,
         *,
         y: NonNegativeInt,
-        norm: NonNegativeInt,
+        norm: NonNegativeInt = 1,
+        weighted_norms: list[float] | None = None,
         return_callback: bool = False,
         verbose: bool = False,
         max_time: int = 60,
@@ -169,6 +187,9 @@ class Explainer(Model, BaseExplainer):
             Target class enforced by the counterfactual.
         norm
             Non-negative integer distance norm used by the CP objective.
+        weighted_norms
+            Optional weights for ``L0``, ``L1``, and ``L2``. When provided,
+            this combined objective is used instead of ``norm``.
         return_callback
             Whether to record incumbent solutions during the search.
         verbose
@@ -199,7 +220,7 @@ class Explainer(Model, BaseExplainer):
         self.solver.parameters.random_seed = random_seed
         if num_workers is not None:
             self.solver.parameters.num_workers = num_workers
-        self.add_objective(x, norm=norm)
+        self.add_objective(x, norm=norm, weighted_norms=weighted_norms)
         self.set_majority_class(y=y)
         self.callback: MySolCallback | None = (
             MySolCallback(starttime=time.time(), _obj_scale=self._obj_scale)
@@ -246,7 +267,10 @@ class Explainer(Model, BaseExplainer):
             self.cleanup()
             return None
         self.explanation.query = x
-        self._distance_norm = norm
+        self._distance_norm, self._weighted_norms = (
+            norm,
+            self._validate_weighted_norms(weighted_norms),
+        )
         if clean_up:
             self.cleanup()
         return self.explanation
