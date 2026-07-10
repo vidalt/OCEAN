@@ -42,3 +42,16 @@ def manual_postprocessed_distance(
     if norm != 1:
         distance **= 1.0 / norm if norm != 0 else 1.0
     return float(distance)
+
+
+def manual_weighted_postprocessed_distance(
+    explanation: BaseExplanation,
+    *,
+    weighted_norms: list[float],
+) -> float:
+    return float(
+        sum(
+            weight * manual_postprocessed_distance(explanation, norm=norm)
+            for norm, weight in enumerate(weighted_norms)
+        )
+    )

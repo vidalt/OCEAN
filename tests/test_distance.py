@@ -16,7 +16,10 @@ from ocean import (
 from ocean.abc import Mapper
 from ocean.feature import Feature, parse_features
 
-from .distance_utils import manual_postprocessed_distance
+from .distance_utils import (
+    manual_postprocessed_distance,
+    manual_weighted_postprocessed_distance,
+)
 from .utils import ENV, generate_data
 
 if TYPE_CHECKING:
@@ -112,6 +115,89 @@ def test_get_distance_matches_manual_postprocessed_distance(
 
     model.cleanup()
     assert model.get_distance() == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "explainer_class",
+    [ConstraintProgrammingExplainer, MixedIntegerProgramExplainer],
+)
+@pytest.mark.parametrize(
+    "weighted_norms",
+    [[2.0], [1.0, 0.5], [0.25, 1.5, 2.0]],
+)
+def test_get_distance_matches_manual_weighted_norms(
+    explainer_class: type[
+        ConstraintProgrammingExplainer | MixedIntegerProgramExplainer
+    ],
+    weighted_norms: list[float],
+) -> None:
+    seed = 7
+    data, y, mapper = generate_data(seed=seed, n_samples=100, n_classes=2)
+    clf = RandomForestClassifier(
+        random_state=seed,
+        n_estimators=5,
+        max_depth=3,
+    )
+    clf.fit(data, y)
+    model = build_explainer(explainer_class, clf, mapper)
+
+    x = data.iloc[0, :].to_numpy(dtype=float).flatten()
+    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    target = int(1 - prediction[0])
+
+    try:
+        explanation = model.explain(
+            x,
+            y=target,
+            weighted_norms=weighted_norms,
+            random_seed=seed,
+            clean_up=False,
+        )
+    except gp.GurobiError as exc:
+        pytest.skip(f"Skipping test due to {exc}")
+
+    assert explanation is not None
+
+    expected = manual_weighted_postprocessed_distance(
+        explanation,
+        weighted_norms=weighted_norms,
+    )
+    assert model.get_distance() == pytest.approx(expected)
+
+    model.cleanup()
+    assert model.get_distance() == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "explainer_class",
+    [ConstraintProgrammingExplainer, MixedIntegerProgramExplainer],
+)
+@pytest.mark.parametrize(
+    "weighted_norms",
+    [[], [1.0, 1.0, 1.0, 1.0], [-1.0], [float("inf")], [float("nan")]],
+)
+def test_explain_rejects_invalid_weighted_norms(
+    explainer_class: type[
+        ConstraintProgrammingExplainer | MixedIntegerProgramExplainer
+    ],
+    weighted_norms: list[float],
+) -> None:
+    seed = 7
+    data, y, mapper = generate_data(seed=seed, n_samples=50, n_classes=2)
+    clf = RandomForestClassifier(
+        random_state=seed,
+        n_estimators=3,
+        max_depth=2,
+    )
+    clf.fit(data, y)
+    model = build_explainer(explainer_class, clf, mapper)
+
+    x = data.iloc[0, :].to_numpy(dtype=float).flatten()
+    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    target = int(1 - prediction[0])
+
+    with pytest.raises(ValueError, match="weighted_norms"):
+        model.explain(x, y=target, weighted_norms=weighted_norms)
 
 
 @pytest.mark.skipif(
