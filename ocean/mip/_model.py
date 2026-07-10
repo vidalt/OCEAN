@@ -33,6 +33,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
     DEFAULT_EPSILON: Unit = 1.0 / (2.0**16)
     DEFAULT_NUM_EPSILON: Unit = 1e-6  # 1.0 / (2.0**20)
     MIN_NUMERIC_TOL: float = 1e-9
+    MAX_WEIGHTED_NORMS: int = 3
 
     class Type(Enum):
         MIP = "MIP"
@@ -148,6 +149,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         x: Array1D,
         *,
         norm: int = 1,
+        weighted_norms: list[float] | None = None,
         sense: int = gp.GRB.MINIMIZE,
     ) -> None:
         r"""
@@ -162,12 +164,19 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         norm
             Distance norm used for :math:`d(x, \hat{x})`. The MIP backend
             supports :math:`L_0`, :math:`L_1`, and :math:`L_2`.
+        weighted_norms
+            Optional weights for a combined ``L0``, ``L1``, ``L2`` objective.
+            The list can contain at most three non-negative values.
         sense
             Optimization sense passed to Gurobi. Counterfactual search uses
             minimization.
 
         """
-        objective = self._add_objective(x=x, norm=norm)
+        objective = self._add_objective(
+            x=x,
+            norm=norm,
+            weighted_norms=weighted_norms,
+        )
         self.explanation.query = np.asarray(x, dtype=np.float64).ravel().copy()
         self.setObjective(objective, sense=sense)
 
@@ -295,7 +304,12 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         if integrality_focus < 1:
             self.setParam("IntegralityFocus", 1)
 
-    def _add_objective(self, x: Array1D, norm: int) -> Objective:
+    def _add_objective(
+        self,
+        x: Array1D,
+        norm: int,
+        weighted_norms: list[float] | None = None,
+    ) -> Objective:
         r"""
         Build the symbolic objective expression for :math:`d(x, \hat{x})`.
 
@@ -320,6 +334,10 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         if x.size != self.mapper.n_columns:
             msg = f"Expected {self.mapper.n_columns} values, got {x.size}"
             raise ValueError(msg)
+        weights = self._validate_weighted_norms(weighted_norms)
+        if weights is not None:
+            x_arr = np.asarray(x, dtype=np.float64).ravel()
+            return self._add_weighted_norms_objective(x_arr, weights)
         if norm not in {0, 1, 2}:
             msg = f"Unsupported norm: {norm}"
             raise ValueError(msg)
@@ -344,6 +362,34 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
             ),
             start=gp.QuadExpr(),
         )
+
+    def _add_weighted_norms_objective(
+        self,
+        x: Array1D,
+        weights: list[float],
+    ) -> Objective:
+        objective = gp.QuadExpr()
+        for norm, weight in enumerate(weights):
+            if weight == 0.0:
+                continue
+            objective += weight * self._add_objective(x, norm=norm)
+        return objective
+
+    @classmethod
+    def _validate_weighted_norms(
+        cls,
+        weighted_norms: list[float] | None,
+    ) -> list[float] | None:
+        if weighted_norms is None:
+            return None
+        if not 1 <= len(weighted_norms) <= cls.MAX_WEIGHTED_NORMS:
+            msg = "weighted_norms must contain between 1 and 3 values."
+            raise ValueError(msg)
+        weights = [float(weight) for weight in weighted_norms]
+        if any(weight < 0.0 or not np.isfinite(weight) for weight in weights):
+            msg = "weighted_norms must contain only finite non-negative values."
+            raise ValueError(msg)
+        return weights
 
     def _add_l0_objective(self, x: Array1D) -> gp.LinExpr:
         objective = gp.LinExpr()

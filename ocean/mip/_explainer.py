@@ -106,7 +106,24 @@ class Explainer(Model, BaseExplainer):
             msg = "No explanation has been computed yet."
             raise RuntimeError(msg)
 
+        weighted_norms = getattr(self, "_weighted_norms", None)
         counterfactual = self.explanation.x
+        if weighted_norms is not None:
+            return float(
+                sum(
+                    weight
+                    * self._distance_for_norm(query, counterfactual, norm)
+                    for norm, weight in enumerate(weighted_norms)
+                )
+            )
+        return self._distance_for_norm(query, counterfactual, norm)
+
+    def _distance_for_norm(
+        self,
+        query: Array1D,
+        counterfactual: Array1D,
+        norm: int,
+    ) -> float:
         distance = 0.0
         for name, feature in self.mapper.items():
             if feature.is_one_hot_encoded:
@@ -186,7 +203,8 @@ class Explainer(Model, BaseExplainer):
         x: Array1D,
         *,
         y: NonNegativeInt,
-        norm: NonNegativeInt,
+        norm: NonNegativeInt = 1,
+        weighted_norms: list[float] | None = None,
         return_callback: bool = False,
         verbose: bool = False,
         max_time: int = 60,
@@ -205,6 +223,9 @@ class Explainer(Model, BaseExplainer):
             Target class enforced by the counterfactual.
         norm
             Distance norm. The MIP backend supports ``0``, ``1``, and ``2``.
+        weighted_norms
+            Optional weights for ``L0``, ``L1``, and ``L2``. When provided,
+            this combined objective is used instead of ``norm``.
         return_callback
             Whether to collect incumbent solutions through a Gurobi callback.
         verbose
@@ -237,7 +258,7 @@ class Explainer(Model, BaseExplainer):
         self.setParam("Seed", random_seed)
         if num_workers is not None:
             self.setParam("Threads", num_workers)
-        self.add_objective(x, norm=norm)
+        self.add_objective(x, norm=norm, weighted_norms=weighted_norms)
         self.set_majority_class(y=y)
         if return_callback:
             self.callback = SolutionCallback(starttime=time.time())
@@ -279,7 +300,10 @@ class Explainer(Model, BaseExplainer):
                 msg += "Unexpected solver status: " + status
                 raise RuntimeError(msg)
         self.explanation.query = x
-        self._distance_norm = norm
+        self._distance_norm, self._weighted_norms = (
+            norm,
+            self._validate_weighted_norms(weighted_norms),
+        )
         self._output_values = np.asarray(self.explanation.x, dtype=np.float64)
         if clean_up:
             self.cleanup()
