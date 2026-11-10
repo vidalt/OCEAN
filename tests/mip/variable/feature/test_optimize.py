@@ -47,13 +47,13 @@ def test_discrete(
     var.build(model)
 
     v = var.xget()
-    val = generator.choice(levels)
+    val = float(generator.choice(levels))
     objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()
     assert np.isclose(v.X, val)
 
-    val = generator.uniform(float(levels.min()), float(levels.max()))
+    val = float(generator.uniform(float(levels.min()), float(levels.max())))
     objective = (v - val) ** 2
     model.setObjective(objective)
     model.optimize()

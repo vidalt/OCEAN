@@ -288,8 +288,10 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             elif first_true is None:
                 candidates = np.array([levels[-1]])
             else:
-                insertion = np.searchsorted(levels, upper, side="left")
-                insertion = np.min(insertion, len(levels) - 1)
+                insertion = min(
+                    int(np.searchsorted(levels, upper, side="left")),
+                    len(levels) - 1,
+                )
                 candidates = np.array([levels[insertion]])
         if query_val is not None and np.any(np.isclose(candidates, query_val)):
             return query_val
