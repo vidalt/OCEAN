@@ -150,7 +150,7 @@ cp_explanation = cp_model.explain(
 Both explanations now keep the fixed features unchanged and increase
 `HoursPerWeek` from `40` to `44`. They also change the unrestricted features
 `CapitalGain`, `CapitalLoss`, and `WorkClass`, at a higher objective value.
-MaxSAT does not support actionability, so its entries are marked unavailable.
+MaxSAT does not support actionability for now, so its entries are marked unavailable.
 
 <table>
 <thead>
@@ -199,7 +199,7 @@ See the [examples folder](https://github.com/vidalt/OCEAN/tree/main/examples) or
 
 ## Citation
 
-If you use OCEAN in your research, please cite the two main papers:
+If you use OCEAN in your research, please cite the three main papers:
 
 ```bibtex
 @misc{khouna2026optimalcounterfactualsearch,
@@ -225,6 +225,17 @@ If you use OCEAN in your research, please cite the two main papers:
   publisher = {PMLR},
   url       = {https://proceedings.mlr.press/v139/parmentier21a.html}
 }
+
+@article{faia250895,
+    title   = {Optimal Counterfactual Explanations for Random Forests with MaxSAT},
+    author  = {Raevskaya, Alesya and Lehtonen, Tuomo},
+    journal = {Frontiers in Artificial Intelligence and Applications},
+    volume  = {350},
+    pages   = {1--12},
+    year    = {2025},
+    doi     = {10.3233/FAIA250895},
+    url     = {https://doi.org/10.3233/FAIA250895}
+    }
 ```
 
 ## References
