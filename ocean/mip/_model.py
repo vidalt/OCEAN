@@ -1,5 +1,6 @@
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from enum import Enum
+from functools import partial
 
 import gurobipy as gp
 import numpy as np
@@ -36,6 +37,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
     DEFAULT_EPSILON: Unit = 1.0 / (2.0**16)
     DEFAULT_NUM_EPSILON: Unit = 1e-6  # 1.0 / (2.0**20)
     MIN_NUMERIC_TOL: float = 1e-9
+    RECOVERY_NUMERIC_FOCUS: int = 2
 
     class Type(Enum):
         MIP = "MIP"
@@ -385,6 +387,41 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         numeric_focus = int(self.getParamInfo("NumericFocus")[2])
         if numeric_focus < 1:
             self.setParam("NumericFocus", 1)
+
+    def optimize(
+        self,
+        callback: Callable[[gp.Model, int], None] | None = None,
+        wheres: list[int] | None = None,
+    ) -> None:
+        """
+        Solve, retrying numerical failures once within the time budget.
+
+        Gurobi 14 can fail to solve node relaxations with the strict split
+        tolerances. Rebuild the search with stronger numerical focus only in
+        that case; normal solves and user-selected stronger settings remain
+        unchanged. Callback filtering is forwarded when supplied (Gurobi 14).
+        """
+        solve = partial(super().optimize, callback)
+        if wheres is not None:
+            solve = partial(solve, wheres=wheres)
+        solve()
+        if self.Status not in {gp.GRB.NUMERIC, gp.GRB.SUBOPTIMAL}:
+            return
+
+        numeric_focus = self.Params.NumericFocus
+        time_limit = self.Params.TimeLimit
+        remaining = time_limit - self.Runtime
+        if numeric_focus >= self.RECOVERY_NUMERIC_FOCUS or remaining <= 0:
+            return
+
+        try:
+            self.setParam("NumericFocus", self.RECOVERY_NUMERIC_FOCUS)
+            self.setParam("TimeLimit", remaining)
+            self.reset()
+            solve()
+        finally:
+            self.setParam("NumericFocus", numeric_focus)
+            self.setParam("TimeLimit", time_limit)
 
     def _add_objective(self, x: Array1D, norm: int) -> Objective:
         r"""
