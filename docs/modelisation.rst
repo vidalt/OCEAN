@@ -280,14 +280,14 @@ Mixed-integer programming model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: ocean.mip._model.Model
-   :members: build, add_objective, set_majority_class, clear_majority_class, cleanup, _set_majority_class, _set_isolation, _add_objective, L1, L2
+   :members: build, add_objective, add_actionability, set_majority_class, clear_majority_class, cleanup, _set_majority_class, _set_isolation, _add_objective, L1, L2
    :member-order: bysource
 
 Constraint-programming model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: ocean.cp._model.Model
-   :members: build, add_objective, set_majority_class, cleanup, _set_majority_class, _set_isolation, _add_objective, get_intervals_cost, L1
+   :members: build, add_objective, add_actionability, set_majority_class, cleanup, _set_majority_class, _set_isolation, _add_objective, get_intervals_cost, get_values_cost, Lp
    :member-order: bysource
 
 Weighted MaxSAT model

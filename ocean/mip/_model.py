@@ -5,10 +5,13 @@ import gurobipy as gp
 import numpy as np
 from pydantic import validate_call
 
+from .._actionability import validate_actionability
 from ..abc import Mapper
 from ..feature import Feature
 from ..tree import Tree
 from ..typing import (
+    Actionability,
+    ActionabilityRule,
     Array1D,
     Key,
     NonNegativeArray1D,
@@ -171,6 +174,87 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         self.explanation.query = np.asarray(x, dtype=np.float64).ravel().copy()
         self.setObjective(objective, sense=sense)
 
+    def add_actionability(
+        self, x: Array1D, actionability: Actionability | None = None
+    ) -> None:
+        """
+        Add temporary restrictions on decoded counterfactual feature values.
+
+        Call after ``add_objective(x, ...)`` so query-dependent domains are
+        ready. Rules accumulate until ``cleanup()``; omitted features remain
+        unrestricted. One-hot groups accept only ``"fixed"``.
+
+        Invalid rules or query values raise ``ValueError``.
+
+        """
+        validate_actionability(self.mapper, x, actionability)
+        for name, rule in (actionability or {}).items():
+            feature = self.mapper[name]
+            if feature.is_one_hot_encoded:
+                for code in feature.codes:
+                    category_value = int(x[self.mapper.idx.get(name, code)])
+                    self.add_garbage(
+                        self.addConstr(feature.xget(code) == category_value)
+                    )
+                continue
+            value = float(x[self.mapper.idx.get(name)])
+            if feature.is_continuous:
+                self._add_continuous_actionability(feature, value, rule)
+            else:
+                self._add_value_actionability(feature, value, rule)
+
+    def _add_continuous_actionability(
+        self, feature: FeatureVar, value: float, rule: ActionabilityRule
+    ) -> None:
+        # Match the decoder: split equality belongs to the left region.
+        # The lower restriction uses the tree builder's positive mu margin.
+        index = max(
+            0, int(np.searchsorted(feature.levels, value, side="left")) - 1
+        )
+        if rule in {"fixed", "increase"} and index > 0:
+            self.add_garbage(
+                self.addConstr(feature.mget(index - 1) == 1),
+                self.addConstr(feature.mget(index) >= self.num_epsilon),
+            )
+        if rule in {"fixed", "decrease"} and index < len(feature.levels) - 2:
+            self.add_garbage(self.addConstr(feature.mget(index + 1) == 0))
+
+    def _add_value_actionability(
+        self, feature: FeatureVar, value: float, rule: ActionabilityRule
+    ) -> None:
+        lower = upper = value
+        if feature.is_discrete:
+            # Stored levels in the query's region decode to the query.
+            regions = np.searchsorted(
+                feature.thresholds, feature.levels, side="left"
+            )
+            region = np.searchsorted(feature.thresholds, value, side="left")
+            decoded = np.where(regions == region, value, feature.levels)
+            if rule == "fixed":
+                allowed = feature.levels[decoded == value]
+            elif rule == "increase":
+                allowed = feature.levels[decoded >= value]
+            else:
+                allowed = feature.levels[decoded <= value]
+            if not allowed.size:
+                self.add_garbage(self.addConstr(gp.LinExpr() == 1))
+                return
+            lower, upper = float(allowed[0]), float(allowed[-1])
+        if rule in {"fixed", "increase"}:
+            self.add_garbage(self.addConstr(feature.xget() >= lower))
+        if rule in {"fixed", "decrease"}:
+            self.add_garbage(self.addConstr(feature.xget() <= upper))
+
+    def _prepare_query(
+        self,
+        x: Array1D,
+        norm: NonNegativeInt,
+        actionability: Actionability | None,
+    ) -> None:
+        validate_actionability(self.mapper, x, actionability)
+        self.add_objective(x, norm=norm)
+        self.add_actionability(x, actionability)
+
     @validate_call
     def set_majority_class(
         self,
@@ -214,7 +298,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
 
     def cleanup(self) -> None:
         r"""
-        Remove query-specific objective auxiliaries and class constraints.
+        Remove query-specific objective, class, and actionability constraints.
 
         After ``cleanup()``, the structural encoding of :math:`x` and
         :math:`p_{t,\ell}` remains, but temporary constraints created for a
@@ -382,9 +466,11 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         *,
         feature: FeatureVar,
     ) -> gp.LinExpr:
-        return gp.LinExpr(feature.xget()) if np.isclose(
-            x, 0.0
-        ) else 1.0 - feature.xget()
+        return (
+            gp.LinExpr(feature.xget())
+            if np.isclose(x, 0.0)
+            else 1.0 - feature.xget()
+        )
 
     @staticmethod
     def _continuous_interval_index(levels: Array1D, x: float) -> int:

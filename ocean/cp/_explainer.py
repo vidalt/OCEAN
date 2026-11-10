@@ -10,6 +10,7 @@ from ..abc import Mapper
 from ..feature import Feature
 from ..tree import parse_ensembles
 from ..typing import (
+    Actionability,
     Array1D,
     BaseExplainableEnsemble,
     BaseExplainer,
@@ -157,6 +158,7 @@ class Explainer(Model, BaseExplainer):
         num_workers: int | None = None,
         random_seed: int = 42,
         clean_up: bool = True,
+        actionability: Actionability | None = None,
     ) -> Explanation | None:
         """
         Solve one counterfactual query with the CP-SAT backend.
@@ -181,6 +183,12 @@ class Explainer(Model, BaseExplainer):
             Random seed passed to CP-SAT.
         clean_up
             Whether to remove query-specific constraints after the solve.
+        actionability
+            Optional mapping from original feature names to ``"fixed"``,
+            ``"increase"`` (non-decreasing), or ``"decrease"`` (non-increasing).
+            Omitted features are unrestricted. One-hot groups support only
+            ``"fixed"``. Rules constrain decoded values in processed space.
+            Invalid rules or constrained query values raise ``ValueError``.
 
         Returns
         -------
@@ -199,57 +207,64 @@ class Explainer(Model, BaseExplainer):
         self.solver.parameters.random_seed = random_seed
         if num_workers is not None:
             self.solver.parameters.num_workers = num_workers
-        self.add_objective(x, norm=norm)
-        self.set_majority_class(y=y)
-        self.callback: MySolCallback | None = (
-            MySolCallback(starttime=time.time(), _obj_scale=self._obj_scale)
-            if return_callback
-            else None
-        )
-        _ = self.solver.Solve(self, solution_callback=self.callback)
-        status = self.solver.status_name()
-        self.Status = status
-        cf_status_ok = True
-        match status:
-            case "OPTIMAL":
-                pass
-            case "FEASIBLE":
-                msg = "A valid CF was found, but it might be "
-                msg += "suboptimal as the constraint programming "
-                msg += "solver could not prove optimality within "
-                msg += "the given time frame. \n It can however certify"
-                msg += " that no counterfactual can be closer than"
-                msg += f" {self.solver.BestObjectiveBound() / self._obj_scale}."
-                warnings.warn(msg, category=UserWarning, stacklevel=2)
-            case "INFEASIBLE":
-                msg = "There are no feasible counterfactuals for this query."
-                msg += " If there should be one, please check the model "
-                msg += "constraints or report this issue to the developers."
-                warnings.warn(msg, category=UserWarning, stacklevel=2)
-                cf_status_ok = False
-            case "MODEL_INVALID":
-                msg = "The constraint programming model is invalid. "
-                msg += "Please check the model constraints or report"
-                msg += " this issue to the developers."
-                raise RuntimeError(msg)
-            case "UNKNOWN":
-                msg = "The constraint programming solver could "
-                msg += "not find any valid CF within the given time frame."
-                msg += " Try increasing the time limit."
-                warnings.warn(msg, category=UserWarning, stacklevel=2)
-                cf_status_ok = False
-            case _:
-                msg = "Unexpected solver status: " + status
-                raise RuntimeError(msg)
+        self._prepare_query(x, norm, actionability)
+        try:
+            self.set_majority_class(y=y)
+            self.callback: MySolCallback | None = (
+                MySolCallback(starttime=time.time(), _obj_scale=self._obj_scale)
+                if return_callback
+                else None
+            )
+            _ = self.solver.Solve(self, solution_callback=self.callback)
+            status = self.solver.status_name()
+            self.Status = status
+            cf_status_ok = True
+            match status:
+                case "OPTIMAL":
+                    pass
+                case "FEASIBLE":
+                    msg = (
+                        "A valid CF was found, but it might be "
+                        "suboptimal as the constraint programming "
+                        "solver could not prove optimality within "
+                    )
+                    bound = self.solver.BestObjectiveBound() / self._obj_scale
+                    msg += (
+                        "the given time frame. \n It can however certify"
+                        f" that no counterfactual can be closer than {bound}."
+                    )
+                    warnings.warn(msg, category=UserWarning, stacklevel=2)
+                case "INFEASIBLE":
+                    msg = (
+                        "There are no feasible counterfactuals for this query."
+                    )
+                    msg += " If there should be one, please check the model "
+                    msg += "constraints or report this issue to the developers."
+                    warnings.warn(msg, category=UserWarning, stacklevel=2)
+                    cf_status_ok = False
+                case "MODEL_INVALID":
+                    msg = "The constraint programming model is invalid. "
+                    msg += "Please check the model constraints or report"
+                    msg += " this issue to the developers."
+                    raise RuntimeError(msg)
+                case "UNKNOWN":
+                    msg = "The constraint programming solver could "
+                    msg += "not find any valid CF within the given time frame."
+                    msg += " Try increasing the time limit."
+                    warnings.warn(msg, category=UserWarning, stacklevel=2)
+                    cf_status_ok = False
+                case _:
+                    msg = "Unexpected solver status: " + status
+                    raise RuntimeError(msg)
 
-        if not cf_status_ok:
-            self.cleanup()
-            return None
-        self.explanation.query = x
-        self._distance_norm = norm
-        if clean_up:
-            self.cleanup()
-        return self.explanation
+            if not cf_status_ok:
+                return None
+            self.explanation.query = x
+            self._distance_norm = norm
+            return self.explanation
+        finally:
+            if clean_up:
+                self.cleanup()
 
     @staticmethod
     def _get_isolation_params(

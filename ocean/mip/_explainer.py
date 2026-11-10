@@ -10,6 +10,7 @@ from ..abc import Mapper
 from ..feature import Feature
 from ..tree import parse_ensembles
 from ..typing import (
+    Actionability,
     Array1D,
     BaseExplainableEnsemble,
     BaseExplainer,
@@ -193,6 +194,7 @@ class Explainer(Model, BaseExplainer):
         num_workers: int | None = None,
         random_seed: int = 42,
         clean_up: bool = True,
+        actionability: Actionability | None = None,
     ) -> Explanation | None:
         """
         Solve one counterfactual query with the MIP backend.
@@ -217,6 +219,12 @@ class Explainer(Model, BaseExplainer):
             Random seed passed to Gurobi.
         clean_up
             Whether to remove query-specific constraints after the solve.
+        actionability
+            Optional mapping from original feature names to ``"fixed"``,
+            ``"increase"`` (non-decreasing), or ``"decrease"`` (non-increasing).
+            Omitted features are unrestricted. One-hot groups support only
+            ``"fixed"``. Rules constrain decoded values in processed space.
+            Invalid rules or constrained query values raise ``ValueError``.
 
         Returns
         -------
@@ -237,53 +245,69 @@ class Explainer(Model, BaseExplainer):
         self.setParam("Seed", random_seed)
         if num_workers is not None:
             self.setParam("Threads", num_workers)
-        self.add_objective(x, norm=norm)
-        self.set_majority_class(y=y)
-        if return_callback:
-            self.callback = SolutionCallback(starttime=time.time())
-            self.optimize(self.callback)
-        else:
-            self.optimize()
-        status = self.get_solving_status()
+        self._prepare_query(x, norm, actionability)
+        try:
+            self.set_majority_class(y=y)
+            self._solve_query(return_callback=return_callback)
+            status = self.get_solving_status()
 
-        if status == "INFEASIBLE":
-            msg = "There are no feasible counterfactuals for this query."
-            msg += " If there should be one, please check the model "
-            msg += "constraints or report this issue to the developers."
-            warnings.warn(msg, category=UserWarning, stacklevel=2)
-            return None
-        if status != "OPTIMAL":
-            if self.SolCount > 0:
-                msg = "A valid CF was found, but it might be "
-                msg += "suboptimal as the MILP "
-                msg += "solver could not prove optimality within "
-                msg += "the given time frame. \n It can however certify"
-                msg += " that no counterfactual can be closer than"
-                msg += f" {self.ObjBound}."
-                warnings.warn(msg, category=UserWarning, stacklevel=2)
-            elif status == "TIME_LIMIT":
-                msg = "The MILP solver could not find any"
-                msg += " valid CF within the given time frame."
-                msg += " Try increasing the time limit."
+            if status == "INFEASIBLE":
+                msg = "There are no feasible counterfactuals for this query."
+                msg += " If there should be one, please check the model "
+                msg += "constraints or report this issue to the developers."
                 warnings.warn(msg, category=UserWarning, stacklevel=2)
                 return None
-            elif status == "MEM_LIMIT":
-                msg = "The MILP solver could not find any"
-                msg += " valid CF within the given max memory."
-                msg += " Try increasing the memory limit."
-                warnings.warn(msg, category=UserWarning, stacklevel=2)
-                return None
-            else:
-                msg = "The MILP solver could not find any"
-                msg += " valid CF for an un-handled reason."
-                msg += "Unexpected solver status: " + status
-                raise RuntimeError(msg)
-        self.explanation.query = x
-        self._distance_norm = norm
-        self._output_values = np.asarray(self.explanation.x, dtype=np.float64)
-        if clean_up:
-            self.cleanup()
-        return self.explanation
+            if status != "OPTIMAL":
+                if self.SolCount > 0:
+                    msg = "A valid CF was found, but it might be "
+                    msg += "suboptimal as the MILP "
+                    msg += "solver could not prove optimality within "
+                    msg += "the given time frame. \n It can however certify"
+                    msg += " that no counterfactual can be closer than"
+                    msg += f" {self.ObjBound}."
+                    warnings.warn(msg, category=UserWarning, stacklevel=2)
+                elif status == "TIME_LIMIT":
+                    msg = "The MILP solver could not find any"
+                    msg += " valid CF within the given time frame."
+                    msg += " Try increasing the time limit."
+                    warnings.warn(msg, category=UserWarning, stacklevel=2)
+                    return None
+                elif status == "MEM_LIMIT":
+                    msg = "The MILP solver could not find any"
+                    msg += " valid CF within the given max memory."
+                    msg += " Try increasing the memory limit."
+                    warnings.warn(msg, category=UserWarning, stacklevel=2)
+                    return None
+                else:
+                    msg = "The MILP solver could not find any"
+                    msg += " valid CF for an un-handled reason."
+                    msg += "Unexpected solver status: " + status
+                    raise RuntimeError(msg)
+            self.explanation.query = x
+            self._distance_norm = norm
+            self._output_values = np.asarray(
+                self.explanation.x, dtype=np.float64
+            )
+            return self.explanation
+        finally:
+            if clean_up:
+                self.cleanup()
+
+    def _solve_query(self, *, return_callback: bool) -> None:
+        self.callback = (
+            SolutionCallback(starttime=time.time()) if return_callback else None
+        )
+        self.optimize(self.callback)
+        if self.Status == gp.GRB.INF_OR_UNBD:
+            # Resolve presolve ambiguity so an infeasible actionable query
+            # follows the normal no-counterfactual path, including cleanup.
+            dual_reductions = self.Params.DualReductions
+            try:
+                self.setParam("DualReductions", 0)
+                self.reset()
+                self.optimize(self.callback)
+            finally:
+                self.setParam("DualReductions", dual_reductions)
 
     @staticmethod
     def _get_isolation_params(

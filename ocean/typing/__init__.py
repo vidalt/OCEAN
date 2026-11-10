@@ -1,7 +1,7 @@
 """Shared type aliases and protocols used throughout OCEAN."""
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Annotated, Protocol
+from typing import TYPE_CHECKING, Annotated, Literal, Protocol
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,10 @@ type NodeId = Annotated[np.int64, Field(ge=-1)]
 # - This is used to represent the name of a feature
 #   or the code of a one-hot encoded feature.
 type Key = int | str
+
+# Rules use original feature names, including whole one-hot encoded groups.
+type ActionabilityRule = Literal["fixed", "increase", "decrease"]
+type Actionability = Mapping[Key, ActionabilityRule]
 
 # Index alias:
 if TYPE_CHECKING:
@@ -152,6 +156,8 @@ class BaseExplainer(Protocol):
 
 
 __all__ = [
+    "Actionability",
+    "ActionabilityRule",
     "Array",
     "Array1D",
     "Array2D",
