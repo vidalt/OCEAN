@@ -362,8 +362,8 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         variables still select the opposite branch, which then disagrees with
         exact sklearn tree traversal. Using the minimum supported tolerance
         and asking the MIP solver to prioritize integral solutions reduces
-        those numerically loose incumbents without an explicit re-optimization
-        pass.
+        those numerically loose incumbents. Numerical focus also stabilizes
+        the LP relaxations solved with these strict tolerances.
         """
         safe_tol = self.MIN_NUMERIC_TOL
 
@@ -378,6 +378,13 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         integrality_focus = int(self.getParamInfo("IntegralityFocus")[2])
         if integrality_focus < 1:
             self.setParam("IntegralityFocus", 1)
+
+        # The split coefficients and strict tolerances also require care in
+        # the LP relaxations. IntegralityFocus alone does not address their
+        # numerical stability. Preserve a user's stronger numerical setting.
+        numeric_focus = int(self.getParamInfo("NumericFocus")[2])
+        if numeric_focus < 1:
+            self.setParam("NumericFocus", 1)
 
     def _add_objective(self, x: Array1D, norm: int) -> Objective:
         r"""
