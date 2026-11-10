@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from ortools.sat.python import cp_model as cp
 
 from ocean.cp import ENV, Model
 from ocean.tree import parse_trees
@@ -49,9 +48,10 @@ class TestNoIsolation:
         model.add_objective(x=x)
 
         solver = ENV.solver
-        status = solver.Solve(model)
-        assert status == cp.OPTIMAL
-        model.explanation.query = x  # type: ignore[unreachable]
+        solver.Solve(model)
+        status = solver.StatusName()
+        assert status == "OPTIMAL"
+        model.explanation.query = x
         explanation = model.explanation
 
         validate_solution(explanation)
@@ -90,13 +90,14 @@ class TestNoIsolation:
             model.add_objective(x=x)
 
             solver = ENV.solver
-            status = solver.Solve(model)
-            assert status == cp.OPTIMAL, (
+            solver.Solve(model)
+            status = solver.StatusName()
+            assert status == "OPTIMAL", (
                 f"Status: {solver.status_name()}"
                 f" for class {class_}, x = {x}, y={predictions[0]}"
             )
 
-            model.explanation.query = x  # type: ignore[unreachable]
+            model.explanation.query = x
             explanation = model.explanation
 
             validate_solution(explanation)
@@ -124,10 +125,11 @@ def test_supported_norms(norm: int) -> None:
     model.add_objective(x=x, norm=norm)
 
     solver = ENV.solver
-    status = solver.Solve(model)
-    assert status == cp.OPTIMAL
+    solver.Solve(model)
+    status = solver.StatusName()
+    assert status == "OPTIMAL"
 
-    model.explanation.query = x  # type: ignore[unreachable]
+    model.explanation.query = x
     explanation = model.explanation
     validate_solution(explanation)
     validate_paths(*model.trees, explanation=explanation)
@@ -152,10 +154,11 @@ def test_cleanup_keeps_model_valid_after_non_l1_objective() -> None:
     model.add_objective(x=x0, norm=0)
 
     solver = ENV.solver
-    status = solver.Solve(model)
-    assert status == cp.OPTIMAL
+    solver.Solve(model)
+    status = solver.StatusName()
+    assert status == "OPTIMAL"
 
-    variable_count = len(model.Proto().variables)  # type: ignore[unreachable]
+    variable_count = len(model.Proto().variables)
     model.cleanup()
     assert not model.Validate()
 
@@ -163,7 +166,8 @@ def test_cleanup_keeps_model_valid_after_non_l1_objective() -> None:
     model.add_objective(x=x1, norm=2)
     assert len(model.Proto().variables) == variable_count
 
-    status = solver.Solve(model)
-    assert status == cp.OPTIMAL, solver.status_name()
+    solver.Solve(model)
+    status = solver.StatusName()
+    assert status == "OPTIMAL", solver.status_name()
     model.cleanup()
     assert len(model.Proto().variables) == variable_count

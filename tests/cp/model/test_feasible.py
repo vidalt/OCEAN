@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from ortools.sat.python import cp_model as cp
 
 from ocean.cp import ENV, Model
 from ocean.tree import parse_trees
@@ -67,12 +66,13 @@ class TestNoIsolation:
         assert len(model.Proto().constraints) <= ub
 
         solver = ENV.solver
-        status = solver.Solve(model)
-        assert status == cp.OPTIMAL, (
+        solver.Solve(model)
+        status = solver.StatusName()
+        assert status == "OPTIMAL", (
             f"Solver satus {status}, status name {solver.StatusName()}"
         )
 
-        explanation = model.explanation  # type: ignore[unreachable]
+        explanation = model.explanation
 
         validate_solution(explanation)
         validate_paths(*model.trees, explanation=explanation)
@@ -104,12 +104,13 @@ class TestNoIsolation:
             model.set_majority_class(y=class_)
 
             solver = ENV.solver
-            status = solver.Solve(model)
-            assert status == cp.OPTIMAL, (
+            solver.Solve(model)
+            status = solver.StatusName()
+            assert status == "OPTIMAL", (
                 f"{solver.ResponseStats()} for class {class_} with constraint "
             )
 
-            explanation = model.explanation  # type: ignore[unreachable]
+            explanation = model.explanation
 
             validate_solution(explanation)
             validate_paths(*model.trees, explanation=explanation)
