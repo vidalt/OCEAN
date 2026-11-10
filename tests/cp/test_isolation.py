@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 import pytest
-from ortools.sat.python import cp_model as cp
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
 
 from ocean.abc import Mapper
@@ -145,10 +144,11 @@ class TestIsolation:
         )
         model.build()
 
-        status = CP_ENV.solver.Solve(model)
-        assert status == cp.OPTIMAL, CP_ENV.solver.StatusName()
+        CP_ENV.solver.Solve(model)
+        status = CP_ENV.solver.StatusName()
+        assert status == "OPTIMAL", CP_ENV.solver.StatusName()
 
-        explanation = model.explanation  # type: ignore[unreachable]
+        explanation = model.explanation
 
         validate_solution(explanation)
         validate_paths(*model.trees, explanation=explanation)
@@ -195,12 +195,13 @@ class TestIsolation:
         for class_ in classes:
             model.set_majority_class(y=class_)
 
-            status = CP_ENV.solver.Solve(model)
-            assert status in {cp.OPTIMAL, cp.INFEASIBLE}, (
+            CP_ENV.solver.Solve(model)
+            status = CP_ENV.solver.StatusName()
+            assert status in {"OPTIMAL", "INFEASIBLE"}, (
                 f"{CP_ENV.solver.ResponseStats()} for class {class_}"
             )
 
-            if status == cp.INFEASIBLE:  # type: ignore[unreachable] # pyright: ignore[reportUnnecessaryComparison]
+            if status == "INFEASIBLE":
                 model.cleanup()
                 continue
 

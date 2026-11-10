@@ -35,7 +35,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
     def _get_active_mu_index(
         self,
         name: Key,
-        for_discrete: bool = False,  # noqa: FBT001, FBT002
+        for_discrete: bool = False,  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument]
     ) -> int:
         """
         Find which mu variable is set to true for a numeric feature.
@@ -106,7 +106,8 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
 
     def to_numpy(self) -> Array1D:
         return (
-            self.to_series()
+            self
+            .to_series()
             .to_frame()
             .T[self.columns]
             .to_numpy()
@@ -287,8 +288,10 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
             elif first_true is None:
                 candidates = np.array([levels[-1]])
             else:
-                insertion = np.searchsorted(levels, upper, side="left")
-                insertion = np.min(insertion, len(levels) - 1)
+                insertion = min(
+                    int(np.searchsorted(levels, upper, side="left")),
+                    len(levels) - 1,
+                )
                 candidates = np.array([levels[insertion]])
         if query_val is not None and np.any(np.isclose(candidates, query_val)):
             return query_val

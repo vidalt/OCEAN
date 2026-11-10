@@ -1,13 +1,19 @@
 import sys
-from typing import cast
+from itertools import product
+from math import fsum
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
+from pysat.formula import WCNF
 
 from ocean.maxsat import ENV, MaxSATSolver, Model
 from ocean.tree import parse_trees
 
 from .utils import train_rf
+
+if TYPE_CHECKING:
+    from ocean.typing import Array1D
 
 Clause = list[int]
 
@@ -35,7 +41,9 @@ def test_solver_reuses_rc2_for_append_only_updates() -> None:
         model.build()
 
         x = np.asarray(data.to_numpy()[0], dtype=np.float64).flatten()
-        target = int(np.asarray(clf.predict(data), dtype=np.int64)[0])
+        target = int(
+            np.asarray(cast("Array1D", clf.predict(data)), dtype=np.int64)[0]
+        )
 
         model.add_objective(x)
         solver.solve(model)
@@ -103,7 +111,9 @@ def test_solver_rebuilds_for_distinct_model_instances() -> None:
         )
         trees = tuple(parse_trees(clf, mapper=mapper))
         x = np.asarray(data.to_numpy()[0], dtype=np.float64).flatten()
-        target = int(np.asarray(clf.predict(data), dtype=np.int64)[0])
+        target = int(
+            np.asarray(cast("Array1D", clf.predict(data)), dtype=np.int64)[0]
+        )
 
         first = Model(trees=trees, mapper=mapper)
         first.build()
@@ -122,3 +132,66 @@ def test_solver_rebuilds_for_distinct_model_instances() -> None:
     finally:
         solver.delete()
         ENV.solver = old_solver
+
+
+def test_fractional_weights_preserve_feasibility() -> None:
+    formula = WCNF()
+    # A unique feasible assignment that violates every soft clause. The
+    # stratified solver incorrectly hardens a clause after accumulating 1.1,
+    # because the remaining budget 1.3 - 1.1 is slightly smaller than 0.2.
+    for literal in [-1, -2, -3, 4]:
+        formula.append([literal])
+    for literal, weight in [(1, 0.3), (2, 0.2), (3, 0.3), (-4, 0.5)]:
+        formula.append([literal], weight=weight)
+
+    solver = MaxSATSolver()
+    try:
+        model = solver.solve(formula)
+        assert set(model) == {-1, -2, -3, 4}
+        assert solver.cost == pytest.approx(1.3)
+    finally:
+        solver.delete()
+
+
+@pytest.mark.parametrize("seed", range(20))
+def test_fractional_objective_matches_exhaustive_search(seed: int) -> None:
+    generator = np.random.default_rng(seed)
+    hard = [[1, 2], [-2, 3], [-3, 4]]
+    soft = [[1], [-1], [2], [-2], [3], [-3], [4], [-4], [-1, -4]]
+    weights = [
+        float(generator.choice([0.1, 0.2, 0.3, 0.5, 0.7, 1.0])) for _ in soft
+    ]
+    formula = WCNF()
+    for clause in hard:
+        formula.append(clause)
+    for clause, weight in zip(soft, weights, strict=True):
+        formula.append(clause, weight=weight)
+
+    def cost(assignment: set[int]) -> float:
+        return fsum(
+            weight
+            for clause, weight in zip(soft, weights, strict=True)
+            if not assignment.intersection(clause)
+        )
+
+    feasible = [
+        {
+            variable if value else -variable
+            for variable, value in enumerate(values, start=1)
+        }
+        for values in product([False, True], repeat=4)
+    ]
+    feasible = [
+        assignment
+        for assignment in feasible
+        if all(assignment.intersection(clause) for clause in hard)
+    ]
+    optimum = min(map(cost, feasible))
+    solver = MaxSATSolver()
+    try:
+        assignment = set(solver.solve(formula))
+        assert assignment in feasible
+        assert cost(assignment) == pytest.approx(optimum)
+        assert solver.cost == pytest.approx(optimum)
+    finally:
+        solver.delete()

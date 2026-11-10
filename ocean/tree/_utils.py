@@ -1,6 +1,6 @@
 from math import log2
 
-from sklearn.ensemble._iforest import (  # noqa: PLC2701
+from sklearn.ensemble._iforest import (  # ruff: ignore[import-private-name]
     _average_path_length,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType, reportPrivateUsage, reportArgumentType]
 )
 

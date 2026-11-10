@@ -10,7 +10,7 @@ class BaseModel(ABC, cp.CpModel):
     def __init__(self) -> None:
         cp.CpModel.__init__(self)
 
-    def __setattr__(self, name: str, value: Any) -> None:  # noqa: ANN401
+    def __setattr__(self, name: str, value: Any) -> None:  # ruff: ignore[any-type]
         object.__setattr__(self, name, value)
 
     def build_vars(self, *variables: "Var") -> None:

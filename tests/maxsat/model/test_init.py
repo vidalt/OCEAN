@@ -1,4 +1,5 @@
 import sys
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
@@ -15,6 +16,9 @@ from ..utils import (
     SEEDS,
     train_rf,
 )
+
+if TYPE_CHECKING:
+    from ocean.typing import SKLearnTree
 
 pytestmark = pytest.mark.skipif(
     sys.platform == "win32", reason="tests for non-windows platforms"
@@ -120,7 +124,7 @@ class TestNoIsolation:
 def test_hard_voting_function_uses_tree_class_variables() -> None:
     clf, mapper = train_rf(42, 3, 2, 100, 2)
     for estimator in clf.estimators_:
-        tree = estimator.tree_
+        tree = cast("SKLearnTree", estimator.tree_)
         children_left = np.asarray(tree.children_left, dtype=np.int64)
         children_right = np.asarray(tree.children_right, dtype=np.int64)
         leaf_ids = np.flatnonzero(children_left == children_right)

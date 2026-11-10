@@ -204,9 +204,7 @@ def _solve_backend(
     seed: int,
     threshold: float | None = None,
 ) -> CounterfactualResult:
-    explainer: (
-        MixedIntegerProgramExplainer | ConstraintProgrammingExplainer
-    )
+    explainer: MixedIntegerProgramExplainer | ConstraintProgrammingExplainer
     if backend == "MIP":
         if use_isolation:
             explainer = MixedIntegerProgramExplainer(
@@ -757,31 +755,29 @@ def build_results_table(
         }
     ]
     rows.extend(
-        (
-            {
-                "case": f"isolation = {threshold}",
-                "mip_status": by_threshold[threshold].mip_iso.status,
-                "mip_cf": _format_counterfactual(
-                    by_threshold[threshold].mip_iso.counterfactual
-                ),
-                "mip_distance": _format_scalar(
-                    by_threshold[threshold].mip_iso.distance
-                ),
-                "mip_if_score": _format_scalar(
-                    by_threshold[threshold].mip_iso.isolation_score
-                ),
-                "cp_status": by_threshold[threshold].cp_iso.status,
-                "cp_cf": _format_counterfactual(
-                    by_threshold[threshold].cp_iso.counterfactual
-                ),
-                "cp_distance": _format_scalar(
-                    by_threshold[threshold].cp_iso.distance
-                ),
-                "cp_if_score": _format_scalar(
-                    by_threshold[threshold].cp_iso.isolation_score
-                ),
-            }
-        )
+        ({
+            "case": f"isolation = {threshold}",
+            "mip_status": by_threshold[threshold].mip_iso.status,
+            "mip_cf": _format_counterfactual(
+                by_threshold[threshold].mip_iso.counterfactual
+            ),
+            "mip_distance": _format_scalar(
+                by_threshold[threshold].mip_iso.distance
+            ),
+            "mip_if_score": _format_scalar(
+                by_threshold[threshold].mip_iso.isolation_score
+            ),
+            "cp_status": by_threshold[threshold].cp_iso.status,
+            "cp_cf": _format_counterfactual(
+                by_threshold[threshold].cp_iso.counterfactual
+            ),
+            "cp_distance": _format_scalar(
+                by_threshold[threshold].cp_iso.distance
+            ),
+            "cp_if_score": _format_scalar(
+                by_threshold[threshold].cp_iso.isolation_score
+            ),
+        })
         for threshold in TABLE_THRESHOLDS
     )
     return pd.DataFrame(rows)

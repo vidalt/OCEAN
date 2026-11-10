@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import gurobipy as gp
 import numpy as np
@@ -18,6 +18,9 @@ from ocean.feature import Feature, parse_features
 
 from .distance_utils import manual_postprocessed_distance
 from .utils import ENV, generate_data
+
+if TYPE_CHECKING:
+    from ocean.typing import Array1D
 
 if TYPE_CHECKING:
     from ocean.typing import BaseExplanation
@@ -91,7 +94,7 @@ def test_get_distance_matches_manual_postprocessed_distance(
     model = build_explainer(explainer_class, clf, mapper)
 
     x = data.iloc[0, :].to_numpy(dtype=float).flatten()
-    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    prediction = np.asarray(cast("Array1D", clf.predict([x])), dtype=np.int64)
     target = int(1 - prediction[0])
 
     try:
@@ -151,7 +154,7 @@ def test_get_distance_matches_across_backends_on_discrete_data() -> None:
     clf.fit(data, y)
 
     x = data.iloc[0, :].to_numpy(dtype=float).flatten()
-    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    prediction = np.asarray(cast("Array1D", clf.predict([x])), dtype=np.int64)
     target = int(1 - prediction[0])
 
     explainers: dict[str, ExplainerT] = {
@@ -171,8 +174,7 @@ def test_get_distance_matches_across_backends_on_discrete_data() -> None:
     assert all(explanation is not None for explanation in explanations.values())
 
     distances = {
-        name: explainer.get_distance()
-        for name, explainer in explainers.items()
+        name: explainer.get_distance() for name, explainer in explainers.items()
     }
 
     for name, explanation in explanations.items():
@@ -220,7 +222,7 @@ def test_get_distance_matches_across_mip_cp_on_discrete_data(norm: int) -> None:
     clf.fit(data, y)
 
     x = data.iloc[0, :].to_numpy(dtype=float).flatten()
-    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    prediction = np.asarray(cast("Array1D", clf.predict([x])), dtype=np.int64)
     target = int(1 - prediction[0])
 
     explainers: dict[
@@ -242,8 +244,7 @@ def test_get_distance_matches_across_mip_cp_on_discrete_data(norm: int) -> None:
     assert all(explanation is not None for explanation in explanations.values())
 
     distances = {
-        name: explainer.get_distance()
-        for name, explainer in explainers.items()
+        name: explainer.get_distance() for name, explainer in explainers.items()
     }
 
     for name, explanation in explanations.items():

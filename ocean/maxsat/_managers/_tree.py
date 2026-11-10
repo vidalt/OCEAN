@@ -85,6 +85,7 @@ class TreeManager:
             If no tree is provided.
 
         """
+
         def create(item: tuple[int, Tree]) -> TreeVar:
             t, tree = item
             name = self.TREE_VAR_FMT.format(t=t)

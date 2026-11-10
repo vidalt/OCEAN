@@ -28,7 +28,7 @@ print(f"Target counterfactual class: {target_class}")
 
 # Explain the prediction using MaxSATExplainer
 print("\n--- MaxSAT Explainer ---")
-try:
+try:  # noqa: PLW0717 - solver calls and result access can both fail
     maxsat_model = MaxSATExplainer(rf, mapper=mapper)
     maxsat_explanation = maxsat_model.explain(x_np, y=target_class, norm=1)
     if maxsat_explanation is not None:
@@ -47,7 +47,7 @@ except (ValueError, RuntimeError, ImportError) as e:
 
 # Explain the prediction using MIPExplainer
 print("\n--- MIP Explainer ---")
-try:
+try:  # noqa: PLW0717 - solver calls and result access can both fail
     mip_model = MixedIntegerProgramExplainer(rf, mapper=mapper)
     mip_explanation = mip_model.explain(x_np, y=target_class, norm=1)
     if mip_explanation is not None:
@@ -63,7 +63,7 @@ except (ValueError, RuntimeError, ImportError) as e:
 
 # Explain the prediction using CPExplainer
 print("\n--- CP Explainer ---")
-try:
+try:  # noqa: PLW0717 - solver calls and result access can both fail
     cp_model = ConstraintProgrammingExplainer(rf, mapper=mapper)
     cp_explanation = cp_model.explain(x_np, y=target_class, norm=1)
     if cp_explanation is not None:

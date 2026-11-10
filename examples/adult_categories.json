@@ -1,0 +1,52 @@
+{
+  "MaritalStatus": {
+    "1": "Divorced",
+    "2": "Married (armed forces spouse)",
+    "3": "Married (civilian spouse)",
+    "4": "Married (spouse absent)",
+    "5": "Never married",
+    "6": "Separated",
+    "7": "Widowed"
+  },
+  "Occupation": {
+    "1": "Administrative / clerical",
+    "2": "Armed forces",
+    "3": "Craft / repair",
+    "4": "Executive / managerial",
+    "5": "Farming / fishing",
+    "6": "Handlers / cleaners",
+    "7": "Machine operator / inspector",
+    "8": "Other service",
+    "9": "Private household service",
+    "10": "Professional specialty",
+    "11": "Protective service",
+    "12": "Sales",
+    "13": "Technical support",
+    "14": "Transport / moving"
+  },
+  "Relationship": {
+    "0": "Husband",
+    "1": "Not in family",
+    "2": "Other relative",
+    "3": "Own child",
+    "4": "Unmarried",
+    "5": "Wife"
+  },
+  "WorkClass": {
+    "1": "Federal government",
+    "2": "Local government",
+    "3": "Private",
+    "4": "Self-employed (incorporated)",
+    "5": "Self-employed (unincorporated)",
+    "6": "State government",
+    "7": "Without pay"
+  },
+  "Sex": {
+    "0": "Male",
+    "1": "Female"
+  },
+  "NativeCountry": {
+    "0": "United States",
+    "1": "Outside United States"
+  }
+}

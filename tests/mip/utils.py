@@ -9,7 +9,7 @@ from ocean.abc import Mapper
 from ocean.feature import Feature
 from ocean.mip import Explanation, Model, TreeVar
 from ocean.tree import Node
-from ocean.typing import Array1D, NonNegativeInt
+from ocean.typing import Array1D, Array2D, NonNegativeInt
 
 from ..utils import generate_data
 
@@ -42,11 +42,11 @@ def validate_solution(explanation: Explanation) -> None:
         feature = explanation[name]
         value = x[i]
         if feature.is_one_hot_encoded:
-            assert np.any(np.isclose(value, [0.0, 1.0]))
+            assert any(np.isclose(value, endpoint) for endpoint in (0.0, 1.0))
             codes[name] += value
 
         if feature.is_binary:
-            assert np.any(np.isclose(value, [0.0, 1.0]))
+            assert any(np.isclose(value, endpoint) for endpoint in (0.0, 1.0))
         elif feature.is_numeric:
             assert feature.levels[0] <= value <= feature.levels[-1]
             if feature.is_discrete:
@@ -130,10 +130,12 @@ def validate_sklearn_pred(
     model: Model,
 ) -> None:
     x = explanation.x.reshape(1, -1)
-    prediction = np.asarray(clf.predict(x), dtype=np.int64)
+    prediction = np.asarray(cast("Array1D", clf.predict(x)), dtype=np.int64)
     function = np.asarray(model.function.getValue(), dtype=np.float64)
     proba = function / np.sum(function)
-    expected_proba = np.asarray(clf.predict_proba(x), dtype=np.float64)
+    expected_proba = np.asarray(
+        cast("Array2D", clf.predict_proba(x)), dtype=np.float64
+    )
     assert (prediction == m_class).all()
     assert np.isclose(expected_proba.flatten(), proba).all()
 

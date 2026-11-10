@@ -80,7 +80,7 @@ def _check_xgb_tree(
                     node.threshold,
                     float(
                         np.nextafter(
-                            np.float32(row["Split"].values[0]),
+                            row["Split"].to_numpy(dtype=np.float32)[0],
                             np.float32(-np.inf),
                             dtype=np.float32,
                         )

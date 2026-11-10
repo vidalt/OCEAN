@@ -4,11 +4,6 @@ from typing import TYPE_CHECKING, cast
 
 from pysat.examples.rc2 import RC2
 
-try:
-    from pysat.examples.rc2 import RC2Stratified
-except ImportError:
-    RC2Stratified = None
-
 if TYPE_CHECKING:
     from pysat.formula import WCNF
 
@@ -67,7 +62,7 @@ class MaxSATSolver:
             raise RuntimeError(msg)
 
         self._rc2.verbose = int(self.verbose)
-        model = cast("list[int] | None", self._rc2.compute())
+        model: list[int] | None = self._rc2.compute()
         if model is None:
             msg = "UNSAT: no counterfactual found."
             raise RuntimeError(msg)
@@ -119,24 +114,18 @@ class MaxSATSolver:
         self._state_version += 1
         hard = cast("list[Clause]", w.hard)
         soft = cast("list[Clause]", w.soft)
-        if RC2Stratified is not None and len(soft) > 0:
-            self._rc2 = RC2Stratified(
-                w,
-                solver=self.solver_name,
-                blo="full",
-                exhaust=False,
-                minz=True,
-                verbose=int(self.verbose),
-            )
-        else:
-            self._rc2 = RC2(
-                w,
-                solver=self.solver_name,
-                adapt=True,
-                exhaust=False,
-                minz=True,
-                verbose=int(self.verbose),
-            )
+        # Objectives can contain fractional weights. Stratified RC2 hardens
+        # clauses using floating-point bound differences, which can turn a
+        # feasible formula into UNSAT through rounding. Standard RC2 avoids
+        # that hardening and also supports our append-only updates.
+        self._rc2 = RC2(
+            w,
+            solver=self.solver_name,
+            adapt=True,
+            exhaust=False,
+            minz=True,
+            verbose=int(self.verbose),
+        )
         self._formula = w
         self._formula_epoch = getattr(w, "solver_epoch", 0)
         self._synced_hard = len(hard)

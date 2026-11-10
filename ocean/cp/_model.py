@@ -5,10 +5,12 @@ import numpy as np
 from ortools.sat.python import cp_model as cp
 from pydantic import validate_call
 
+from .._actionability import validate_actionability
 from ..abc import Mapper
 from ..feature import Feature
 from ..tree import Tree
 from ..typing import (
+    Actionability,
     Array1D,
     Key,
     NonNegativeArray1D,
@@ -135,6 +137,58 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         objective = self._add_objective(x=x, norm=norm)
         self.Minimize(objective)
 
+    def add_actionability(
+        self, x: Array1D, actionability: Actionability | None = None
+    ) -> None:
+        """
+        Add temporary restrictions on decoded counterfactual feature values.
+
+        Call after ``add_objective(x, ...)`` so query-dependent domains are
+        ready. Rules accumulate until ``cleanup()``; omitted features remain
+        unrestricted. One-hot groups accept only ``"fixed"``.
+
+        Invalid rules or query values raise ``ValueError``.
+
+        """
+        validate_actionability(self.mapper, x, actionability)
+        for name, rule in (actionability or {}).items():
+            feature = self.mapper[name]
+            if feature.is_one_hot_encoded:
+                for code in feature.codes:
+                    category_value = int(x[self.mapper.idx.get(name, code)])
+                    self.add_garbage(
+                        self.Add(feature.xget(code) == category_value)
+                    )
+                continue
+            value = float(x[self.mapper.idx.get(name)])
+            if feature.is_continuous:
+                # Match Explanation.format_value: split equality goes left.
+                reference = max(
+                    0,
+                    int(np.searchsorted(feature.levels, value, side="left"))
+                    - 1,
+                )
+            else:
+                reference = int(value)
+            var = feature.xget()
+            if rule == "fixed":
+                constraint = var == reference
+            elif rule == "increase":
+                constraint = var >= reference
+            else:
+                constraint = var <= reference
+            self.add_garbage(self.Add(constraint))
+
+    def _prepare_query(
+        self,
+        x: Array1D,
+        norm: NonNegativeInt,
+        actionability: Actionability | None,
+    ) -> None:
+        validate_actionability(self.mapper, x, actionability)
+        self.add_objective(x, norm=norm)
+        self.add_actionability(x, actionability)
+
     @validate_call
     def set_majority_class(
         self,
@@ -202,7 +256,7 @@ class Model(BaseModel, FeatureManager, TreeManager, GarbageManager):
         Remove query-specific constraints from the CP model.
 
         The persistent structure over :math:`x` and :math:`p_{t,\ell}` is
-        kept, while objective auxiliaries and class constraints for the last
+        kept, while objective, class, and actionability constraints for the last
         query :math:`\hat{x}` are discarded.
         """
         self.remove_garbage()

@@ -60,6 +60,62 @@ Every explainer exposes an ``explain`` method with the same core arguments.
 ``verbose``
    Whether to print solver logs.
 
+Actionability constraints (CP and MIP)
+--------------------------------------
+
+Pass ``actionability`` to restrict how individual features may change. The
+public aliases in :mod:`ocean.typing` describe the mapping and its values:
+
+.. code-block:: python
+
+   from ocean.typing import Actionability, ActionabilityRule
+
+   income_rule: ActionabilityRule = "increase"
+   rules: Actionability = {
+       "age": "increase",
+       "income": income_rule,
+       "employment_type": "fixed",
+       "debt": "decrease",
+   }
+   explanation = explainer.explain(x, y=1, norm=1, actionability=rules)
+
+Use feature names from ``mapper`` (strings or integers). For a one-hot encoded
+feature, use the original group name, not an individual encoded column.
+
+.. list-table:: Supported rules
+   :header-rows: 1
+
+   * - Rule
+     - Meaning for the returned counterfactual
+   * - ``"fixed"``
+     - Keep the input value or category unchanged.
+   * - ``"increase"``
+     - Value must be greater than or equal to the input value.
+   * - ``"decrease"``
+     - Value must be less than or equal to the input value.
+
+Unlisted features are unrestricted; ``None`` (the default) and ``{}`` add no
+restrictions. Numeric and binary features support all three rules. Unordered
+one-hot groups support only ``"fixed"``. Unknown names, unsupported rules,
+invalid one-hot or binary query values, non-integer discrete query values,
+and constrained numeric values outside the feature bounds raise ``ValueError``
+before query constraints are added. When a mapping is provided, the query must
+also be a finite one-dimensional array with the mapper's column count.
+
+Rules apply in the processed feature space supplied to the explainer and to
+its decoded counterfactual values. CP continuous variables represent intervals;
+fixing the input's interval preserves its original value through decoding.
+MIP likewise restricts the represented regions where necessary, including
+when a discrete input is not one of its stored levels. The distance objective
+and target-class constraint continue to apply. These rules do not encode causal
+relationships between features or arbitrary category transitions.
+
+An infeasible set of restrictions returns ``None`` with the usual solver
+warning. With the default ``clean_up=True``, actionability constraints are
+removed after both successful and unsuccessful solves. With
+``clean_up=False``, call ``cleanup()`` before starting an independent query.
+The MaxSAT backend does not support this argument.
+
 Backend-specific behavior
 -------------------------
 
@@ -95,7 +151,8 @@ Repeated solves
 ---------------
 
 All three explainers default to ``clean_up=True`` inside ``explain``. That
-means query-specific objectives and target-class constraints are removed
+means query-specific objectives, target-class constraints, and CP/MIP
+actionability constraints are removed
 automatically after each solve unless you opt out.
 
 Call ``cleanup()`` manually only when you deliberately run ``explain(...,
