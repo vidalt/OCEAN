@@ -56,7 +56,8 @@ def _parse(
             feature = Feature(Feature.Type.ONE_HOT_ENCODED, codes=codes)
         elif is_binary:
             frame = (
-                pd.get_dummies(series, drop_first=True)
+                pd
+                .get_dummies(series, drop_first=True)
                 .iloc[:, 0]
                 .rename("")
                 .astype(int)

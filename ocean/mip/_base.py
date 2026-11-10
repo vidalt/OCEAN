@@ -10,7 +10,7 @@ class BaseModel(ABC, gp.Model):
     def __init__(self, name: str = "", env: gp.Env | None = None) -> None:
         gp.Model.__init__(self, name=name, env=env)
 
-    def __setattr__(self, name: str, value: Any) -> None:  # noqa: ANN401
+    def __setattr__(self, name: str, value: Any) -> None:  # ruff: ignore[any-type]
         object.__setattr__(self, name, value)
 
     def build_vars(self, *variables: "Var") -> None:

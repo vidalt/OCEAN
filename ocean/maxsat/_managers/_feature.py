@@ -68,6 +68,7 @@ class FeatureManager:
             If ``mapper`` is empty.
 
         """
+
         def create(key: Key, feature: Feature) -> FeatureVar:
             name = self.FEATURE_VAR_FMT.format(key=key)
             return FeatureVar(feature, name=name)

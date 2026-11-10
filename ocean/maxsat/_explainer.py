@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from ._explanation import Explanation
 
 
-def handler(signum: Any, frame: Any) -> TimeoutError:  # noqa: ANN401, ARG001
+def handler(signum: Any, frame: Any) -> TimeoutError:  # ruff: ignore[any-type, unused-function-argument]
     msg = "Timeout for maxsat!"
     raise TimeoutError(msg)
 

@@ -1,5 +1,5 @@
 import sys
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
@@ -8,6 +8,9 @@ from ocean.maxsat import ENV, MaxSATSolver, Model
 from ocean.tree import parse_trees
 
 from .utils import train_rf
+
+if TYPE_CHECKING:
+    from ocean.typing import Array1D
 
 Clause = list[int]
 
@@ -35,7 +38,9 @@ def test_solver_reuses_rc2_for_append_only_updates() -> None:
         model.build()
 
         x = np.asarray(data.to_numpy()[0], dtype=np.float64).flatten()
-        target = int(np.asarray(clf.predict(data), dtype=np.int64)[0])
+        target = int(
+            np.asarray(cast("Array1D", clf.predict(data)), dtype=np.int64)[0]
+        )
 
         model.add_objective(x)
         solver.solve(model)
@@ -103,7 +108,9 @@ def test_solver_rebuilds_for_distinct_model_instances() -> None:
         )
         trees = tuple(parse_trees(clf, mapper=mapper))
         x = np.asarray(data.to_numpy()[0], dtype=np.float64).flatten()
-        target = int(np.asarray(clf.predict(data), dtype=np.int64)[0])
+        target = int(
+            np.asarray(cast("Array1D", clf.predict(data)), dtype=np.int64)[0]
+        )
 
         first = Model(trees=trees, mapper=mapper)
         first.build()

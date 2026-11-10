@@ -24,14 +24,14 @@ def test_binary(seed: int) -> None:
     solver = ENV.solver
     v = var.xget()
 
-    val = generator.choice(range(2, 10))
+    val = int(generator.choice(range(2, 10)))
     objective = val + v
     model.Minimize(objective)
     solver.Solve(model)
     value = solver.Value(v)
     assert np.isclose(value, 0.0, rtol=0.0, atol=1e-10)
 
-    val = generator.choice(range(5, 10))
+    val = int(generator.choice(range(5, 10)))
     objective = val - v
     model.Minimize(objective)
     solver.Solve(model)
@@ -61,7 +61,7 @@ def test_discrete(
     var.build(model)
 
     v = var.xget()
-    val = generator.choice(levels)
+    val = int(generator.choice(levels))
     u = model.NewIntVar(0, n_levels - 1, f"u_{v.name}")
     model.AddAbsEquality(u, v - val)
     objective = u

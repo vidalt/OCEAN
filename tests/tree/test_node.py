@@ -10,19 +10,19 @@ def test_leaf() -> None:
     assert np.all(leaf.value == [1.0, 0.0, 0.0])
     assert leaf.node_id == 0
     with pytest.raises(AttributeError):
-        leaf.left  # noqa: B018
+        leaf.left  # ruff: ignore[useless-expression]
     with pytest.raises(AttributeError):
-        leaf.right  # noqa: B018
+        leaf.right  # ruff: ignore[useless-expression]
     with pytest.raises(AttributeError):
-        leaf.feature  # noqa: B018
+        leaf.feature  # ruff: ignore[useless-expression]
     with pytest.raises(AttributeError):
-        leaf.threshold  # noqa: B018
+        leaf.threshold  # ruff: ignore[useless-expression]
     with pytest.raises(AttributeError):
-        leaf.code  # noqa: B018
+        leaf.code  # ruff: ignore[useless-expression]
 
     leaf = Node(1)
     with pytest.raises(AttributeError):
-        leaf.value  # noqa: B018
+        leaf.value  # ruff: ignore[useless-expression]
 
 
 def test_node() -> None:
@@ -32,12 +32,12 @@ def test_node() -> None:
 
     assert not node.is_leaf
     with pytest.raises(AttributeError):
-        node.value  # noqa: B018
+        node.value  # ruff: ignore[useless-expression]
 
     with pytest.raises(AttributeError):
-        node.threshold  # noqa: B018
+        node.threshold  # ruff: ignore[useless-expression]
     with pytest.raises(AttributeError):
-        node.code  # noqa: B018
+        node.code  # ruff: ignore[useless-expression]
 
     assert node.left.node_id == left.node_id
     assert node.right.node_id == right.node_id

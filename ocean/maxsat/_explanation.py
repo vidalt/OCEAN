@@ -35,7 +35,7 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
     def _get_active_mu_index(
         self,
         name: Key,
-        for_discrete: bool = False,  # noqa: FBT001, FBT002
+        for_discrete: bool = False,  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument]
     ) -> int:
         """
         Find which mu variable is set to true for a numeric feature.
@@ -106,7 +106,8 @@ class Explanation(Mapper[FeatureVar], BaseExplanation):
 
     def to_numpy(self) -> Array1D:
         return (
-            self.to_series()
+            self
+            .to_series()
             .to_frame()
             .T[self.columns]
             .to_numpy()

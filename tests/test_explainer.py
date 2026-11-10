@@ -1,4 +1,5 @@
 import sys
+from typing import TYPE_CHECKING, cast
 
 import gurobipy as gp
 import numpy as np
@@ -15,6 +16,9 @@ from ocean import (
 from ocean.feature import parse_features
 
 from .utils import ENV, generate_data
+
+if TYPE_CHECKING:
+    from ocean.typing import Array1D
 
 
 @pytest.mark.parametrize("seed", [42, 43, 44])
@@ -45,7 +49,7 @@ def test_mip_explain(
     y = clf.predict([x])[0]
     classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
-        try:
+        try:  # ruff: ignore[too-many-statements-in-try-clause] - solver calls and result access can both fail
             exp = model.explain(
                 x,
                 y=target,
@@ -55,6 +59,7 @@ def test_mip_explain(
                 random_seed=seed,
             )
             assert model.Status == gp.GRB.OPTIMAL
+            assert model.callback is not None
             assert len(model.callback.sollist) != 0
             assert exp is not None
             assert clf.predict([exp.to_numpy()])[0] == target
@@ -92,7 +97,7 @@ def test_mip_explain_xgb(
     y = clf.predict([x])[0]
     classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
-        try:
+        try:  # ruff: ignore[too-many-statements-in-try-clause] - solver calls and result access can both fail
             exp = model.explain(
                 x,
                 y=target,
@@ -103,6 +108,7 @@ def test_mip_explain_xgb(
             )
             model.cleanup()
             assert model.Status == gp.GRB.OPTIMAL
+            assert model.callback is not None
             assert len(model.callback.sollist) != 0
             assert exp is not None
             assert clf.predict([exp.to_numpy()])[0] == target
@@ -139,7 +145,7 @@ def test_cp_explain(
     y = clf.predict([x])[0]
     classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
-        try:
+        try:  # ruff: ignore[too-many-statements-in-try-clause] - solver calls and result access can both fail
             exp = model.explain(
                 x,
                 y=target,
@@ -185,7 +191,7 @@ def test_cp_explain_xgb(
     y = clf.predict([x])[0]
     classes = np.unique(clf.predict(data.to_numpy())).astype(np.int64)  # pyright: ignore[reportUnknownArgumentType]
     for target in classes[classes != y]:
-        try:
+        try:  # ruff: ignore[too-many-statements-in-try-clause] - solver calls and result access can both fail
             exp = model.explain(
                 x,
                 y=target,
@@ -241,7 +247,7 @@ def test_explainers_return_same_distance_on_discrete_data() -> None:
     clf.fit(data, y)
 
     x = data.iloc[0, :].to_numpy(dtype=float).flatten()
-    prediction = np.asarray(clf.predict([x]), dtype=np.int64)
+    prediction = np.asarray(cast("Array1D", clf.predict([x])), dtype=np.int64)
     target = int(1 - prediction[0])
 
     mip = MixedIntegerProgramExplainer(clf, mapper=mapper, env=ENV)

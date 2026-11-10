@@ -1,4 +1,5 @@
 import sys
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
@@ -7,6 +8,9 @@ from sklearn.ensemble import RandomForestClassifier
 from ocean import MaxSATExplainer
 
 from .utils import generate_data
+
+if TYPE_CHECKING:
+    from ocean.typing import Array1D
 
 pytestmark = pytest.mark.skipif(
     sys.platform == "win32", reason="tests for non-windows platforms"
@@ -17,7 +21,9 @@ def hard_vote_predict(clf: RandomForestClassifier, x: np.ndarray) -> int:
     sample = np.asarray(x, dtype=np.float64).reshape(1, -1)
     votes_list: list[int] = []
     for tree in clf.estimators_:
-        prediction = np.asarray(tree.predict(sample), dtype=np.int64)
+        prediction = np.asarray(
+            cast("Array1D", tree.predict(sample)), dtype=np.int64
+        )
         votes_list.append(int(prediction[0]))
     votes = np.asarray(votes_list, dtype=np.int64)
     classes, counts = np.unique(votes, return_counts=True)

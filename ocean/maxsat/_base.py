@@ -22,7 +22,7 @@ class BaseModel(ABC, WCNF):
         self.vpool = IDPool()  # Create new pool for each instance
         self._solver_epoch = 0
 
-    def __setattr__(self, name: str, value: Any) -> None:  # noqa: ANN401
+    def __setattr__(self, name: str, value: Any) -> None:  # ruff: ignore[any-type]
         object.__setattr__(self, name, value)
 
     def build_vars(self, *variables: "Var") -> None:
@@ -41,7 +41,7 @@ class BaseModel(ABC, WCNF):
             raise ValueError(msg)
         return self.vpool.obj2id[name]  # type: ignore[no-any-return]
 
-    def add_hard(self, lits: list[int], return_id: bool = False) -> int:  # noqa: FBT001, FBT002
+    def add_hard(self, lits: list[int], return_id: bool = False) -> int:  # ruff: ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument]
         """
         Add a hard clause (must be satisfied).
 

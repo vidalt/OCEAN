@@ -9,7 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 from ocean import ConstraintProgrammingExplainer, MixedIntegerProgramExplainer
 from ocean.abc import Mapper
 from ocean.feature import Feature, parse_features
-from ocean.typing import BaseExplanation
+from ocean.typing import Array1D, BaseExplanation
 
 from .distance_utils import manual_postprocessed_distance
 from .utils import ENV
@@ -79,7 +79,7 @@ def predict_processed(
     columns: pd.Index,
 ) -> int:
     frame = pd.DataFrame([x], columns=columns)
-    prediction = np.asarray(clf.predict(frame), dtype=np.int64)
+    prediction = np.asarray(cast("Array1D", clf.predict(frame)), dtype=np.int64)
     return int(prediction[0])
 
 
@@ -189,7 +189,7 @@ def assert_continuous_explanation_is_valid(
         assert float(feature.levels[0]) <= value <= float(feature.levels[-1])
 
 
-def test_continuous_cp_and_mip_explainers_match_distance() -> None:  # noqa: PLR0914
+def test_continuous_cp_and_mip_explainers_match_distance() -> None:  # ruff: ignore[too-many-locals]
     data, y, mapper = build_continuous_dataset(seed=SEED, n_samples=N_SAMPLES)
     assert mapper.n_columns == N_FEATURES
     assert all(feature.is_continuous for feature in mapper.values())
@@ -201,11 +201,13 @@ def test_continuous_cp_and_mip_explainers_match_distance() -> None:  # noqa: PLR
     )
     clf.fit(data, y)
 
-    importances = np.asarray(clf.feature_importances_, dtype=np.float64)
+    importances = np.asarray(
+        cast("Array1D", clf.feature_importances_), dtype=np.float64
+    )
     assert importances.shape == (N_FEATURES,)
     assert np.count_nonzero(importances > 0.0) == N_FEATURES
 
-    predictions = np.asarray(clf.predict(data), dtype=np.int64)
+    predictions = np.asarray(cast("Array1D", clf.predict(data)), dtype=np.int64)
     query_indices = select_query_indices(predictions)
     assert query_indices.size == N_QUERY_EXAMPLES
 
@@ -238,7 +240,7 @@ def test_continuous_cp_and_mip_explainers_match_distance() -> None:  # noqa: PLR
         class_epsilon=float(mip_explainer.epsilon),
     )
 
-    try:
+    try:  # ruff: ignore[too-many-statements-in-try-clause] - solver calls and result access can both fail
         for idx in query_indices:
             query = data.iloc[int(idx)].to_numpy(dtype=float)
             target = int(1 - predictions[int(idx)])
@@ -336,7 +338,7 @@ def test_continuous_mip_regression_seed_returns_valid_cf() -> None:
     )
     clf.fit(data, y)
 
-    predictions = np.asarray(clf.predict(data), dtype=np.int64)
+    predictions = np.asarray(cast("Array1D", clf.predict(data)), dtype=np.int64)
 
     try:
         mip_explainer: MIPExplainer = MixedIntegerProgramExplainer(
@@ -356,7 +358,7 @@ def test_continuous_mip_regression_seed_returns_valid_cf() -> None:
         ("cp", cp_explainer),
     )
 
-    try:
+    try:  # ruff: ignore[too-many-statements-in-try-clause] - solver calls and result access can both fail
         for idx in REGRESSION_QUERY_INDICES:
             query = data.iloc[idx].to_numpy(dtype=float)
             target = int(1 - predictions[idx])

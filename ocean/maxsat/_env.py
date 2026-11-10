@@ -67,7 +67,7 @@ class MaxSATSolver:
             raise RuntimeError(msg)
 
         self._rc2.verbose = int(self.verbose)
-        model = cast("list[int] | None", self._rc2.compute())
+        model: list[int] | None = self._rc2.compute()
         if model is None:
             msg = "UNSAT: no counterfactual found."
             raise RuntimeError(msg)
