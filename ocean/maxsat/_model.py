@@ -21,7 +21,9 @@ except (AssertionError, ImportError):
     PBEncType = None
     PBEnc = None
 
-from ..typing import NonNegativeInt
+from ..typing import (
+    NonNegativeInt,  # ruff: ignore[typing-only-first-party-import] - resolved by validate_call
+)
 from ._base import BaseModel
 from ._builder.model import ModelBuilder, ModelBuilderFactory
 from ._managers import FeatureManager, GarbageManager, TreeManager
@@ -32,7 +34,7 @@ if TYPE_CHECKING:
     from ..abc import Mapper
     from ..feature import Feature
     from ..tree import Tree
-    from ..typing import Array1D, Key, NonNegativeArray1D, NonNegativeInt
+    from ..typing import Array1D, Key, NonNegativeArray1D
     from ._variables import FeatureVar
 
 
@@ -229,12 +231,14 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
         v: FeatureVar,
         code: Key,
     ) -> None:
+        # Switching category flips two bits; charge half per bit so the
+        # whole one-hot feature contributes one unit, matching CP and MIP.
         x_var = v.xget(code=code)
         binary_threshold = 0.5
         if x_val > binary_threshold:
-            self.add_soft([x_var], weight=1.0)
+            self.add_soft([x_var], weight=0.5)
         else:
-            self.add_soft([-x_var], weight=1.0)
+            self.add_soft([-x_var], weight=0.5)
 
     def _add_soft_l1_continuous(self, x_val: float, v: FeatureVar) -> None:
         r"""
@@ -619,13 +623,11 @@ class Model(BaseModel, FeatureManager, GarbageManager, TreeManager):
 
             min_diff = min(diff for _, diff in contribs)
             effective_bound -= min_diff
-            normalized.append(
-                [
-                    (leaf_var, diff - min_diff)
-                    for leaf_var, diff in contribs
-                    if diff != min_diff
-                ]
-            )
+            normalized.append([
+                (leaf_var, diff - min_diff)
+                for leaf_var, diff in contribs
+                if diff != min_diff
+            ])
 
         flat_weights = [
             diff for contribs in normalized for _, diff in contribs if diff > 0
